@@ -8,9 +8,12 @@ ASP.NET/ViewState/AJAX. Two GET requests per term are sufficient:
   2. GET search_term.php?term=N  → HTML table of all syllabi for that term
 
 Spider arguments (-a key=value):
-  target_terms  — comma-separated term codes to scrape (default: all)
+  target_terms  — comma-separated term codes to scrape (overrides target_year)
+  target_year   — 4-digit year to filter terms by label (default: "2026")
   target_depts  — comma-separated dept prefixes to keep (default: all)
   no_download   — set to "1" to skip file downloads (metadata-only mode)
+
+By default (no arguments), the spider scrapes all 2026 terms.
 """
 
 import re
@@ -141,16 +144,20 @@ class UConnSyllabiSpider(scrapy.Spider):
     # Spider-level custom settings (can be overridden in settings.py)
     custom_settings = {}
 
-    def __init__(self, target_terms=None, target_depts=None, no_download=None, *args, **kwargs):
+    def __init__(self, target_terms=None, target_year=None, target_depts=None, no_download=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Parse comma-separated argument lists
+        # Explicit term codes override year filtering
         self._target_terms = set(t.strip() for t in target_terms.split(",") if t.strip()) if target_terms else None
+        # Default to 2026 when no explicit term list is provided
+        self._target_year  = str(target_year).strip() if target_year else "2026"
         self._target_depts = set(d.strip().upper() for d in target_depts.split(",") if d.strip()) if target_depts else None
-        self._no_download = str(no_download).strip() in ("1", "true", "yes") if no_download else False
+        self._no_download  = str(no_download).strip() in ("1", "true", "yes") if no_download else False
 
         if self._target_terms:
-            self.logger.info(f"Filtering to terms: {self._target_terms}")
+            self.logger.info(f"Filtering to explicit term codes: {self._target_terms}")
+        else:
+            self.logger.info(f"Filtering to year: {self._target_year}")
         if self._target_depts:
             self.logger.info(f"Filtering to depts: {self._target_depts}")
         if self._no_download:
@@ -172,7 +179,12 @@ class UConnSyllabiSpider(scrapy.Spider):
         self.logger.info(f"Found {len(options)} terms total.")
 
         for term_code, term_label in options:
-            if self._target_terms and term_code not in self._target_terms:
+            # Explicit term codes take priority; otherwise filter by year in label
+            if self._target_terms:
+                if term_code not in self._target_terms:
+                    continue
+            elif self._target_year not in term_label:
+                self.logger.debug(f"Skipping term {term_code} ({term_label}) — not a {self._target_year} term")
                 continue
             url = f"{TERM_LIST_URL}?term={term_code}"
             self.logger.info(f"Queuing term {term_code}: {term_label}")

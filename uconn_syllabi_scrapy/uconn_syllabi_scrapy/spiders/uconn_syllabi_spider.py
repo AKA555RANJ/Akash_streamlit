@@ -144,6 +144,16 @@ class UConnSyllabiSpider(scrapy.Spider):
     # Spider-level custom settings (can be overridden in settings.py)
     custom_settings = {}
 
+    @classmethod
+    def from_crawler(cls, crawler, *args, **kwargs):
+        spider = super().from_crawler(crawler, *args, **kwargs)
+        # Read CLOSESPIDER_ITEMCOUNT so the spider can enforce it row-by-row
+        # within a single page response (Scrapy normally only stops new requests,
+        # not items mid-page — this fixes that).
+        spider._max_items = crawler.settings.getint("CLOSESPIDER_ITEMCOUNT", 0)
+        spider._items_yielded = 0
+        return spider
+
     def __init__(self, target_terms=None, target_year=None, target_depts=None, no_download=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -204,6 +214,14 @@ class UConnSyllabiSpider(scrapy.Spider):
 
         yielded = 0
         for row in rows:
+            # Enforce CLOSESPIDER_ITEMCOUNT mid-page so it stops at exactly N items
+            if self._max_items and self._items_yielded >= self._max_items:
+                self.logger.info(
+                    f"Reached CLOSESPIDER_ITEMCOUNT={self._max_items} — "
+                    f"stopping mid-page at term {term_code}"
+                )
+                return
+
             class_name = row["class_name"]
             dept, _ = _split_class(class_name)
 
@@ -235,6 +253,7 @@ class UConnSyllabiSpider(scrapy.Spider):
                 files     = [],
             )
             yielded += 1
+            self._items_yielded += 1
             yield item
 
         self.logger.info(f"Term {term_code}: yielded {yielded} items after dept filter")

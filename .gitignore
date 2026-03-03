@@ -1,0 +1,10 @@
+# Raw downloaded syllabi — tracked via Data.zip (Git LFS) instead
+data/
+Data/
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor
+.vscode/

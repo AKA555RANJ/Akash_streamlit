@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
 """
-package_data.py — Build Data.zip and push to GitHub via Git LFS.
+package_data.py — Build per-institution zip files and push to GitHub via Git LFS.
 
-Zip structure (subfolders directly at root, metadata separated):
-  bergen_community_college__3061268__syllabus/
-    ACC-107.pdf
-    ...
-  delaware_technical_community_college_terry__2984303__syllabus/
-    ACC-101.html
-    ...
-  metadata/
-    bergen_community_college__3061268__syllabus.csv
-    delaware_technical_community_college_terry__2984303__syllabus.csv
+For each subfolder in data/, creates a zip like:
+  bergen_community_college__3061268__syllabus.zip
+  └── bergen_community_college__3061268__syllabus/
+      ├── bergen_community_college__3061268__syllabus/   ← scraped files (PDFs, HTMLs, etc.)
+      │   ├── ACC-107.pdf
+      │   └── ...
+      └── bergen_community_college__3061268__syllabus.csv ← metadata
 
 Rules:
   - data/ (lowercase) is the source folder
-  - Only the subfolders inside data/ are compressed, NOT the parent data/ folder
-  - CSV metadata files go into metadata/ at the zip root, not inside download subfolders
+  - One zip per subfolder, placed at the repo root
+  - CSV metadata sits at the top level inside the zip (beside the files folder)
+  - Non-CSV files go into a nested subfolder with the same name
 """
 
 import sys
@@ -26,13 +24,11 @@ from pathlib import Path
 
 REPO_DIR = Path(__file__).parent
 DATA_DIR = REPO_DIR / "data"
-ZIP_PATH = REPO_DIR / "Data.zip"
-COMMIT_MSG = "Refresh Data.zip with latest syllabi"
+COMMIT_MSG = "Refresh per-institution zip files with latest syllabi"
 
 
-def build_zip():
+def build_zips():
     if not DATA_DIR.exists():
-        # Fall back to capital-D Data/ if data/ doesn't exist yet
         fallback = REPO_DIR / "Data"
         if fallback.exists():
             print(f"[warn] 'data/' not found, using '{fallback}' — rename it to 'data/' for consistency")
@@ -49,34 +45,42 @@ def build_zip():
         sys.exit(1)
 
     print(f"Source : {source}")
-    print(f"Output : {ZIP_PATH}")
     print(f"Subfolders to package: {[s.name for s in subfolders]}\n")
 
-    with zipfile.ZipFile(ZIP_PATH, "w", zipfile.ZIP_DEFLATED, allowZip64=True) as zf:
-        for subfolder in subfolders:
-            files = sorted(subfolder.iterdir())
-            download_files = [f for f in files if f.suffix != ".csv"]
-            csv_files = [f for f in files if f.suffix == ".csv"]
+    zip_paths = []
 
-            # Add download files directly under the subfolder name (not under data/)
+    for subfolder in subfolders:
+        name = subfolder.name
+        zip_path = REPO_DIR / f"{name}.zip"
+        zip_paths.append(zip_path)
+
+        files = sorted(subfolder.iterdir())
+        download_files = [f for f in files if f.is_file() and f.suffix != ".csv"]
+        csv_files = [f for f in files if f.is_file() and f.suffix == ".csv"]
+
+        print(f"  [{name}]")
+
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, allowZip64=True) as zf:
+            # Scraped files go into name/name/
             for f in download_files:
-                arc_path = f"{subfolder.name}/{f.name}"
+                arc_path = f"{name}/{name}/{f.name}"
                 zf.write(f, arc_path)
 
-            print(f"  [{subfolder.name}]")
-            print(f"    downloads : {len(download_files)} files")
-
-            # Add CSVs to a separate metadata/ directory at zip root
+            # CSV metadata goes into name/
             for f in csv_files:
-                arc_path = f"metadata/{f.name}"
+                arc_path = f"{name}/{f.name}"
                 zf.write(f, arc_path)
-                print(f"    metadata  : metadata/{f.name}")
 
-    size_mb = ZIP_PATH.stat().st_size / 1024 / 1024
-    print(f"\nDone: {ZIP_PATH.name} ({size_mb:.1f} MB)")
+            print(f"    downloads : {len(download_files)} files")
+            print(f"    metadata  : {len(csv_files)} CSV(s)")
+
+        size_mb = zip_path.stat().st_size / 1024 / 1024
+        print(f"    output    : {zip_path.name} ({size_mb:.1f} MB)\n")
+
+    return zip_paths
 
 
-def git_push():
+def git_push(zip_paths):
     print("\n--- Git ---")
 
     def run(cmd):
@@ -89,12 +93,20 @@ def git_push():
             print(f"[error] Command failed: {' '.join(cmd)}")
             sys.exit(result.returncode)
 
-    run(["git", "add", "Data.zip"])
+    # Track new zip files with LFS and stage them
+    for zp in zip_paths:
+        run(["git", "add", zp.name])
+
+    # Remove old Data.zip if it exists and is tracked
+    old_zip = REPO_DIR / "Data.zip"
+    if old_zip.exists():
+        run(["git", "rm", "Data.zip"])
+
     run(["git", "commit", "-m", COMMIT_MSG])
     run(["git", "push", "origin", "main"])
     print("Pushed successfully.")
 
 
 if __name__ == "__main__":
-    build_zip()
-    git_push()
+    zips = build_zips()
+    git_push(zips)

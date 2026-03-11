@@ -17,6 +17,7 @@ Rules:
   - Non-CSV files go into a nested subfolder with the same name
 """
 
+import argparse
 import sys
 import zipfile
 import subprocess
@@ -27,7 +28,12 @@ DATA_DIR = REPO_DIR / "data"
 COMMIT_MSG = "Refresh per-institution zip files with latest syllabi"
 
 
-def build_zips():
+def _newest_mtime(folder: Path) -> float:
+    """Return the most recent mtime of any file in folder."""
+    return max(f.stat().st_mtime for f in folder.rglob("*") if f.is_file())
+
+
+def build_zips(force: bool = False):
     if not DATA_DIR.exists():
         fallback = REPO_DIR / "Data"
         if fallback.exists():
@@ -52,6 +58,17 @@ def build_zips():
     for subfolder in subfolders:
         name = subfolder.name
         zip_path = REPO_DIR / f"{name}.zip"
+
+        # Skip if zip already exists and is newer than all data files
+        if not force and zip_path.exists():
+            zip_mtime = zip_path.stat().st_mtime
+            data_mtime = _newest_mtime(subfolder)
+            if zip_mtime >= data_mtime:
+                size_mb = zip_path.stat().st_size / 1024 / 1024
+                print(f"  [{name}] up-to-date, skipping ({size_mb:.1f} MB)")
+                zip_paths.append(zip_path)
+                continue
+
         zip_paths.append(zip_path)
 
         files = sorted(subfolder.iterdir())
@@ -108,5 +125,8 @@ def git_push(zip_paths):
 
 
 if __name__ == "__main__":
-    zips = build_zips()
+    parser = argparse.ArgumentParser(description="Package data/ subfolders into zips and push")
+    parser.add_argument("--force", action="store_true", help="Rebuild all zips even if up-to-date")
+    args = parser.parse_args()
+    zips = build_zips(force=args.force)
     git_push(zips)

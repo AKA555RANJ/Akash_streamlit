@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-iusb_syllabi_scraper.py — Scrape course syllabi from Indiana University South Bend
-(IPEDS 3029187) at https://syllabi.iu.edu/
+iupui_syllabi_scraper.py — Scrape course syllabi from Indiana University-Purdue
+University-Indianapolis (IPEDS 3029192) at https://syllabi.iu.edu/
 
-The site uses a JSON REST API (FOSE framework). We search for all South Bend
+The site uses a JSON REST API (FOSE framework). We search for all Indianapolis
 Campus sections in Spring 2026 (srcdb=4262), fetch detail pages for syllabus
 links, then download Canvas-hosted syllabi as HTML.
 
 Outputs HTML files + a 18-column CSV to:
-  data/indiana_university_south_bend__3029187__syllabus/
+  data/indiana_university_purdue_university_indianapolis__3029192__syllabus/
 """
 
 import csv
@@ -27,7 +27,7 @@ from tqdm import tqdm
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-SCHOOL_ID = "3029187"
+SCHOOL_ID = "3029192"
 SOURCE_URL = "https://syllabi.iu.edu/"
 API_URL = "https://syllabi.iu.edu/api/?page=fose&route="
 SRCDB = "4262"  # Spring 2026
@@ -36,9 +36,9 @@ TERM = "Spring 2026"
 OUTPUT_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "data",
-    "indiana_university_south_bend__3029187__syllabus",
+    "indiana_university_purdue_university_indianapolis__3029192__syllabus",
 )
-CSV_FILENAME = "indiana_university_south_bend__3029187__syllabus.csv"
+CSV_FILENAME = "indiana_university_purdue_university_indianapolis__3029192__syllabus.csv"
 
 SCHEMA_FIELDS = [
     "school_id",
@@ -129,7 +129,7 @@ def file_md5(filepath: str) -> str:
 # API Functions
 # ---------------------------------------------------------------------------
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-def search_sections(session: requests.Session, campus_filter: str = "South Bend Campus") -> list[dict]:
+def search_sections(session: requests.Session, campus_filter: str = "Indianapolis Campus") -> list[dict]:
     """Search for all sections matching the campus filter in the given term."""
     criteria = [{"field": "alias", "value": "*"}]
     if campus_filter:
@@ -336,9 +336,9 @@ def run_probe(session: requests.Session, targets: list[str]):
         print("No valid targets to probe.")
         return
 
-    # Step 1: Search with South Bend Campus filter
-    print("--- Searching with campus='South Bend Campus' ---")
-    sb_results = search_sections(session, campus_filter="South Bend Campus")
+    # Step 1: Search with Indianapolis Campus filter
+    print("--- Searching with campus='Indianapolis Campus' ---")
+    sb_results = search_sections(session, campus_filter="Indianapolis Campus")
     sb_crns = {r.get("crn", ""): r for r in sb_results}
 
     # Step 2: Search without campus filter (broader)
@@ -351,12 +351,12 @@ def run_probe(session: requests.Session, targets: list[str]):
         print(f"Probing: {code} (CRN {crn})")
         print(f"{'='*60}")
 
-        # Check in South Bend results
+        # Check in Indianapolis results
         if crn in sb_crns:
             r = sb_crns[crn]
-            print(f"  FOUND in South Bend search: code={r.get('code')!r}, title={r.get('title')!r}")
+            print(f"  FOUND in Indianapolis search: code={r.get('code')!r}, title={r.get('title')!r}")
         else:
-            print(f"  NOT FOUND in South Bend search results")
+            print(f"  NOT FOUND in Indianapolis search results")
 
         # Check in all-campus results
         if crn in all_crns:
@@ -479,7 +479,7 @@ def run_dedup():
                 canonical = rename_map[fname]
                 row["syllabus_filename"] = canonical
                 row["syllabus_filepath_local"] = (
-                    f"../data/indiana_university_south_bend__{SCHOOL_ID}__syllabus/{canonical}"
+                    f"../data/indiana_university_purdue_university_indianapolis__{SCHOOL_ID}__syllabus/{canonical}"
                 )
                 # Update filesize to canonical file's size
                 canonical_path = os.path.join(OUTPUT_DIR, canonical)
@@ -504,7 +504,7 @@ def run_dedup():
 # ---------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(
-        description="Scrape IU South Bend syllabi from syllabi.iu.edu"
+        description="Scrape IUPUI syllabi from syllabi.iu.edu"
     )
     parser.add_argument(
         "--no-download",
@@ -620,7 +620,7 @@ def main():
                 "instructor": "",
                 "syllabus_filename": ex_filename,
                 "syllabus_file_format": ex_ext,
-                "syllabus_filepath_local": f"../data/indiana_university_south_bend__{SCHOOL_ID}__syllabus/{ex_filename}",
+                "syllabus_filepath_local": f"../data/indiana_university_purdue_university_indianapolis__{SCHOOL_ID}__syllabus/{ex_filename}",
                 "syllabus_filesize": str(filesize),
                 "syllabus_file_source_url": "",
                 "downloaded_on": crawled_on,
@@ -728,7 +728,7 @@ def main():
             "instructor": instructor,
             "syllabus_filename": filename,
             "syllabus_file_format": file_format,
-            "syllabus_filepath_local": f"../data/indiana_university_south_bend__{SCHOOL_ID}__syllabus/{filename}",
+            "syllabus_filepath_local": f"../data/indiana_university_purdue_university_indianapolis__{SCHOOL_ID}__syllabus/{filename}",
             "syllabus_filesize": str(filesize),
             "syllabus_file_source_url": syllabus_url,
             "downloaded_on": now,

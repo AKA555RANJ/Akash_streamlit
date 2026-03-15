@@ -1,19 +1,4 @@
 #!/usr/bin/env python3
-"""
-deanza_syllabi_scraper.py — Scrape course syllabi from De Anza College
-(IPEDS 2995987) at https://www.deanza.edu/
-
-Two-strategy approach:
-  1. PHP API at /_resources/php/apps/syl/_actions.php (structured HTML tables
-     with course, section, title, instructor, and download IDs)
-  2. Fallback: crawl department syllabi pages for direct PDF links
-
-Uses curl_cffi to bypass Cloudflare protection.
-
-Outputs PDF files + a 17-column CSV to:
-  data/de_anza_college__2995987__syllabus/
-"""
-
 import csv
 import os
 import re
@@ -26,9 +11,6 @@ from curl_cffi import requests as cffi_requests
 from bs4 import BeautifulSoup
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 SCHOOL_ID = "2995987"
 BASE_URL = "https://www.deanza.edu"
 SYL_PAGE_URL = "https://www.deanza.edu/syl/"
@@ -62,10 +44,8 @@ SCHEMA_FIELDS = [
     "downloaded_on",
 ]
 
-DELAY = 0.3  # seconds between requests
+DELAY = 0.3
 
-# API quarter codes → human-readable term names and short codes
-# The API uses single-letter quarter codes: W, S, SU, F
 QUARTER_MAP = {
     "W": ("W26", "Winter 2026"),
     "S": ("S26", "Spring 2026"),
@@ -73,23 +53,14 @@ QUARTER_MAP = {
     "F": ("F26", "Fall 2026"),
 }
 
-# Department hosts: some departments are on www2.deanza.edu
 DEPT_PAGE_HOSTS = ["www.deanza.edu", "www2.deanza.edu"]
 
-
-# ---------------------------------------------------------------------------
-# Session helper
-# ---------------------------------------------------------------------------
 def make_session() -> cffi_requests.Session:
-    """Create a curl_cffi session with Chrome TLS fingerprint."""
+
     return cffi_requests.Session(impersonate="chrome")
 
-
-# ---------------------------------------------------------------------------
-# Strategy 1: PHP API
-# ---------------------------------------------------------------------------
 def api_get_departments(session: cffi_requests.Session, year: str, quarter: str) -> list[tuple[str, str]]:
-    """Get department list from the syl API. Returns [(code, name), ...]."""
+
     resp = session.post(API_URL, data={"a": "l", "t": "4", "y": year, "q": quarter}, timeout=15)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "lxml")
@@ -99,9 +70,8 @@ def api_get_departments(session: cffi_requests.Session, year: str, quarter: str)
         if o.get("value")
     ]
 
-
 def api_get_syllabi(session: cffi_requests.Session, year: str, quarter: str, dept_code: str) -> list[dict]:
-    """Get syllabi list for a department from the syl API."""
+
     resp = session.post(API_URL, data={"a": "sll", "y": year, "q": quarter, "d": dept_code}, timeout=15)
     resp.raise_for_status()
     if not resp.text.strip():
@@ -110,40 +80,36 @@ def api_get_syllabi(session: cffi_requests.Session, year: str, quarter: str, dep
     soup = BeautifulSoup(resp.text, "lxml")
     entries = []
 
-    # Parse department name from heading
     h2 = soup.find("h2")
     dept_name = ""
     if h2:
-        # e.g. "<small>2026 WINTER</small><br>Mathematics Department"
+
         small = h2.find("small")
         if small:
             small.extract()
         dept_name = h2.get_text(strip=True)
 
-    # Parse table rows
     for tr in soup.find_all("tr"):
         tds = tr.find_all("td")
         if len(tds) < 5:
             continue
 
-        course_raw = tds[0].get_text(strip=True)  # e.g. "MATH 1A"
-        section = tds[1].get_text(strip=True)       # e.g. "59Z"
-        title = tds[2].get_text(strip=True)          # e.g. "Calculus I"
+        course_raw = tds[0].get_text(strip=True)
+        section = tds[1].get_text(strip=True)
+        title = tds[2].get_text(strip=True)
         instructor_el = tds[3].find("a")
         instructor = instructor_el.get_text(strip=True) if instructor_el else tds[3].get_text(strip=True)
 
-        # Find download link
         download_link = tds[4].find("a", href=True)
         if not download_link:
             continue
         href = download_link["href"]
-        # Extract document ID from href like /schedule/_download.php?id=7072
+
         m = re.search(r"id=(\d+)", href)
         if not m:
             continue
         doc_id = m.group(1)
 
-        # Parse course code
         parts = course_raw.split()
         if len(parts) >= 2:
             dept = parts[0]
@@ -169,12 +135,10 @@ def api_get_syllabi(session: cffi_requests.Session, year: str, quarter: str, dep
 
     return entries
 
-
 def scrape_via_api(session: cffi_requests.Session, target_quarters: list[str] | None = None) -> list[dict]:
-    """Use the PHP API to discover all syllabi for 2026."""
+
     print("Strategy 1: Using PHP syl API ...")
 
-    # Establish session
     session.get(SYL_PAGE_URL, timeout=15)
 
     quarters = target_quarters or list(QUARTER_MAP.keys())
@@ -192,7 +156,7 @@ def scrape_via_api(session: cffi_requests.Session, target_quarters: list[str] | 
         for dept_code, dept_name in depts:
             entries = api_get_syllabi(session, "2026", quarter, dept_code)
             if entries:
-                # Attach term info
+
                 for e in entries:
                     e["term_code"] = term_code
                     e["term"] = term_name
@@ -204,21 +168,11 @@ def scrape_via_api(session: cffi_requests.Session, target_quarters: list[str] | 
     print(f"\n  API total: {len(all_entries)} syllabi")
     return all_entries
 
-
-# ---------------------------------------------------------------------------
-# Strategy 2: Department page crawl (fallback)
-# ---------------------------------------------------------------------------
 def parse_pdf_filename(filename: str) -> dict:
-    """Parse De Anza syllabus PDF filename.
 
-    Known patterns:
-      Instructor-DEPT-NUM-SECTION-TERM.pdf  (e.g. Arvizu-MATH-32-Q10-W26.pdf)
-      Instructor-DEPT-NUM-TERM.pdf          (e.g. Smith-CIS-22A-S26.pdf)
-    """
     base = filename.rsplit(".", 1)[0] if "." in filename else filename
     term_codes = "|".join(tc for tc, _ in QUARTER_MAP.values())
 
-    # Full pattern: Instructor-DEPT-NUM-SECTION-TERM
     m = re.match(
         rf"^(.+?)-([A-Z][A-Z/& ]{{0,5}})-(\d+[A-Z]?)-([A-Z0-9]+)-({term_codes})$",
         base,
@@ -232,7 +186,6 @@ def parse_pdf_filename(filename: str) -> dict:
             "term_code": m.group(5),
         }
 
-    # Without section: Instructor-DEPT-NUM-TERM
     m = re.match(
         rf"^(.+?)-([A-Z][A-Z/& ]{{0,5}})-(\d+[A-Z]?)-({term_codes})$",
         base,
@@ -248,9 +201,8 @@ def parse_pdf_filename(filename: str) -> dict:
 
     return {}
 
-
 def crawl_department_pages(session: cffi_requests.Session) -> list[dict]:
-    """Crawl department syllabi HTML pages for direct PDF links."""
+
     print("\nStrategy 2: Crawling department syllabi pages ...")
 
     dept_slugs = [
@@ -289,7 +241,7 @@ def crawl_department_pages(session: cffi_requests.Session) -> list[dict]:
                                 "course_title": "",
                                 "doc_id": "",
                             })
-                    break  # found page on this host
+                    break
                 except Exception:
                     continue
                 time.sleep(DELAY)
@@ -297,10 +249,6 @@ def crawl_department_pages(session: cffi_requests.Session) -> list[dict]:
     print(f"  Department crawl total: {len(entries)} syllabi")
     return entries
 
-
-# ---------------------------------------------------------------------------
-# Download & CSV
-# ---------------------------------------------------------------------------
 FILE_SIGNATURES = {
     b"%PDF": ("pdf", ".pdf"),
     b"PK\x03\x04": ("docx", ".docx"),
@@ -309,32 +257,29 @@ FILE_SIGNATURES = {
     b"<html": ("html", ".html"),
 }
 
-
 def detect_file_format(data: bytes) -> tuple[str, str]:
-    """Detect file format from magic bytes. Returns (format_name, extension)."""
+
     for sig, (fmt, ext) in FILE_SIGNATURES.items():
         if data[:len(sig)] == sig:
             return fmt, ext
-    return "pdf", ".pdf"  # default
-
+    return "pdf", ".pdf"
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def download_file(session: cffi_requests.Session, url: str, filepath: str) -> tuple[int, str, str]:
-    """Download a syllabus file. Returns (filesize, actual_format, actual_ext)."""
+
     resp = session.get(url, timeout=60)
     resp.raise_for_status()
     fmt, ext = detect_file_format(resp.content)
-    # If extension doesn't match, fix the filepath
+
     if not filepath.endswith(ext):
         filepath = filepath.rsplit(".", 1)[0] + ext
     with open(filepath, "wb") as f:
         f.write(resp.content)
     return len(resp.content), fmt, ext
 
-
 def build_row(entry: dict, filename: str, file_format: str, filesize: int,
               crawled_on: str, downloaded_on: str = "") -> dict:
-    """Build a CSV row dict from a syllabus entry."""
+
     return {
         "school_id": SCHOOL_ID,
         "term_code": entry.get("term_code", ""),
@@ -357,10 +302,6 @@ def build_row(entry: dict, filename: str, file_format: str, filesize: int,
         "downloaded_on": downloaded_on or crawled_on,
     }
 
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(
         description="Scrape De Anza College syllabi (IPEDS 2995987)"
@@ -383,21 +324,18 @@ def main():
     session = make_session()
     crawled_on = datetime.now(timezone.utc).isoformat()
 
-    # Strategy 1: PHP API
     entries = scrape_via_api(session, target_quarters=args.terms)
 
-    # Strategy 2: Fallback to department page crawl if API found nothing
     if not entries:
         dept_entries = crawl_department_pages(session)
         for e in dept_entries:
-            # Infer term from term_code
+
             for q, (tc, tn) in QUARTER_MAP.items():
                 if e.get("term_code") == tc:
                     e["term"] = tn
                     break
         entries = dept_entries
 
-    # Deduplicate by (course_code, section_code, term_code)
     seen = set()
     unique_entries = []
     for e in entries:
@@ -426,7 +364,6 @@ def main():
         print(f"\nTotal: {len(entries)} syllabi")
         return
 
-    # Download PDFs
     rows: list[dict] = []
     total = len(entries)
     downloaded = 0
@@ -434,15 +371,14 @@ def main():
     errors = 0
 
     for i, entry in enumerate(entries, 1):
-        # Build base filename from metadata: YEAR_Q_DEPT_NUM_SECTION
+
         tc = entry.get("term_code", "W26")
         cc = entry.get("course_code", "UNKNOWN").replace("-", "_")
         sec = entry.get("section_code", "")
         base_stem = f"2026_{tc}_{cc}_{sec}" if sec else f"2026_{tc}_{cc}"
-        # Sanitize
+
         base_stem = re.sub(r'[<>:"/\\|?*]', '_', base_stem)
 
-        # Check for any existing file with this stem (any extension)
         existing = [f for f in os.listdir(OUTPUT_DIR)
                     if f.startswith(base_stem) and f != base_stem and os.path.getsize(os.path.join(OUTPUT_DIR, f)) > 0]
         if existing:
@@ -455,7 +391,6 @@ def main():
             rows.append(build_row(entry, cached_file, fmt, filesize, crawled_on))
             continue
 
-        # Download with .pdf as initial extension (will be corrected by detect)
         filepath = os.path.join(OUTPUT_DIR, base_stem + ".pdf")
         try:
             filesize, fmt, ext = download_file(session, entry["pdf_url"], filepath)
@@ -471,11 +406,9 @@ def main():
 
         time.sleep(DELAY)
 
-    # Sort by term, department, course, section
     rows.sort(key=lambda r: (r["term_code"], r["department_code"],
                               r["course_code"], r["section_code"]))
 
-    # Write CSV
     csv_path = os.path.join(OUTPUT_DIR, CSV_FILENAME)
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=SCHEMA_FIELDS)
@@ -488,7 +421,6 @@ def main():
     print(f"  Errors: {errors}")
     print(f"Output: {OUTPUT_DIR}")
     print(f"CSV: {csv_path} ({len(rows)} rows)")
-
 
 if __name__ == "__main__":
     main()

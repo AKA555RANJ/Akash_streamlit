@@ -1,20 +1,4 @@
 #!/usr/bin/env python3
-"""
-ufl_syllabi_scraper.py — Scrape 2026 course syllabi from University of Florida
-(IPEDS 3012766) at https://ufl.simplesyllabus.com/en-US/syllabus-library
-
-Two-phase approach:
-  1. Use requests to enumerate all syllabi via the /api2/doc-library-search
-     REST endpoint (paginated, 50 per page, ~1628 total for 2026)
-  2. Use Playwright to render each syllabus SPA page and save as PDF
-
-The SimpleSyllabus platform is an Angular SPA — syllabus content is rendered
-client-side, so we must use a real browser to capture it.
-
-Outputs PDF files + a 17-column CSV to:
-  data/university_of_florida__3012766__syllabus/
-"""
-
 from __future__ import annotations
 
 import csv
@@ -27,9 +11,6 @@ import requests
 from tenacity import retry, stop_after_attempt, wait_exponential
 from tqdm import tqdm
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 SCHOOL_ID = "3012766"
 SITE_BASE = "https://ufl.simplesyllabus.com"
 LIBRARY_URL = f"{SITE_BASE}/en-US/syllabus-library"
@@ -64,7 +45,7 @@ SCHEMA_FIELDS = [
 
 YEAR_FILTER = "2026"
 PAGE_SIZE = 50
-DELAY = 0.5  # seconds between requests
+DELAY = 0.5
 
 HEADERS = {
     "User-Agent": (
@@ -75,13 +56,9 @@ HEADERS = {
     "Accept": "application/json, text/html, */*",
 }
 
-
-# ---------------------------------------------------------------------------
-# Phase 1: Enumerate all syllabi via REST API
-# ---------------------------------------------------------------------------
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def fetch_search_page(session: requests.Session, page: int) -> dict:
-    """Fetch one page from the doc-library-search API."""
+
     params = {
         "term_statuses[]": "current",
         "page": page,
@@ -90,13 +67,11 @@ def fetch_search_page(session: requests.Session, page: int) -> dict:
     resp.raise_for_status()
     return resp.json()
 
-
 def enumerate_syllabi(session: requests.Session) -> list[dict]:
-    """Paginate through the search API and collect all syllabus items."""
+
     all_items = []
     page = 0
 
-    # First page to get total
     data = fetch_search_page(session, 0)
     total = data["pagination"]["total"]
     items = data["items"]
@@ -104,7 +79,6 @@ def enumerate_syllabi(session: requests.Session) -> list[dict]:
     print(f"  Total syllabi available: {total}")
     print(f"  Page 0: {len(items)} items")
 
-    # Remaining pages
     num_pages = (total + PAGE_SIZE - 1) // PAGE_SIZE
     for page in tqdm(range(1, num_pages), desc="  Fetching pages", unit="page"):
         data = fetch_search_page(session, page)
@@ -114,7 +88,6 @@ def enumerate_syllabi(session: requests.Session) -> list[dict]:
         all_items.extend(page_items)
         time.sleep(DELAY)
 
-    # Filter to 2026 terms only
     filtered = [
         item for item in all_items
         if YEAR_FILTER in item.get("term_name", "")
@@ -122,20 +95,14 @@ def enumerate_syllabi(session: requests.Session) -> list[dict]:
     print(f"  After filtering to {YEAR_FILTER}: {len(filtered)} items (from {len(all_items)} total)")
     return filtered
 
-
 def parse_title(title: str) -> tuple[str, str, str]:
-    """Parse SimpleSyllabus title like 'ADV 3001 15772' into
-    (department_code, course_code, section_code).
 
-    Returns e.g. ('ADV', 'ADV-3001', '15772').
-    Some titles have suffixes like 'DIG 4527C 11405'.
-    """
     parts = title.strip().split()
     if len(parts) >= 3:
         dept = parts[0]
         course_num = parts[1]
         section = parts[2]
-        # Handle extra parts (e.g., "HLP 6535 HHU THEM 17726")
+
         if len(parts) > 3:
             section = parts[-1]
         course_code = f"{dept}-{course_num}"
@@ -145,15 +112,8 @@ def parse_title(title: str) -> tuple[str, str, str]:
     else:
         return title, title, ""
 
-
-# ---------------------------------------------------------------------------
-# Phase 2: Download syllabi using Playwright
-# ---------------------------------------------------------------------------
 def download_syllabi_playwright(items: list[dict], crawled_on: str) -> list[dict]:
-    """Use Playwright to render each syllabus page and save as PDF.
 
-    Returns list of CSV row dicts.
-    """
     from playwright.sync_api import sync_playwright
 
     rows: list[dict] = []
@@ -178,19 +138,16 @@ def download_syllabi_playwright(items: list[dict], crawled_on: str) -> list[dict
 
             dept_code, course_code, section_code = parse_title(title)
 
-            # Primary instructor (first editor)
             instructor = ""
             if editors:
                 instructor = editors[0].get("full_name", "")
 
-            # Build filename: {COURSE_CODE}__{first8chars_of_code}.pdf
             code_short = code[:8]
             safe_cc = re.sub(r'[<>:"/\\|?*\s]', "_", course_code)
             base_stem = f"{safe_cc}__{code_short}"
             filename = f"{base_stem}.pdf"
             filepath = os.path.join(OUTPUT_DIR, filename)
 
-            # Resume: skip if already downloaded
             if os.path.isfile(filepath) and os.path.getsize(filepath) > 0:
                 filesize = os.path.getsize(filepath)
                 cached += 1
@@ -201,12 +158,11 @@ def download_syllabi_playwright(items: list[dict], crawled_on: str) -> list[dict
                 ))
                 continue
 
-            # Render syllabus page as PDF
             syllabus_url = f"{SITE_BASE}/en-US/doc/{code}/syllabus"
             try:
                 page = context.new_page()
                 page.goto(syllabus_url, wait_until="networkidle", timeout=30000)
-                # Wait for Angular to render content
+
                 try:
                     page.wait_for_selector(
                         "app-doc-viewer, .doc-content, .syllabus-content, main",
@@ -214,7 +170,7 @@ def download_syllabi_playwright(items: list[dict], crawled_on: str) -> list[dict
                     )
                 except Exception:
                     pass
-                # Small extra wait for dynamic content
+
                 time.sleep(1)
 
                 page.pdf(path=filepath, format="Letter", print_background=True)
@@ -222,7 +178,7 @@ def download_syllabi_playwright(items: list[dict], crawled_on: str) -> list[dict
 
                 filesize = os.path.getsize(filepath)
                 if filesize < 5000:
-                    # Too small — likely an empty/error page
+
                     tqdm.write(f"  [WARN] {course_code}: PDF too small ({filesize} bytes), keeping anyway")
 
                 now = datetime.now(timezone.utc).isoformat()
@@ -248,14 +204,13 @@ def download_syllabi_playwright(items: list[dict], crawled_on: str) -> list[dict
     print(f"  Errors:     {errors}")
     return rows
 
-
 def _build_row(
     dept_code: str, course_code: str, section_code: str, course_title: str,
     instructor: str, term_name: str, term_id: str, code: str,
     filename: str, file_format: str, filesize: int,
     crawled_on: str, downloaded_on: str,
 ) -> dict:
-    """Build a CSV row dict."""
+
     return {
         "school_id": SCHOOL_ID,
         "term_code": term_id,
@@ -278,15 +233,10 @@ def _build_row(
         "downloaded_on": downloaded_on,
     }
 
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     crawled_on = datetime.now(timezone.utc).isoformat()
 
-    # Phase 1: Enumerate syllabi via REST API
     print("Phase 1: Enumerating syllabi via API ...\n")
     session = requests.Session()
     session.headers.update(HEADERS)
@@ -296,7 +246,6 @@ def main():
         print("No 2026 syllabi found. Exiting.")
         return
 
-    # Show term breakdown
     term_counts: dict[str, int] = {}
     for item in items:
         t = item.get("term_name", "Unknown")
@@ -305,14 +254,11 @@ def main():
     for t, c in sorted(term_counts.items()):
         print(f"    {t}: {c}")
 
-    # Phase 2: Download syllabi with Playwright
     print(f"\nPhase 2: Downloading {len(items)} syllabi with Playwright ...\n")
     rows = download_syllabi_playwright(items, crawled_on)
 
-    # Sort by term, department, course
     rows.sort(key=lambda r: (r["term"], r["department_code"], r["course_code"]))
 
-    # Write CSV
     csv_path = os.path.join(OUTPUT_DIR, CSV_FILENAME)
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=SCHEMA_FIELDS)
@@ -322,7 +268,6 @@ def main():
     print(f"\nDone! {len(rows)} syllabi processed")
     print(f"Output: {OUTPUT_DIR}")
     print(f"CSV:    {csv_path} ({len(rows)} rows)")
-
 
 if __name__ == "__main__":
     main()

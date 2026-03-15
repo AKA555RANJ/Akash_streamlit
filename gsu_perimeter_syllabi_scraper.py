@@ -1,16 +1,4 @@
 #!/usr/bin/env python3
-"""
-gsu_perimeter_syllabi_scraper.py — Scrape course syllabi from Georgia State
-University - Perimeter College (IPEDS 3017988) at https://cdn.gsu.edu/syllabi/
-
-The site is an Angular SPA backed by static JSON files on a CDN. All course
-metadata lives in per-term JSON files, and syllabus PDFs are directly
-downloadable from the CDN.
-
-Outputs PDF files + an 18-column CSV to:
-  data/georgia_state_university_perimeter_college__3017988__syllabus/
-"""
-
 import csv
 import os
 import argparse
@@ -21,9 +9,6 @@ import requests
 from tenacity import retry, stop_after_attempt, wait_exponential
 from tqdm import tqdm
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 SCHOOL_ID = "3017988"
 SOURCE_URL = "https://cdn.gsu.edu/syllabi/"
 TERMS_URL = "https://cdn.gsu.edu/static/syllabi-public/terms.json"
@@ -69,32 +54,26 @@ HEADERS = {
     "Accept": "application/json, */*",
 }
 
-MAX_WORKERS = 8  # concurrent PDF downloads
+MAX_WORKERS = 8
 
-
-# ---------------------------------------------------------------------------
-# API Functions
-# ---------------------------------------------------------------------------
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def fetch_terms(session: requests.Session) -> list[dict]:
-    """Fetch the list of available terms from the CDN."""
+
     resp = session.get(TERMS_URL, headers=HEADERS, timeout=15)
     resp.raise_for_status()
     data = resp.json()
     return data.get("terms", data) if isinstance(data, dict) else data
 
-
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def fetch_term_data(session: requests.Session, term_value: str) -> dict:
-    """Fetch course data for a specific term."""
+
     url = TERM_DATA_URL.format(term_value=term_value)
     resp = session.get(url, headers=HEADERS, timeout=30)
     resp.raise_for_status()
     return resp.json()
 
-
 def download_pdf(session: requests.Session, url: str, filepath: str) -> tuple[int, str]:
-    """Download a PDF. Returns (filesize, skip_reason)."""
+
     try:
         resp = session.get(url, headers=HEADERS, timeout=(5, 30))
         resp.raise_for_status()
@@ -104,10 +83,6 @@ def download_pdf(session: requests.Session, url: str, filepath: str) -> tuple[in
     except Exception as e:
         return 0, f"download_error: {e}"
 
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(
         description="Scrape GSU Perimeter College syllabi from cdn.gsu.edu"
@@ -123,7 +98,6 @@ def main():
     session = requests.Session()
     crawled_on = datetime.now(timezone.utc).isoformat()
 
-    # Step 1: Fetch terms and filter to 2026
     print("Fetching terms...")
     all_terms = fetch_terms(session)
     terms_2026 = [t for t in all_terms if str(t.get("value", "")).startswith(YEAR_PREFIX)]
@@ -134,8 +108,7 @@ def main():
         print("No 2026 terms found. Aborting.")
         return
 
-    # Step 2: Fetch course data for each term and filter to Perimeter College
-    all_courses: list[dict] = []  # (course_dict, term_code, term_name)
+    all_courses: list[dict] = []
 
     for term in terms_2026:
         term_value = str(term["value"])
@@ -145,7 +118,6 @@ def main():
         courses = term_data.get("courses", [])
         print(f"  Total courses in term: {len(courses)}")
 
-        # Filter: Perimeter College + has syllabus
         filtered = [
             c for c in courses
             if c.get("collegeName") == COLLEGE_FILTER
@@ -169,8 +141,7 @@ def main():
         print(f"\nTotal: {len(all_courses)} syllabi across {len(terms_2026)} terms")
         return
 
-    # Step 3: Build download tasks
-    download_tasks: list[tuple[str, str, dict]] = []  # (url, filepath, row)
+    download_tasks: list[tuple[str, str, dict]] = []
     rows: list[dict] = []
 
     for course, term_code, term_name in all_courses:
@@ -211,7 +182,6 @@ def main():
             "skip_reason": "",
         }
 
-        # Resume: skip already-downloaded files
         if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
             row["syllabus_filesize"] = str(os.path.getsize(filepath))
             row["downloaded_on"] = crawled_on
@@ -224,7 +194,6 @@ def main():
     if already:
         print(f"Resuming: {already} already downloaded, {len(download_tasks)} remaining")
 
-    # Step 4: Download PDFs concurrently
     errors = 0
     if download_tasks:
         print(f"\nDownloading {len(download_tasks)} PDFs (workers={MAX_WORKERS})...")
@@ -251,7 +220,6 @@ def main():
 
                 rows.append(row)
 
-    # Step 5: Write CSV (sort by term_code, course_code, section_code)
     rows.sort(key=lambda r: (r["term_code"], r["course_code"], r["section_code"]))
 
     csv_path = os.path.join(OUTPUT_DIR, CSV_FILENAME)
@@ -265,7 +233,6 @@ def main():
     print(f"  Downloaded: {downloaded}")
     print(f"  Errors: {errors}")
     print(f"CSV: {csv_path} ({len(rows)} rows)")
-
 
 if __name__ == "__main__":
     main()

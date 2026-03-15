@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""
-cedarcrest_syllabi_scraper.py — Scrape course syllabi from Cedar Crest College
-at https://my.cedarcrest.edu/ics/staticpages/syllabilist.aspx
-
-ASP.NET WebForms page: GET to obtain ViewState, then POST with selected term.
-Three terms for 2025-2026: Fall (202510), Winter (202520), Spring (202530).
-Outputs PDF/DOCX/DOC files + a CSV with 17-column schema to:
-  data/cedar_crest_college__3083372__syllabus/
-"""
-
 import csv
 import os
 import re
@@ -20,9 +10,6 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 SCHOOL_ID = "3083372"
 SOURCE_URL = "https://my.cedarcrest.edu/ics/staticpages/syllabilist.aspx"
 
@@ -74,17 +61,10 @@ DOWNLOAD_HEADERS = {
     "Referer": SOURCE_URL,
 }
 
-DELAY = 0.3  # seconds between downloads
+DELAY = 0.3
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 def parse_course_code_cell(raw: str) -> dict:
-    """Parse course code string like 'ACC  101  66   L' into components.
 
-    Returns dict with dept_code, course_number, section_code, course_type.
-    """
     parts = raw.split()
     result = {
         "dept_code": "",
@@ -102,9 +82,8 @@ def parse_course_code_cell(raw: str) -> dict:
         result["course_type"] = parts[3]
     return result
 
-
 def get_file_format(url: str) -> str:
-    """Determine file format from URL extension."""
+
     lower = url.lower()
     if lower.endswith(".pdf"):
         return "pdf"
@@ -114,17 +93,12 @@ def get_file_format(url: str) -> str:
         return "doc"
     return ""
 
-
 def filename_from_url(url: str) -> str:
-    """Extract filename from URL path."""
+
     return url.rsplit("/", 1)[-1]
 
-
-# ---------------------------------------------------------------------------
-# Scraper
-# ---------------------------------------------------------------------------
 def get_viewstate(session: requests.Session) -> dict:
-    """GET the page and extract ASP.NET hidden fields."""
+
     resp = session.get(SOURCE_URL, headers=HEADERS, timeout=30)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "lxml")
@@ -136,9 +110,8 @@ def get_viewstate(session: requests.Session) -> dict:
             fields[name] = tag.get("value", "")
     return fields
 
-
 def scrape_term(session: requests.Session, term_code: str, hidden_fields: dict) -> list[dict]:
-    """POST with the selected term and parse the results table."""
+
     data = dict(hidden_fields)
     data["ddlTerm"] = term_code
     data["btnSubmit"] = "Submit"
@@ -158,7 +131,6 @@ def scrape_term(session: requests.Session, term_code: str, hidden_fields: dict) 
         if len(cells) < 3:
             continue
 
-        # Cell 0: course code with link to syllabus
         link = cells[0].find("a", href=True)
         if not link:
             continue
@@ -167,16 +139,13 @@ def scrape_term(session: requests.Session, term_code: str, hidden_fields: dict) 
         href = link["href"]
         syllabus_url = urljoin(SOURCE_URL, href)
 
-        # Cell 1: course title
         title = cells[1].get_text(strip=True) if len(cells) > 1 else ""
 
-        # Cell 2: instructor
         instructor = cells[2].get_text(strip=True) if len(cells) > 2 else ""
 
-        # Determine file format
         file_format = get_file_format(syllabus_url)
         if not file_format:
-            # Extensionless or broken link — skip
+
             print(f"  [SKIP] No valid extension for: {syllabus_url}")
             continue
 
@@ -197,15 +166,13 @@ def scrape_term(session: requests.Session, term_code: str, hidden_fields: dict) 
 
     return entries
 
-
 def scrape_all_terms(session: requests.Session) -> list[tuple[str, str, dict]]:
-    """Scrape all terms, returning (term_code, term_name, entry) tuples."""
+
     all_entries = []
 
     for term_code, term_name in TERMS_2025_2026.items():
         print(f"\n=== {term_name} ({term_code}) ===")
 
-        # Get fresh ViewState for each term
         hidden_fields = get_viewstate(session)
         time.sleep(DELAY)
 
@@ -217,16 +184,15 @@ def scrape_all_terms(session: requests.Session) -> list[tuple[str, str, dict]]:
 
     return all_entries
 
-
 def download_and_build_rows(
     session: requests.Session,
     all_entries: list[tuple[str, str, dict]],
     crawled_on: str,
     no_download: bool = False,
 ) -> list[dict]:
-    """Download files (deduplicating by URL) and build CSV rows."""
+
     rows = []
-    downloaded_urls: dict[str, str] = {}  # url -> filename
+    downloaded_urls: dict[str, str] = {}
     total = len(all_entries)
 
     for i, (term_code, term_name, entry) in enumerate(all_entries, 1):
@@ -294,7 +260,6 @@ def download_and_build_rows(
 
     return rows
 
-
 def main():
     parser = argparse.ArgumentParser(
         description="Scrape Cedar Crest College syllabi"
@@ -311,7 +276,6 @@ def main():
     session = requests.Session()
     crawled_on = datetime.now(timezone.utc).isoformat()
 
-    # Step 1: scrape all terms
     print("=== Scraping Cedar Crest College syllabi ===")
     all_entries = scrape_all_terms(session)
     if not all_entries:
@@ -320,11 +284,9 @@ def main():
 
     print(f"\nFound {len(all_entries)} total entries across all terms\n")
 
-    # Step 2: download files and build CSV rows
     print("=== Downloading files ===")
     rows = download_and_build_rows(session, all_entries, crawled_on, args.no_download)
 
-    # Step 3: write CSV
     csv_path = os.path.join(OUTPUT_DIR, CSV_FILENAME)
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=SCHEMA_FIELDS)
@@ -333,7 +295,6 @@ def main():
 
     print(f"\nDone! {len(rows)} syllabi saved to {OUTPUT_DIR}")
     print(f"CSV: {csv_path} ({len(rows)} rows)")
-
 
 if __name__ == "__main__":
     main()

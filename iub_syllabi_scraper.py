@@ -1,16 +1,4 @@
 #!/usr/bin/env python3
-"""
-iub_syllabi_scraper.py — Scrape course syllabi from Indiana University Bloomington
-(IPEDS 3029188) at https://syllabi.iu.edu/
-
-The site uses a JSON REST API (FOSE framework). We search for all Bloomington
-Campus sections in Spring 2026 (srcdb=4262), fetch detail pages for syllabus
-links, then download Canvas-hosted syllabi as HTML.
-
-Outputs HTML files + a 17-column CSV to:
-  data/indiana_university_bloomington__3029188__syllabus/
-"""
-
 import csv
 import os
 import re
@@ -23,13 +11,10 @@ from bs4 import BeautifulSoup
 from tenacity import retry, stop_after_attempt, wait_exponential
 from tqdm import tqdm
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 SCHOOL_ID = "3029188"
 SOURCE_URL = "https://syllabi.iu.edu/"
 API_URL = "https://syllabi.iu.edu/api/?page=fose&route="
-SRCDB = "4262"  # Spring 2026
+SRCDB = "4262"
 TERM = "Spring 2026"
 
 OUTPUT_DIR = os.path.join(
@@ -71,38 +56,27 @@ HEADERS = {
     "Referer": "https://syllabi.iu.edu/",
 }
 
-DELAY = 0.5  # seconds between requests
+DELAY = 0.5
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 def normalize_code(raw: str) -> str:
-    """'AAAD-A 100' → 'AAAD-A-100'"""
+
     return raw.strip().replace(" ", "-")
 
-
 def parse_department_code(code: str) -> str:
-    """'AAAD-A-100' → 'AAAD-A', 'BUS-A-201' → 'BUS-A', 'ENG-W-131' → 'ENG-W'
 
-    IU uses compound department codes like BUS-A, ENG-W, etc.
-    The department is everything before the last numeric segment.
-    """
     m = re.match(r"(.+?)-\d+", code)
     return m.group(1) if m else code
 
-
 def parse_instructor(html: str) -> str:
-    """Extract instructor name from instructordetail_html."""
+
     if not html:
         return ""
     soup = BeautifulSoup(html, "lxml")
     text = soup.get_text(separator=" ", strip=True)
     return re.sub(r"\s+", " ", text).strip()
 
-
 def extract_syllabus_url(html: str) -> str | None:
-    """Extract the Canvas syllabus URL from external_syllabi_links HTML."""
+
     if not html:
         return None
     soup = BeautifulSoup(html, "lxml")
@@ -111,13 +85,9 @@ def extract_syllabus_url(html: str) -> str | None:
         return link["href"]
     return None
 
-
-# ---------------------------------------------------------------------------
-# API Functions
-# ---------------------------------------------------------------------------
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def search_sections(session: requests.Session) -> list[dict]:
-    """Search for all Bloomington Campus sections in the given term."""
+
     payload = {
         "other": {"srcdb": SRCDB},
         "criteria": [
@@ -137,10 +107,9 @@ def search_sections(session: requests.Session) -> list[dict]:
     print(f"Found {len(results)} sections from search API")
     return results
 
-
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def get_section_detail(session: requests.Session, code: str, crn: str) -> dict:
-    """Fetch detail for a single section, returning the JSON response."""
+
     payload = {
         "group": f"code:{code}",
         "key": f"crn:{crn}",
@@ -156,26 +125,18 @@ def get_section_detail(session: requests.Session, code: str, crn: str) -> dict:
     resp.raise_for_status()
     return resp.json()
 
-
 CANVAS_BASE = "https://iu.instructure.com"
 
-
 def _canvas_download_url(url: str) -> str:
-    """Transform a Canvas file preview URL into a direct download URL.
 
-    '/courses/ID/files/FID?verifier=X&wrap=1'
-    → 'https://iu.instructure.com/courses/ID/files/FID/download?verifier=X'
-    """
     from urllib.parse import urlparse, parse_qs, urlencode
 
     parsed = urlparse(url)
-    path = parsed.path  # e.g. /courses/123/files/456
+    path = parsed.path
 
-    # Insert /download before query string
     if "/download" not in path:
         path = path.rstrip("/") + "/download"
 
-    # Remove wrap=1 from query params, keep verifier
     params = parse_qs(parsed.query)
     params.pop("wrap", None)
     clean_query = urlencode({k: v[0] for k, v in params.items()})
@@ -184,11 +145,9 @@ def _canvas_download_url(url: str) -> str:
     netloc = parsed.netloc or "iu.instructure.com"
     return f"{scheme}://{netloc}{path}?{clean_query}"
 
-
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def _download_url(session: requests.Session, url: str, filepath: str) -> int:
-    """Download a URL to filepath. Returns filesize in bytes."""
-    # Transform Canvas file URLs to direct download URLs
+
     if "instructure.com" in url or url.startswith("/courses/"):
         url = _canvas_download_url(url)
 
@@ -202,13 +161,8 @@ def _download_url(session: requests.Session, url: str, filepath: str) -> int:
         f.write(resp.content)
     return len(resp.content)
 
-
 def download_syllabus(session: requests.Session, url: str, filepath: str) -> tuple[int, str, str]:
-    """Download a Canvas syllabus page and extract the syllabus content.
 
-    Returns (filesize, actual_filepath, file_format).
-    filesize=0 means no content found.
-    """
     dl_headers = {
         "User-Agent": HEADERS["User-Agent"],
         "Accept": "text/html,application/xhtml+xml",
@@ -219,36 +173,32 @@ def download_syllabus(session: requests.Session, url: str, filepath: str) -> tup
 
     content_type = resp.headers.get("Content-Type", "")
 
-    # If it's a PDF, save directly
     if "application/pdf" in content_type or url.lower().endswith(".pdf"):
         pdf_path = re.sub(r"\.html$", ".pdf", filepath)
         with open(pdf_path, "wb") as f:
             f.write(resp.content)
         return len(resp.content), pdf_path, "pdf"
 
-    # Otherwise treat as HTML — extract syllabus div
     html = resp.text
     soup = BeautifulSoup(html, "lxml")
 
-    # Try to find the Canvas syllabus content div
     syllabus_div = soup.find("div", id="course_syllabus")
 
     if syllabus_div:
-        # Check if the div has substantial inline text or only file links
+
         text_content = syllabus_div.get_text(strip=True)
         file_links = syllabus_div.find_all(
             "a", class_="instructure_file_link", href=True
         )
 
         if len(text_content) < 80 and file_links:
-            # The syllabus is a file attachment — download the first file link
+
             link = file_links[0]
             href = link["href"]
             file_url = href if href.startswith("http") else CANVAS_BASE + href
             title = link.get("title", "")
 
-            # Determine extension from title or URL
-            ext = "pdf"  # default
+            ext = "pdf"
             for e in ("pdf", "docx", "doc", "xlsx", "pptx"):
                 if title.lower().endswith(f".{e}") or file_url.lower().endswith(f".{e}"):
                     ext = e
@@ -257,11 +207,11 @@ def download_syllabus(session: requests.Session, url: str, filepath: str) -> tup
             file_path = re.sub(r"\.html$", f".{ext}", filepath)
             try:
                 size = _download_url(session, file_url, file_path)
-                # Verify the actual file type matches extension
+
                 with open(file_path, "rb") as fcheck:
                     magic = fcheck.read(4)
                 if ext == "pdf" and magic[:2] == b"PK":
-                    # Actually a docx/zip, rename
+
                     new_path = re.sub(r"\.pdf$", ".docx", file_path)
                     os.rename(file_path, new_path)
                     file_path = new_path
@@ -269,15 +219,12 @@ def download_syllabus(session: requests.Session, url: str, filepath: str) -> tup
                 return size, file_path, ext
             except Exception as e:
                 tqdm.write(f"    [WARN] Could not download linked file: {e}")
-                # Fall through to save HTML as-is
 
-        # Has substantial inline content — save it
         content = str(syllabus_div)
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
         return os.path.getsize(filepath), filepath, "html"
 
-    # Fall back to full body
     body = soup.find("body")
     if body and len(body.get_text(strip=True)) > 50:
         content = str(body)
@@ -287,10 +234,6 @@ def download_syllabus(session: requests.Session, url: str, filepath: str) -> tup
 
     return 0, filepath, "html"
 
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(
         description="Scrape IU Bloomington syllabi from syllabi.iu.edu"
@@ -305,11 +248,10 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     session = requests.Session()
-    # Hit the main page first to establish session cookies
+
     session.get(SOURCE_URL, headers={"User-Agent": HEADERS["User-Agent"]}, timeout=30)
     crawled_on = datetime.now(timezone.utc).isoformat()
 
-    # Step 1: Search for all sections
     sections = search_sections(session)
     if not sections:
         print("No sections found. Aborting.")
@@ -324,7 +266,6 @@ def main():
             print(f"  {code} (CRN {crn}): {title}")
         return
 
-    # Step 2: For each section, get details and download syllabus
     rows: list[dict] = []
     skipped = 0
     errors = 0
@@ -340,7 +281,6 @@ def main():
         base_name = f"{code}__{crn}"
         filepath = os.path.join(OUTPUT_DIR, f"{base_name}.html")
 
-        # Resume: skip if already downloaded (check any extension)
         existing = None
         for ext in ("html", "pdf", "docx", "doc"):
             candidate = os.path.join(OUTPUT_DIR, f"{base_name}.{ext}")
@@ -373,7 +313,6 @@ def main():
             })
             continue
 
-        # Fetch section detail
         try:
             detail = get_section_detail(session, raw_code, crn)
         except Exception as e:
@@ -390,7 +329,6 @@ def main():
             time.sleep(DELAY)
             continue
 
-        # Download syllabus — returns (filesize, actual_filepath, file_format)
         try:
             filesize, actual_path, file_format = download_syllabus(session, syllabus_url, filepath)
         except Exception as e:
@@ -402,7 +340,7 @@ def main():
         if filesize == 0:
             tqdm.write(f"  [WARN] No syllabus content for {code} CRN {crn}")
             skipped += 1
-            # Clean up empty file if created
+
             if os.path.exists(filepath):
                 os.remove(filepath)
             time.sleep(DELAY)
@@ -432,7 +370,6 @@ def main():
 
         time.sleep(DELAY)
 
-    # Step 3: Write CSV
     csv_path = os.path.join(OUTPUT_DIR, CSV_FILENAME)
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=SCHEMA_FIELDS)
@@ -443,7 +380,6 @@ def main():
     print(f"  Skipped (no syllabus): {skipped}")
     print(f"  Errors: {errors}")
     print(f"CSV: {csv_path} ({len(rows)} rows)")
-
 
 if __name__ == "__main__":
     main()

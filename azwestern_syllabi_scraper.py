@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""
-azwestern_syllabi_scraper.py — Scrape course syllabi from Arizona Western College
-at https://www.azwestern.edu/syllabi
-
-Simple paginated site: GET ?page=0..N, each page has ~20 entries with direct PDF
-links. Outputs PDF files + a CSV with 17-column schema to:
-  data/arizona_western_college__2990700__syllabus/
-"""
-
 import csv
 import os
 import re
@@ -18,9 +9,6 @@ from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 SCHOOL_ID = "2990700"
 BASE_URL = "https://www.azwestern.edu/syllabi"
 
@@ -60,28 +48,19 @@ HEADERS = {
     "Accept": "text/html,application/xhtml+xml",
 }
 
-DELAY = 0.3  # seconds between requests
+DELAY = 0.3
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 def parse_department(code: str) -> str:
-    """'ACC-100' → 'ACC'"""
+
     m = re.match(r"([A-Z]+)", code)
     return m.group(1) if m else ""
 
-
 def safe_filename(course_code: str) -> str:
-    """Sanitize course code for use as a filename."""
+
     return re.sub(r"[^\w\-]", "_", course_code)
 
-
-# ---------------------------------------------------------------------------
-# Scraper
-# ---------------------------------------------------------------------------
 def scrape_all_pages(session: requests.Session) -> list[dict]:
-    """Paginate through all pages and extract syllabus entries."""
+
     entries = []
     page = 0
 
@@ -101,7 +80,6 @@ def scrape_all_pages(session: requests.Session) -> list[dict]:
         entries.extend(page_entries)
         print(f"{len(page_entries)} entries (total: {len(entries)})")
 
-        # Check for "Load More" link to determine if there's a next page
         load_more = soup.find("a", string=re.compile(r"Load\s*More", re.IGNORECASE))
         if not load_more:
             break
@@ -111,19 +89,12 @@ def scrape_all_pages(session: requests.Session) -> list[dict]:
 
     return entries
 
-
 def parse_page(soup: BeautifulSoup, page: int) -> list[dict]:
-    """Parse a single page and return list of entry dicts with code, title, pdf_url.
 
-    Each entry is a <tr> with:
-      - td with <a href="*.pdf"> (download icon)
-      - td with <strong><a>Title</a></strong> and <span class="badge">CODE</span>
-      - td with <p>description</p>
-    """
     entries = []
 
     for row in soup.find_all("tr"):
-        # Find PDF link in the row
+
         pdf_link = row.find("a", href=re.compile(
             r"/sites/default/files/documents/syllabi/.*\.pdf", re.IGNORECASE
         ))
@@ -133,14 +104,12 @@ def parse_page(soup: BeautifulSoup, page: int) -> list[dict]:
         href = pdf_link["href"]
         pdf_url = href if href.startswith("http") else f"https://www.azwestern.edu{href}"
 
-        # Title: <strong><a>Title</a></strong>
         title = ""
         strong = row.find("strong")
         if strong:
             title_link = strong.find("a")
             title = title_link.get_text(strip=True) if title_link else strong.get_text(strip=True)
 
-        # Course code: <span class="badge ...">CODE</span>
         code = ""
         badge = row.find("span", class_="badge")
         if badge:
@@ -150,7 +119,6 @@ def parse_page(soup: BeautifulSoup, page: int) -> list[dict]:
             print(f"  [WARN] Could not parse course code from row with link: {href}")
             continue
 
-        # Normalize: ensure dash between prefix and number
         if re.match(r"^[A-Z]{2,4}\d", code):
             code = re.sub(r"^([A-Z]+)(\d)", r"\1-\2", code)
 
@@ -163,14 +131,13 @@ def parse_page(soup: BeautifulSoup, page: int) -> list[dict]:
 
     return entries
 
-
 def download_and_build_rows(
     session: requests.Session,
     entries: list[dict],
     crawled_on: str,
     no_download: bool = False,
 ) -> list[dict]:
-    """Download PDFs and build CSV rows."""
+
     rows = []
     seen_codes: dict[str, int] = {}
     total = len(entries)
@@ -178,7 +145,6 @@ def download_and_build_rows(
     for i, entry in enumerate(entries, 1):
         code = entry["code"]
 
-        # Handle duplicate course codes
         if code in seen_codes:
             seen_codes[code] += 1
             filename = f"{safe_filename(code)}_{seen_codes[code]}.pdf"
@@ -188,7 +154,6 @@ def download_and_build_rows(
 
         filepath = os.path.join(OUTPUT_DIR, filename)
 
-        # Resume: skip if already downloaded
         already_exists = os.path.exists(filepath) and os.path.getsize(filepath) > 0
         label = "cached" if already_exists else "downloading"
         print(f"  [{i}/{total}] {code} ({label})")
@@ -235,7 +200,6 @@ def download_and_build_rows(
 
     return rows
 
-
 def main():
     parser = argparse.ArgumentParser(
         description="Scrape Arizona Western College syllabi"
@@ -252,7 +216,6 @@ def main():
     session = requests.Session()
     crawled_on = datetime.now(timezone.utc).isoformat()
 
-    # Step 1: scrape all pages
     print("=== Scraping syllabi listing pages ===")
     entries = scrape_all_pages(session)
     if not entries:
@@ -261,11 +224,9 @@ def main():
 
     print(f"\nFound {len(entries)} syllabi total\n")
 
-    # Step 2: download PDFs and build CSV rows
     print("=== Downloading PDFs ===")
     rows = download_and_build_rows(session, entries, crawled_on, args.no_download)
 
-    # Step 3: write CSV
     csv_path = os.path.join(OUTPUT_DIR, CSV_FILENAME)
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=SCHEMA_FIELDS)
@@ -274,7 +235,6 @@ def main():
 
     print(f"\nDone! {len(rows)} syllabi saved to {OUTPUT_DIR}")
     print(f"CSV: {csv_path} ({len(rows)} rows)")
-
 
 if __name__ == "__main__":
     main()

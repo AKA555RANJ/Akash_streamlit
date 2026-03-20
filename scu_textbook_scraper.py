@@ -12,6 +12,7 @@ Usage:
 
 import csv
 import os
+import re
 import sys
 import threading
 import time
@@ -167,7 +168,7 @@ def process_department(dept, term_name, crawled_on):
         course_id = course.get("id")
         course_num = course.get("code", "")
         course_title = course.get("name", "")
-        course_code = f"{dept_code} {course_num}".strip()
+        course_code = f"|{course_num}".strip()
 
         try:
             sections = fetch_sections(course_id)
@@ -188,7 +189,7 @@ def process_department(dept, term_name, crawled_on):
                 "department_code": dept_code,
                 "course_code": course_code,
                 "course_title": course_title,
-                "section": section_code,
+                "section": f"|{section_code}",
                 "section_instructor": instructor,
                 "term": term_name,
                 "crawled_on": crawled_on,
@@ -206,9 +207,15 @@ def process_department(dept, term_name, crawled_on):
                     "material_adoption_code": "This course does not require any course materials",
                 })
 
-            # Case 2: Not loaded yet — skip
+            # Case 2: Books not loaded yet — record with no materials info
             elif not books_loaded:
-                continue
+                rows.append({
+                    **base_row,
+                    "isbn": "",
+                    "title": "",
+                    "author": "",
+                    "material_adoption_code": "This course does not require any course materials",
+                })
 
             # Case 3: Has books
             else:
@@ -269,7 +276,7 @@ def scrape(fresh=False):
 
     for term in terms:
         term_id = term.get("id")
-        term_name = term.get("name", "")
+        term_name = re.sub(r"\s*\(.*?\)\s*", "", term.get("name", "")).strip()
         print(f"\n[*] Processing term: {term_name} (id={term_id})")
 
         depts = fetch_departments(term_id)

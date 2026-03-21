@@ -47,13 +47,14 @@ def extract_text(pdf_path):
 
 
 # Pattern to detect the start of a new APA citation entry.
-# Matches: optional ⌨/† symbols, then author name (Surname, Initial. or Organization name),
+# Matches: optional ⌨/† symbols, then author surname (2+ chars starting with capital),
 # followed by (year) somewhere in the line.
+# Requires 2+ word chars to avoid false positives on continuation lines like "P. (2022)."
 NEW_ENTRY_RE = re.compile(
     r'^[⌨†\s]*'                      # optional symbols/whitespace
     r'[*]?'                           # optional asterisk (e.g. *National Academy)
-    r'[A-Z]'                          # starts with capital letter
-    r'.*'                             # author text
+    r'[A-Z][A-Za-z\'\-]+'            # surname: 2+ chars starting with capital
+    r'.*'                             # rest of author text
     r'\((?:\d{4}|n\.d\.)\)'           # (year) or (n.d.)
 )
 
@@ -82,14 +83,37 @@ def is_new_entry_start(line):
     return False
 
 
+def current_entry_has_year(lines_so_far):
+    """Check if accumulated entry text already contains a year pattern, indicating it's complete."""
+    text = ' '.join(lines_so_far)
+    return bool(re.search(r'\((?:\d{4}|n\.d\.)\)', text))
+
+
 def group_entry_lines(lines):
-    """Group section lines into individual book entries."""
+    """Group section lines into individual book entries.
+
+    A new entry starts when:
+    1. The line begins with ⌨ or † (always a new entry), OR
+    2. The line matches an author citation pattern AND the current accumulated
+       entry already contains a year (i.e., the previous entry is complete).
+    This prevents splitting multi-line author lists where continuation lines
+    also look like author names (e.g., 'Lazzara, J., ... (2020). Title').
+    """
     entries = []
     current = []
     for line in lines:
-        if is_new_entry_start(line) and current:
-            entries.append(' '.join(current))
-            current = [line]
+        stripped = line.strip()
+        if current:
+            # Lines with ⌨/† always start a new entry
+            if stripped and stripped[0] in '⌨†':
+                entries.append(' '.join(current))
+                current = [line]
+            # Author-pattern lines only start new entry if current is complete
+            elif is_new_entry_start(line) and current_entry_has_year(current):
+                entries.append(' '.join(current))
+                current = [line]
+            else:
+                current.append(line)
         else:
             current.append(line)
     if current:
@@ -121,7 +145,7 @@ def parse_single_entry(entry_text):
             return None
 
     # Try to split on year pattern: Author. (year). Title...
-    yr_match = re.search(r'\.\s*\((?:\d{4}|n\.d\.)\)\.?\s*', clean)
+    yr_match = re.search(r'\.\s*,?\s*\((?:\d{4}|n\.d\.)\)\.?\s*', clean)
     if yr_match:
         author = clean[:yr_match.start()].strip()
         rest_after_year = clean[yr_match.end():].strip()
@@ -153,7 +177,7 @@ def parse_single_entry(entry_text):
         url_match = re.search(r'https?://\S+', clean)
         if url_match:
             before_url = clean[:url_match.start()].strip().rstrip('.')
-            yr_match2 = re.search(r'\.\s*\((?:\d{4}|n\.d\.)\)\.?\s*', before_url)
+            yr_match2 = re.search(r'\.\s*,?\s*\((?:\d{4}|n\.d\.)\)\.?\s*', before_url)
             if yr_match2:
                 author = before_url[:yr_match2.start()].strip()
                 title = before_url[yr_match2.end():].strip().rstrip('.')

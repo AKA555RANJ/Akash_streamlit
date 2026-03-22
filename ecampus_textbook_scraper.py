@@ -179,6 +179,7 @@ def api_get(sess, params, retries=3):
             time.sleep(REQUEST_DELAY)
             resp = sess.get(API_URL, params=params, timeout=30)
             resp.raise_for_status()
+            resp.encoding = 'utf-8'
             text = resp.text.strip()
 
             if is_cloudflare_block(text):
@@ -231,6 +232,7 @@ def fetch_course_list(sess, section_ids):
     time.sleep(REQUEST_DELAY)
     resp = sess.get(url, timeout=60)
     resp.raise_for_status()
+    resp.encoding = 'utf-8'
     text = resp.text
     if is_cloudflare_block(text):
         raise RuntimeError("Cloudflare challenge on course-list page")

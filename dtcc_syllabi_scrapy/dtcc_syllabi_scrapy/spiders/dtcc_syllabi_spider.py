@@ -10,7 +10,6 @@ COURSES_URL = f"{CATALOG_BASE}/en/current/catalog/courses/"
 
 SCHOOL_ID = "2984303"
 
-
 class DtccSyllabiSpider(scrapy.Spider):
     name = "dtcc_syllabi"
     allowed_domains = ["dtcc.smartcatalogiq.com"]
@@ -30,7 +29,6 @@ class DtccSyllabiSpider(scrapy.Spider):
         yield scrapy.Request(COURSES_URL, callback=self.parse_departments)
 
     def parse_departments(self, response):
-        """Parse the main courses page to find all department links."""
         dept_links = response.css('a[href*="/en/current/catalog/courses/"]')
 
         count = 0
@@ -58,7 +56,6 @@ class DtccSyllabiSpider(scrapy.Spider):
         self.logger.info(f"Found {count} department(s) to crawl")
 
     def parse_department(self, response, dept_code, dept_name):
-        """Parse a department page to find all course links."""
         course_links = response.css("a[href]")
 
         count = 0
@@ -81,7 +78,6 @@ class DtccSyllabiSpider(scrapy.Spider):
         self.logger.info(f"Dept {dept_code}: found {count} course link(s)")
 
     def parse_course(self, response, dept_code, dept_name):
-        """Parse a course page and follow to the syllabus rendering."""
         h1_parts = response.css("h1 ::text").getall()
         h1 = " ".join(p.strip() for p in h1_parts if p.strip())
         course_code, course_title = self._parse_h1(h1)
@@ -105,7 +101,6 @@ class DtccSyllabiSpider(scrapy.Spider):
 
     def parse_syllabus(self, response, dept_code, dept_name,
                        course_code, course_title, source_url):
-        """Extract the syllabus HTML and yield the item."""
         now = datetime.now(timezone.utc).isoformat()
 
         syllabus_html = response.text
@@ -131,15 +126,8 @@ class DtccSyllabiSpider(scrapy.Spider):
             _syllabus_html=syllabus_html,
         )
 
-
-
     @staticmethod
     def _parse_dept_text(text):
-        """Parse 'ACC-Accounting' → ('ACC', 'Accounting').
-
-        Also handles multi-word like 'BIO-Biology' or 'CIS-Computer Information Systems'.
-        The slug format uses the first token as the code.
-        """
         match = re.match(r"^([A-Z]{2,5})\s*[-\u2013]\s*(.+)$", text, re.IGNORECASE)
         if match:
             return match.group(1).upper(), match.group(2).strip()
@@ -147,7 +135,6 @@ class DtccSyllabiSpider(scrapy.Spider):
 
     @staticmethod
     def _parse_h1(h1_text):
-        """Parse 'ACC 101 Accounting I' → ('ACC-101', 'Accounting I')."""
         match = re.match(r"^([A-Z]{2,5})\s+(\d{3}[A-Z]?)\s+(.+)$", h1_text, re.IGNORECASE)
         if match:
             code = f"{match.group(1).upper()}-{match.group(2)}"

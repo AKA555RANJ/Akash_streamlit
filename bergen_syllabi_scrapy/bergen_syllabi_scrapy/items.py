@@ -1,6 +1,5 @@
 import scrapy
 
-
 class BergenSyllabusItem(scrapy.Item):
     school_id               = scrapy.Field()  
     term_code               = scrapy.Field()

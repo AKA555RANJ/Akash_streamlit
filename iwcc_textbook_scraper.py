@@ -1,15 +1,4 @@
 #!/usr/bin/env python3
-"""
-iwcc_textbook_scraper.py — Scrape textbook/course material information from
-Iowa Western Community College bookstore at www.iwcccollegestore.com.
-
-Uses FlareSolverr for FingerprintJS bypass, then plain HTTP requests for
-XML API enumeration and form POST for textbook results.
-
-Usage:
-    python iwcc_textbook_scraper.py           # scrape only missing departments
-    python iwcc_textbook_scraper.py --fresh   # delete CSV and scrape everything
-"""
 
 import csv
 import os
@@ -26,12 +15,8 @@ from tqdm import tqdm
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
-# Force unbuffered stdout so prints appear immediately in log files
 sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, 'reconfigure') else None
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 SCHOOL_NAME = "iowa_western_community_college"
 SCHOOL_ID = "3020581"
 BASE_URL = "https://www.iwcccollegestore.com"
@@ -68,12 +53,7 @@ OUTPUT_DIR = os.path.join(
 )
 CSV_PATH = os.path.join(OUTPUT_DIR, f"{SCHOOL_NAME}__{SCHOOL_ID}__bks.csv")
 
-
-# ---------------------------------------------------------------------------
-# FlareSolverr bootstrap
-# ---------------------------------------------------------------------------
 def flaresolverr_create_session():
-    """Create a named FlareSolverr session for clean browser state."""
     try:
         requests.post(FLARESOLVERR_URL, json={
             "cmd": "sessions.destroy",
@@ -87,9 +67,7 @@ def flaresolverr_create_session():
     }, timeout=120)
     resp.raise_for_status()
 
-
 def flaresolverr_destroy_session():
-    """Destroy the named FlareSolverr session."""
     try:
         requests.post(FLARESOLVERR_URL, json={
             "cmd": "sessions.destroy",
@@ -98,11 +76,7 @@ def flaresolverr_destroy_session():
     except Exception:
         pass
 
-
 def flaresolverr_get(url, max_timeout=60000):
-    """Use FlareSolverr to GET a URL, bypassing FingerprintJS bot protection.
-    Returns (html, cookies_dict, user_agent).
-    """
     resp = requests.post(FLARESOLVERR_URL, json={
         "cmd": "request.get",
         "url": url,
@@ -125,18 +99,14 @@ def flaresolverr_get(url, max_timeout=60000):
 
     return html, cookies, ua
 
-
 def create_session():
-    """Bootstrap a session via FlareSolverr. Returns (requests.Session, csrf_token)."""
     print("[*] Bootstrapping session via FlareSolverr...")
     flaresolverr_create_session()
     html, cookies, ua = flaresolverr_get(BASE_URL + "/buy_textbooks.asp")
 
-    # Verify bot protection cookies
     if "x-bni-fpc" not in cookies:
         print("[WARN] x-bni-fpc cookie not found — bot protection may not be bypassed")
 
-    # Extract CSRF token from hidden input
     csrf_token = ""
     csrf_match = re.search(r'name="__CSRFToken"\s+value="([^"]+)"', html)
     if csrf_match:
@@ -157,12 +127,7 @@ def create_session():
     print(f"[*] Session ready. Cookies: {list(cookies.keys())}")
     return sess, csrf_token
 
-
 def refresh_session(sess):
-    """Destroy current session and create a fresh one via FlareSolverr.
-    Retries up to 5 times with increasing delays.
-    Returns (new requests.Session, csrf_token).
-    """
     print("[*] Refreshing session via FlareSolverr...", flush=True)
     for attempt in range(5):
         try:
@@ -174,24 +139,14 @@ def refresh_session(sess):
             if attempt == 4:
                 raise
 
-
-# ---------------------------------------------------------------------------
-# Bot detection
-# ---------------------------------------------------------------------------
 def is_bot_blocked(text):
-    """Check if the response indicates bot detection or redirect."""
     if not text:
         return False
     lower = text[:2000].lower()
     return ("error.asp" in lower or "object moved" in lower or
             "just a moment" in lower or "challenge-platform" in lower)
 
-
-# ---------------------------------------------------------------------------
-# XML API functions
-# ---------------------------------------------------------------------------
 def xml_get(sess, params, retries=3):
-    """GET textbooks_xml.asp with retry logic. Returns parsed XML soup."""
     url = BASE_URL + "/textbooks_xml.asp"
     for attempt in range(retries):
         try:
@@ -203,7 +158,6 @@ def xml_get(sess, params, retries=3):
             if is_bot_blocked(text):
                 raise RuntimeError("Bot detection triggered")
 
-            # Detect HTML error pages returned instead of XML
             if "<!DOCTYPE" in text[:100] or "<html" in text[:200].lower():
                 raise RuntimeError("Got HTML error page instead of XML")
 
@@ -216,9 +170,7 @@ def xml_get(sess, params, retries=3):
                 raise
     return BeautifulSoup("", "html.parser")
 
-
 def fetch_departments(sess):
-    """Fetch all departments. Returns list of dicts with dept_id, dept_code, dept_name."""
     params = {"control": "campus", "campus": CAMPUS_ID, "term": TERM_ID}
     soup = xml_get(sess, params)
     departments = []
@@ -230,9 +182,7 @@ def fetch_departments(sess):
         })
     return departments
 
-
 def fetch_courses(sess, dept_id):
-    """Fetch courses for a department. Returns list of dicts with course_id, course_name."""
     params = {"control": "department", "dept": dept_id, "term": TERM_ID}
     soup = xml_get(sess, params)
     courses = []
@@ -243,9 +193,7 @@ def fetch_courses(sess, dept_id):
         })
     return courses
 
-
 def fetch_sections(sess, course_id):
-    """Fetch sections for a course. Returns list of dicts with section_id, section_name, instructor."""
     params = {"control": "course", "course": course_id, "term": TERM_ID}
     soup = xml_get(sess, params)
     sections = []
@@ -257,12 +205,7 @@ def fetch_sections(sess, course_id):
         })
     return sections
 
-
-# ---------------------------------------------------------------------------
-# Textbook results via form POST
-# ---------------------------------------------------------------------------
 def fetch_textbooks(sess, section_ids, csrf_token):
-    """POST to textbook_express.asp to get textbook results HTML."""
     url = BASE_URL + "/textbook_express.asp?mode=2&step=2"
     data = {
         "sectionIds": ",".join(str(sid) for sid in section_ids),
@@ -278,31 +221,11 @@ def fetch_textbooks(sess, section_ids, csrf_token):
         raise RuntimeError("Bot detection on textbook_express page")
     return text
 
-
 def parse_textbook_html(html, section_meta):
-    """Parse textbook_express.asp HTML for textbook data.
-
-    BNC legacy HTML structure per section:
-      <h3>Displaying Textbooks for <strong><span id="course-bookdisplay-coursename">
-          DEPT - COURSE, section SECTION (INSTRUCTOR)</span></strong></h3>
-      <table class="data" id="section-{section_id}">
-        <tr class="book course-required book-container">
-          <td class="book-desc">
-            <span class="book-title">TITLE</span>
-            <span class="book-meta book-author">AUTHOR</span>
-            <span class="book-meta book-isbn">ISBN <span class="isbn">9781234567890</span></span>
-            <p class="book-req">Required</p>
-          </td>
-        </tr>
-      </table>
-
-    Returns list of row dicts (without source_url, school_id, crawled_on).
-    """
     soup = BeautifulSoup(html, "html.parser")
     results = []
     seen_section_ids = set()
 
-    # Find all section headers: <h3> containing "Displaying Textbooks for"
     all_h3s = soup.find_all("h3")
     section_headers = []
     for h3 in all_h3s:
@@ -311,7 +234,6 @@ def parse_textbook_html(html, section_meta):
             section_headers.append(h3)
 
     for h3 in section_headers:
-        # Extract section metadata from the h3 header span
         dept_code = ""
         course_code = ""
         section_name = ""
@@ -320,7 +242,6 @@ def parse_textbook_html(html, section_meta):
         header_span = h3.find("span", id="course-bookdisplay-coursename")
         if header_span:
             header_text = header_span.get_text(strip=True)
-            # Parse "A S L - 001, section 10189 (KHORSANDI,S.S.)"
             m = re.match(
                 r"(.+?)\s*-\s*(\S+),\s*section\s+(\S+)\s*(?:\((.+?)\))?",
                 header_text,
@@ -331,27 +252,21 @@ def parse_textbook_html(html, section_meta):
                 section_name = "|" + m.group(3).strip()
                 instructor = m.group(4).strip() if m.group(4) else ""
 
-        # Track which sections we've seen (use section_name to dedup)
         sec_key = f"{dept_code}_{course_code}_{section_name}"
         if sec_key in seen_section_ids:
             continue
         seen_section_ids.add(sec_key)
 
-        # Try to match with section_meta for any additional info
         meta = {}
         for sid, sm in section_meta.items():
             if sm["section"] == section_name and sm["dept_code"] == dept_code:
                 meta = sm
                 break
 
-        # Find the section table following this h3
-        # It's the next sibling <table> with id matching "section-{digits}"
         table = h3.find_next_sibling("table", id=re.compile(r"^section-\d+"))
         if not table:
-            # Also check non-sibling (may be nested differently)
             table = h3.find_next("table", id=re.compile(r"^section-\d+"))
 
-        # Check for error div (e.g., "textbooks for this section could not be found")
         error_div = h3.find_next_sibling("div", class_="error")
         if error_div and (not table or error_div.sourceline < table.sourceline if hasattr(error_div, 'sourceline') else True):
             results.append({
@@ -371,7 +286,6 @@ def parse_textbook_html(html, section_meta):
         book_rows = table.find_all("tr", class_=re.compile(r"\bbook\b")) if table else []
 
         if not book_rows:
-            # No books for this section
             results.append({
                 "department_code": dept_code,
                 "course_code": course_code,
@@ -393,27 +307,22 @@ def parse_textbook_html(html, section_meta):
             isbn = ""
             adoption = ""
 
-            # Title: <span class="book-title">
             title_el = row.find("span", class_="book-title")
             if title_el:
                 title = title_el.get_text(strip=True)
 
-            # Author: <span class="book-meta book-author">
             author_el = row.find("span", class_="book-author")
             if author_el:
                 author = author_el.get_text(strip=True)
 
-            # ISBN: <span class="isbn">
             isbn_el = row.find("span", class_="isbn")
             if isbn_el:
                 isbn = isbn_el.get_text(strip=True).replace("-", "")
 
-            # Adoption: <p class="book-req">
             req_el = row.find("p", class_="book-req")
             if req_el:
                 adoption = req_el.get_text(strip=True).capitalize()
 
-            # Skip BNC placeholder entries like "See Instructor For More Info"
             if title and re.search(r"see instructor|not a book", title, re.I):
                 continue
 
@@ -434,7 +343,6 @@ def parse_textbook_html(html, section_meta):
         if section_books:
             results.extend(section_books)
         else:
-            # All entries were placeholders — record as no materials
             results.append({
                 "department_code": dept_code,
                 "course_code": course_code,
@@ -448,7 +356,6 @@ def parse_textbook_html(html, section_meta):
                 "material_adoption_code": "This course does not require any course materials",
             })
 
-    # Handle sections from section_meta that weren't found in the HTML
     if not results:
         page_text = soup.get_text(" ", strip=True).lower()
         no_materials = ("no course materials" in page_text or
@@ -472,12 +379,7 @@ def parse_textbook_html(html, section_meta):
 
     return results
 
-
-# ---------------------------------------------------------------------------
-# CSV helpers
-# ---------------------------------------------------------------------------
 def append_csv(rows, filepath):
-    """Append rows to CSV (create with header if new)."""
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     file_exists = os.path.exists(filepath) and os.path.getsize(filepath) > 0
     with open(filepath, "a", newline="", encoding="utf-8") as f:
@@ -486,9 +388,7 @@ def append_csv(rows, filepath):
             writer.writeheader()
         writer.writerows(rows)
 
-
 def get_scraped_departments(filepath):
-    """Read existing CSV and return set of department codes already scraped."""
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
     scraped = set()
@@ -500,47 +400,27 @@ def get_scraped_departments(filepath):
                 scraped.add(dept)
     return scraped
 
-
-# ---------------------------------------------------------------------------
-# Field normalization helpers
-# ---------------------------------------------------------------------------
 def normalize_course_code(course_name, dept_code):
-    """Extract course number from course name and add pipe prefix.
-    E.g., "ACCT 2301" -> "|2301", "101" -> "|101"
-    """
     name = course_name.strip()
-    # Remove department prefix if present
     if name.upper().startswith(dept_code.upper()):
         name = name[len(dept_code):].strip()
-    # Remove any remaining non-numeric prefix
     num_match = re.search(r"[\d].*", name)
     if num_match:
         return "|" + num_match.group(0).strip()
     return "|" + name if name else ""
 
-
 def normalize_section(section_name):
-    """Add pipe prefix to section name. E.g., "16469" -> "|16469" """
     name = section_name.strip()
     return "|" + name if name else ""
 
-
 def clean_term(term_str):
-    """Strip parenthetical suffixes from term name.
-    E.g., "SPRING 2026 (PIERCE)" -> "SPRING 2026"
-    """
     return re.sub(r'\s*\([^)]*\)', '', term_str).strip()
 
-
-# ---------------------------------------------------------------------------
-# Main scraper
-# ---------------------------------------------------------------------------
 def scrape(fresh=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     source_url = BASE_URL + "/"
     term_name = TERM_NAME
 
-    # Fresh run — delete existing CSV
     if fresh and os.path.exists(CSV_PATH):
         os.remove(CSV_PATH)
         print("[*] Fresh run — deleted existing CSV.")
@@ -550,10 +430,8 @@ def scrape(fresh=False):
         print(f"[*] {len(done_depts)} departments already scraped: {sorted(done_depts)}")
         print("[*] Will only scrape missing departments.")
 
-    # Bootstrap session via FlareSolverr
     sess, csrf_token = create_session()
 
-    # Fetch all departments
     print("[*] Fetching departments...")
     depts = fetch_departments(sess)
     print(f"    Found {len(depts)} departments")
@@ -574,7 +452,6 @@ def scrape(fresh=False):
         if dept_code in done_depts:
             continue
 
-        # Fetch courses for this department
         try:
             courses = fetch_courses(sess, dept_id)
         except Exception as e:
@@ -605,7 +482,6 @@ def scrape(fresh=False):
             total_rows += 1
             continue
 
-        # Collect all sections and build section_meta
         all_section_ids = []
         section_meta = {}
 
@@ -634,7 +510,6 @@ def scrape(fresh=False):
         if not all_section_ids:
             continue
 
-        # Batch section IDs and fetch textbook results
         batches = [
             all_section_ids[i:i + BATCH_SIZE]
             for i in range(0, len(all_section_ids), BATCH_SIZE)
@@ -647,7 +522,6 @@ def scrape(fresh=False):
                 try:
                     html = fetch_textbooks(sess, batch, csrf_token)
 
-                    # Debug: dump first HTML response for inspection
                     if not debug_dumped:
                         debug_path = os.path.join(OUTPUT_DIR, "debug_textbook_express.html")
                         os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -656,7 +530,6 @@ def scrape(fresh=False):
                         print(f"\n    [DEBUG] First textbook HTML dumped to {debug_path}", flush=True)
                         debug_dumped = True
 
-                    # Build batch section_meta subset
                     batch_meta = {sid: section_meta[sid] for sid in batch if sid in section_meta}
                     materials = parse_textbook_html(html, batch_meta)
 
@@ -672,7 +545,7 @@ def scrape(fresh=False):
                         dept_rows += len(rows)
                         total_rows += len(rows)
 
-                    break  # Success
+                    break
 
                 except Exception as e:
                     print(f"\n  [!] Batch {batch_idx} attempt {attempt + 1} failed: {e}", flush=True)
@@ -683,10 +556,8 @@ def scrape(fresh=False):
 
         tqdm.write(f"    [{dept_code}] +{dept_rows} rows (total: {total_rows})")
 
-    # Cleanup
     flaresolverr_destroy_session()
 
-    # Final summary
     print(f"\n{'='*60}")
     print(f"SCRAPE COMPLETE")
     print(f"{'='*60}")
@@ -700,7 +571,6 @@ def scrape(fresh=False):
         print("  Re-run without --fresh to scrape only these.")
     else:
         print(f"\n[OK] All {len(all_expected_depts)} departments scraped successfully!")
-
 
 if __name__ == "__main__":
     fresh = "--fresh" in sys.argv

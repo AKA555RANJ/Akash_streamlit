@@ -1,12 +1,4 @@
 #!/usr/bin/env python3
-"""
-cvcc_syllabi_scraper.py — Scrape master course syllabi from Central Virginia
-Community College (CVCC) at https://www.cvcccoursedocs.com/CourseDocIndex.php
-
-Each syllabus is an HTML page obtained by POSTing to CourseDocIndexDisplay.php.
-Outputs HTML files + a CSV with 17-column schema to:
-  data/central_virginia_community_college__3106110__syllabus/
-"""
 
 import csv
 import os
@@ -18,9 +10,6 @@ from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 SCHOOL_ID = "3106110"
 INDEX_URL = "https://www.cvcccoursedocs.com/CourseDocIndex.php"
 DETAIL_URL = "https://www.cvcccoursedocs.com/CourseDocIndexDisplay.php"
@@ -62,47 +51,27 @@ HEADERS = {
     "Referer": INDEX_URL,
 }
 
-DELAY = 0.5  # seconds between requests
+DELAY = 0.5
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 def normalize_code(raw: str) -> str:
-    """'ACC 120' → 'ACC-120'"""
     return raw.strip().replace(" ", "-")
 
-
 def parse_department(code: str) -> str:
-    """'ACC-120' → 'ACC'"""
     m = re.match(r"([A-Z]+)", code)
     return m.group(1) if m else ""
 
-
 def parse_title(html: str) -> str:
-    """Extract course title from the detail page H2.
-
-    The H2 looks like: ACC 120 : PRIN OF FINANCIAL ACCOUNTING (Coll/Tran)
-    We want just: PRIN OF FINANCIAL ACCOUNTING
-    """
     soup = BeautifulSoup(html, "lxml")
     for h2 in soup.find_all("h2"):
         text = h2.get_text(strip=True)
-        # Match pattern: CODE : TITLE (optional parenthetical)
         m = re.match(r"[A-Z]{2,4}\s+\d{3}\s*:\s*(.+)", text)
         if m:
             title = m.group(1).strip()
-            # Strip trailing parenthetical like (Coll/Tran)
             title = re.sub(r"\s*\([^)]*\)\s*$", "", title)
             return title.strip()
     return ""
 
-
-# ---------------------------------------------------------------------------
-# Scraper
-# ---------------------------------------------------------------------------
 def get_course_codes(session: requests.Session) -> list[str]:
-    """Fetch the index page and extract all course codes."""
     resp = session.get(INDEX_URL, headers=HEADERS, timeout=30)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "lxml")
@@ -111,16 +80,12 @@ def get_course_codes(session: requests.Session) -> list[str]:
     print(f"Found {len(codes)} course codes on index page")
     return codes
 
-
 def scrape_course(session: requests.Session, raw_code: str, crawled_on: str) -> dict | None:
-    """POST for a single course and save its HTML. Returns a metadata row dict."""
     code = normalize_code(raw_code)
     filename = f"{code}.html"
     filepath = os.path.join(OUTPUT_DIR, filename)
 
-    # Resume: skip if already downloaded
     if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
-        # Still build metadata from existing file
         with open(filepath, "r", encoding="utf-8") as f:
             html = f.read()
         filesize = os.path.getsize(filepath)
@@ -136,7 +101,6 @@ def scrape_course(session: requests.Session, raw_code: str, crawled_on: str) -> 
     resp.raise_for_status()
     html = resp.text
 
-    # Check for error / empty page
     if "Not Acceptable" in html or len(html) < 200:
         print(f"  [WARN] Skipping {code}: got error or empty response")
         return None
@@ -149,7 +113,6 @@ def scrape_course(session: requests.Session, raw_code: str, crawled_on: str) -> 
     now = datetime.now(timezone.utc).isoformat()
 
     return _build_row(code, raw_code, title, filename, filepath, filesize, crawled_on, now)
-
 
 def _build_row(
     code: str,
@@ -181,7 +144,6 @@ def _build_row(
         "downloaded_on": downloaded_on or crawled_on,
     }
 
-
 def main():
     parser = argparse.ArgumentParser(description="Scrape CVCC master course syllabi")
     parser.add_argument(
@@ -196,7 +158,6 @@ def main():
     session = requests.Session()
     crawled_on = datetime.now(timezone.utc).isoformat()
 
-    # Step 1: get all course codes
     course_codes = get_course_codes(session)
     if not course_codes:
         print("No course codes found. Aborting.")
@@ -208,7 +169,6 @@ def main():
             print(f"  {c}")
         return
 
-    # Step 2: scrape each course
     rows: list[dict] = []
     total = len(course_codes)
     for i, raw_code in enumerate(course_codes, 1):
@@ -224,7 +184,6 @@ def main():
         if not already_exists:
             time.sleep(DELAY)
 
-    # Step 3: write CSV
     csv_path = os.path.join(OUTPUT_DIR, CSV_FILENAME)
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=SCHEMA_FIELDS)
@@ -233,7 +192,6 @@ def main():
 
     print(f"\nDone! {len(rows)} syllabi saved to {OUTPUT_DIR}")
     print(f"CSV: {csv_path} ({len(rows)} rows)")
-
 
 if __name__ == "__main__":
     main()

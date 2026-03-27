@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""
-scu_textbook_scraper.py — Scrape textbook/course material information from
-Santa Clara University's bookstore at scu.studentstore.com.
-
-Uses the public Valore Campus / StudentStore REST API (no Cloudflare bypass needed).
-
-Usage:
-    python scu_textbook_scraper.py           # scrape only missing departments
-    python scu_textbook_scraper.py --fresh   # delete CSV and scrape everything
-"""
 
 import csv
 import os
@@ -22,20 +12,16 @@ from datetime import datetime, timezone
 import requests
 from tqdm import tqdm
 
-# Force unbuffered stdout so prints appear immediately in log files
 sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, "reconfigure") else None
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 SCHOOL_NAME = "santa_clara_university"
 SCHOOL_ID = "2995749"
 SOURCE_URL = "https://scu.studentstore.com"
 BASE_API = "https://api.studentstore.com/webcomm-rest/catalog"
 LOCATION_ID = "991027"
 
-REQUEST_DELAY = 0.2   # seconds between requests per thread
-MAX_WORKERS = 5       # parallel department workers
+REQUEST_DELAY = 0.2
+MAX_WORKERS = 5
 
 CSV_FIELDS = [
     "source_url",
@@ -65,18 +51,11 @@ HEADERS = {
     "Accept": "application/json",
 }
 
-# Thread-safe CSV lock
 _csv_lock = threading.Lock()
-# Thread-safe counter
 _total_rows = 0
 _rows_lock = threading.Lock()
 
-
-# ---------------------------------------------------------------------------
-# API helpers
-# ---------------------------------------------------------------------------
 def api_get(url, retries=3):
-    """GET a JSON API endpoint with retry logic. Returns parsed JSON."""
     for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
@@ -89,37 +68,27 @@ def api_get(url, retries=3):
             else:
                 raise
 
-
 def fetch_terms():
     data = api_get(f"{BASE_API}/terms?location-id={LOCATION_ID}")
     return data if isinstance(data, list) else []
-
 
 def fetch_departments(term_id):
     data = api_get(f"{BASE_API}/departments?term-id={term_id}")
     return data if isinstance(data, list) else []
 
-
 def fetch_courses(dept_id):
     data = api_get(f"{BASE_API}/courses?department-id={dept_id}")
     return data if isinstance(data, list) else []
-
 
 def fetch_sections(course_id):
     data = api_get(f"{BASE_API}/sections?course-id={course_id}")
     return data if isinstance(data, list) else []
 
-
 def fetch_adoptions(section_id):
     data = api_get(f"{BASE_API}/adoptions?section-id={section_id}")
     return data if isinstance(data, list) else []
 
-
-# ---------------------------------------------------------------------------
-# CSV helpers
-# ---------------------------------------------------------------------------
 def append_csv(rows, filepath):
-    """Thread-safe append rows to CSV (create with header if new)."""
     if not rows:
         return
     with _csv_lock:
@@ -131,9 +100,7 @@ def append_csv(rows, filepath):
                 writer.writeheader()
             writer.writerows(rows)
 
-
 def get_scraped_departments(filepath):
-    """Read existing CSV and return set of department codes already scraped."""
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
     scraped = set()
@@ -145,14 +112,7 @@ def get_scraped_departments(filepath):
                 scraped.add(dept)
     return scraped
 
-
-# ---------------------------------------------------------------------------
-# Per-department worker
-# ---------------------------------------------------------------------------
 def process_department(dept, term_name, crawled_on):
-    """Fetch all courses/sections/adoptions for one department.
-    Writes rows to CSV immediately per section. Returns row count written.
-    """
     global _total_rows
     dept_id = dept.get("id")
     dept_code = dept.get("code", "")
@@ -197,7 +157,6 @@ def process_department(dept, term_name, crawled_on):
 
             rows = []
 
-            # Case 1: No materials needed
             if not books_required and books_loaded:
                 rows.append({
                     **base_row,
@@ -207,7 +166,6 @@ def process_department(dept, term_name, crawled_on):
                     "material_adoption_code": "This course does not require any course materials",
                 })
 
-            # Case 2: Books not loaded yet — record with no materials info
             elif not books_loaded:
                 rows.append({
                     **base_row,
@@ -217,7 +175,6 @@ def process_department(dept, term_name, crawled_on):
                     "material_adoption_code": "This course does not require any course materials",
                 })
 
-            # Case 3: Has books
             else:
                 try:
                     adoptions = fetch_adoptions(section_id)
@@ -235,7 +192,6 @@ def process_department(dept, term_name, crawled_on):
                         "material_adoption_code": adoption.get("requiredStatus", "") or "",
                     })
 
-            # Write rows for this section immediately
             if rows:
                 append_csv(rows, CSV_PATH)
                 rows_written += len(rows)
@@ -244,16 +200,11 @@ def process_department(dept, term_name, crawled_on):
 
     return rows_written
 
-
-# ---------------------------------------------------------------------------
-# Main scraper
-# ---------------------------------------------------------------------------
 def scrape(fresh=False):
     global _total_rows
     _total_rows = 0
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    # Fresh run — delete existing CSV
     if fresh and os.path.exists(CSV_PATH):
         os.remove(CSV_PATH)
         print("[*] Fresh run — deleted existing CSV.")
@@ -263,7 +214,6 @@ def scrape(fresh=False):
         print(f"[*] {len(done_depts)} departments already scraped: {sorted(done_depts)}")
         print("[*] Will only scrape missing departments.")
 
-    # Fetch terms
     print("[*] Fetching terms...")
     terms = fetch_terms()
     print(f"    Found {len(terms)} terms: {[t.get('name') for t in terms]}")
@@ -313,7 +263,6 @@ def scrape(fresh=False):
                         tqdm.write(f"  [ERROR] dept={dept_code}: {e}")
                     pbar.update(1)
 
-    # Final summary
     print(f"\n{'='*60}")
     print(f"SCRAPE COMPLETE")
     print(f"{'='*60}")
@@ -327,7 +276,6 @@ def scrape(fresh=False):
         print("  Re-run without --fresh to scrape only these.")
     else:
         print(f"\n[OK] All {len(all_expected_depts)} departments scraped successfully!")
-
 
 if __name__ == "__main__":
     fresh = "--fresh" in sys.argv

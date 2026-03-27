@@ -1,21 +1,4 @@
 #!/usr/bin/env python3
-"""
-package_data.py — Build per-institution zip files and push to GitHub via Git LFS.
-
-For each subfolder in data/, creates a zip like:
-  bergen_community_college__3061268__syllabus.zip
-  └── bergen_community_college__3061268__syllabus/
-      ├── bergen_community_college__3061268__syllabus/   ← scraped files (PDFs, HTMLs, etc.)
-      │   ├── ACC-107.pdf
-      │   └── ...
-      └── bergen_community_college__3061268__syllabus.csv ← metadata
-
-Rules:
-  - data/ (lowercase) is the source folder
-  - One zip per subfolder, placed at the repo root
-  - CSV metadata sits at the top level inside the zip (beside the files folder)
-  - Non-CSV files go into a nested subfolder with the same name
-"""
 
 import argparse
 import sys
@@ -27,11 +10,8 @@ REPO_DIR = Path(__file__).parent
 DATA_DIR = REPO_DIR / "data"
 COMMIT_MSG = "Refresh per-institution zip files with latest syllabi"
 
-
 def _newest_mtime(folder: Path) -> float:
-    """Return the most recent mtime of any file in folder."""
     return max(f.stat().st_mtime for f in folder.rglob("*") if f.is_file())
-
 
 def build_zips(force: bool = False):
     if not DATA_DIR.exists():
@@ -59,7 +39,6 @@ def build_zips(force: bool = False):
         name = subfolder.name
         zip_path = REPO_DIR / f"{name}.zip"
 
-        # Skip if zip already exists and is newer than all data files
         if not force and zip_path.exists():
             zip_mtime = zip_path.stat().st_mtime
             data_mtime = _newest_mtime(subfolder)
@@ -78,12 +57,10 @@ def build_zips(force: bool = False):
         print(f"  [{name}]")
 
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, allowZip64=True) as zf:
-            # Scraped files go into name/name/
             for f in download_files:
                 arc_path = f"{name}/{name}/{f.name}"
                 zf.write(f, arc_path)
 
-            # CSV metadata goes into name/
             for f in csv_files:
                 arc_path = f"{name}/{f.name}"
                 zf.write(f, arc_path)
@@ -95,7 +72,6 @@ def build_zips(force: bool = False):
         print(f"    output    : {zip_path.name} ({size_mb:.1f} MB)\n")
 
     return zip_paths
-
 
 def git_push(zip_paths):
     print("\n--- Git ---")
@@ -110,11 +86,9 @@ def git_push(zip_paths):
             print(f"[error] Command failed: {' '.join(cmd)}")
             sys.exit(result.returncode)
 
-    # Track new zip files with LFS and stage them
     for zp in zip_paths:
         run(["git", "add", zp.name])
 
-    # Remove old Data.zip if it exists and is tracked
     old_zip = REPO_DIR / "Data.zip"
     if old_zip.exists():
         run(["git", "rm", "Data.zip"])
@@ -122,7 +96,6 @@ def git_push(zip_paths):
     run(["git", "commit", "-m", COMMIT_MSG])
     run(["git", "push", "origin", "main"])
     print("Pushed successfully.")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Package data/ subfolders into zips and push")

@@ -13,7 +13,6 @@ from threading import Lock
 import requests
 from playwright.sync_api import sync_playwright
 
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 DATA_DIR = os.path.join(PROJECT_ROOT, "Data", "bergen_community_college__3061268__syllabus")
@@ -40,9 +39,7 @@ SCHEMA_FIELDS = [
 
 log = logging.getLogger("download_syllabi")
 
-
 def get_weblink_session_cookie() -> str:
-    """Launch headless Chromium, visit Browse.aspx, return WebLinkSession cookie value."""
     log.info("Launching Playwright to obtain WebLinkSession cookie...")
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
@@ -62,9 +59,7 @@ def get_weblink_session_cookie() -> str:
         "The Laserfiche site may be down or have changed its auth flow."
     )
 
-
 def build_session(cookie_value: str) -> requests.Session:
-    """Build a requests.Session with the WebLinkSession cookie set."""
     s = requests.Session()
     s.cookies.set("WebLinkSession", cookie_value, domain="lf.bergen.edu", path="/")
     s.headers.update({
@@ -76,7 +71,6 @@ def build_session(cookie_value: str) -> requests.Session:
         "Origin": "https://lf.bergen.edu",
     })
     return s
-
 
 def search_course(session: requests.Session, course_code: str) -> list[dict] | None:
     payload = {
@@ -109,7 +103,6 @@ def search_course(session: requests.Session, course_code: str) -> list[dict] | N
         log.error(f"Search failed for {course_code}: {e}")
         return None
 
-
 def download_file(session: requests.Session, entry_id: int, course_code: str,
                   ext: str, output_dir: str) -> dict | None:
     url = f"{FILE_DOWNLOAD_URL}?docid={entry_id}&dbid=0&repo=BergenPublic"
@@ -138,7 +131,6 @@ def download_file(session: requests.Session, entry_id: int, course_code: str,
                 f.write(chunk)
                 size += len(chunk)
 
-        # Validate the file is actually a PDF (not an HTML error page)
         with open(filepath, "rb") as f:
             head = f.read(8)
         if not head.startswith(b"%PDF"):
@@ -158,22 +150,17 @@ def download_file(session: requests.Session, entry_id: int, course_code: str,
         log.error(f"Download failed for {course_code} (entry {entry_id}): {e}")
         return None
 
-
 def read_courses(csv_path: str) -> list[dict]:
-    """Read the existing catalog CSV into a list of row dicts."""
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         return list(reader)
 
-
 def write_csv(rows: list[dict], csv_path: str):
-    """Write updated rows to CSV."""
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=SCHEMA_FIELDS, extrasaction="ignore")
         writer.writeheader()
         for row in rows:
             writer.writerow({f: row.get(f, "") for f in SCHEMA_FIELDS})
-
 
 def process_course(session: requests.Session, row: dict, output_dir: str,
                    delay: float, lock: Lock, stats: dict) -> dict:
@@ -197,7 +184,6 @@ def process_course(session: requests.Session, row: dict, output_dir: str,
             stats["no_results"] += 1
         log.debug(f"{course_code}: no Laserfiche results")
         return row
-
 
     result = results[0]
     entry_id = result.get("entryId") or result.get("EntryId") or result.get("id")
@@ -226,7 +212,6 @@ def process_course(session: requests.Session, row: dict, output_dir: str,
 
     return row
 
-
 def main():
     parser = argparse.ArgumentParser(description="Download Bergen CC syllabi from Laserfiche")
     parser.add_argument("--limit", type=int, default=0, help="Max courses to process (0=all)")
@@ -254,7 +239,6 @@ def main():
     rows = read_courses(args.csv)
     log.info(f"Loaded {len(rows)} courses from CSV")
 
-
     if args.depts:
         dept_filter = {d.strip().upper() for d in args.depts.split(",") if d.strip()}
         rows = [r for r in rows if r.get("department_code", "").upper() in dept_filter]
@@ -263,7 +247,6 @@ def main():
     if args.limit:
         rows = rows[:args.limit]
         log.info(f"Limited to {args.limit} courses")
-
 
     os.makedirs(args.output_dir, exist_ok=True)
     if args.resume:
@@ -284,9 +267,7 @@ def main():
         log.info("Nothing to process")
         return 0
 
-
     cookie_value = get_weblink_session_cookie()
-
 
     session = build_session(cookie_value)
 
@@ -326,10 +307,8 @@ def main():
             if row and row.pop("_auth_failed", False):
                 auth_failed_indices.add(idx)
 
-
     all_indices = list(range(len(rows_to_process)))
     run_batch(all_indices)
-
 
     while auth_failed_indices and retry_count < max_retries:
         retry_count += 1
@@ -340,7 +319,6 @@ def main():
         session = build_session(cookie_value)
 
         run_batch(list(auth_failed_indices))
-
 
     all_rows = read_courses(args.csv)
     processed_map = {}
@@ -354,11 +332,9 @@ def main():
         if cc in processed_map:
             all_rows[i] = processed_map[cc]
 
-
     write_csv(all_rows, args.csv)
     log.info(f"Updated CSV: {args.csv}")
 
-    # Summary
     log.info("=" * 50)
     log.info(f"Downloaded:      {stats['downloaded']}")
     log.info(f"No results:      {stats['no_results']}")
@@ -367,7 +343,6 @@ def main():
     log.info("=" * 50)
 
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

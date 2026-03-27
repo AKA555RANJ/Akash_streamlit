@@ -26,7 +26,6 @@ SCHEMA_FIELDS = [
     "downloaded_on",
 ]
 
-
 class CsvExportPipeline:
 
     def open_spider(self, spider):

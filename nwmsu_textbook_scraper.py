@@ -1,15 +1,4 @@
 #!/usr/bin/env python3
-"""
-nwmsu_textbook_scraper.py — Scrape textbook data from
-Northwest Missouri State University (Maryville, MO).
-
-Their textbook lookup is a Banner system at ssbprod.nwmissouri.edu.
-Plain HTML form POST — no Cloudflare, no authentication needed.
-
-Usage:
-    python nwmsu_textbook_scraper.py           # scrape only missing (term, dept) pairs
-    python nwmsu_textbook_scraper.py --fresh   # delete CSV and scrape everything
-"""
 
 import csv
 import os
@@ -24,9 +13,6 @@ from tqdm import tqdm
 
 sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, "reconfigure") else None
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 SCHOOL_NAME = "nw_missouri_state_univ"
 SCHOOL_ID = "3050213"
 BASE_URL = "https://ssbprod.nwmissouri.edu/PROD/"
@@ -68,10 +54,6 @@ HEADERS = {
 
 NO_MATERIALS_MSG = "This course does not require any course materials"
 
-
-# ---------------------------------------------------------------------------
-# HTTP helpers
-# ---------------------------------------------------------------------------
 def http_get(session, url, retries=3):
     for attempt in range(retries):
         try:
@@ -84,7 +66,6 @@ def http_get(session, url, retries=3):
                 time.sleep(2 * (attempt + 1))
             else:
                 raise
-
 
 def http_post(session, url, data, retries=3):
     for attempt in range(retries):
@@ -99,18 +80,7 @@ def http_post(session, url, data, retries=3):
             else:
                 raise
 
-
-# ---------------------------------------------------------------------------
-# Discovery: terms and departments
-# ---------------------------------------------------------------------------
 def fetch_terms_and_departments(session):
-    """GET the form page, parse term and department dropdowns.
-
-    Returns (terms, departments):
-        terms: list of (term_code, term_name), e.g. [("202620", "Spring 2026")]
-        departments: list of (dept_code, dept_name), e.g. [("ACCT", "Accounting/51")]
-    Only active (non-Inactive) terms are returned.
-    """
     html = http_get(session, FORM_URL)
     soup = BeautifulSoup(html, "html.parser")
 
@@ -134,30 +104,13 @@ def fetch_terms_and_departments(session):
 
     return terms, departments
 
-
-# ---------------------------------------------------------------------------
-# HTML parsing: extract section records from response
-# ---------------------------------------------------------------------------
 def parse_textbook_response(html, term_name, dept_code):
-    """Parse the HTML table from nwtext.P_Displaydata.
-
-    The HTML uses <tr bgcolor="SILVER"> to delimit records (no closing </tr>).
-    Each record has a variable number of <td> cells:
-      - 7 cells: no book (ends with "No textbook rental")
-      - 8 cells: no book (OP campus section with Textbook Finder link)
-      - 13 cells: has book data
-      - Other counts: may be a header row or malformed — skip
-
-    Returns list of row dicts ready for CSV.
-    """
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     rows = []
 
-    # Split HTML by <tr to get individual record chunks
     chunks = re.split(r"<tr\b[^>]*>", html, flags=re.IGNORECASE)
 
     for chunk in chunks:
-        # Extract all <td> cell contents from this chunk
         soup = BeautifulSoup(chunk, "html.parser")
         cells = soup.find_all("td")
         if not cells:
@@ -166,16 +119,13 @@ def parse_textbook_response(html, term_name, dept_code):
         cell_texts = [c.get_text(strip=True) for c in cells]
         n = len(cell_texts)
 
-        # Skip header rows (contain "CRN" header)
         if n >= 7 and cell_texts[0] == "CRN":
             continue
 
-        # Skip if first cell doesn't look like a CRN (numeric)
         if not cell_texts[0].isdigit():
             continue
 
         if n == 7:
-            # No book: CRN, Camp, Crse#, Sec, Title, Instructor, "No textbook rental"
             rows.append({
                 "source_url": SOURCE_URL,
                 "school_id": SCHOOL_ID,
@@ -193,7 +143,6 @@ def parse_textbook_response(html, term_name, dept_code):
                 "updated_on": crawled_on,
             })
         elif n == 8:
-            # OP section with Textbook Finder link: CRN, Camp, Crse#, Sec, Title, Instructor, "", "Textbook Finder"
             rows.append({
                 "source_url": SOURCE_URL,
                 "school_id": SCHOOL_ID,
@@ -211,8 +160,6 @@ def parse_textbook_response(html, term_name, dept_code):
                 "updated_on": crawled_on,
             })
         elif n == 13:
-            # Has book: CRN, Camp, Crse#, Sec, Title, Instructor, Rental,
-            #           BookTitle, Author, Publisher, Edition, ISBN, NumBooks
             rows.append({
                 "source_url": SOURCE_URL,
                 "school_id": SCHOOL_ID,
@@ -229,16 +176,10 @@ def parse_textbook_response(html, term_name, dept_code):
                 "crawled_on": crawled_on,
                 "updated_on": crawled_on,
             })
-        # else: skip rows with unexpected cell count (navigation, etc.)
 
     return rows
 
-
-# ---------------------------------------------------------------------------
-# Fetch one department's textbooks
-# ---------------------------------------------------------------------------
 def fetch_department_textbooks(session, term_code, term_name, dept_code):
-    """POST for one (term, department) pair, parse results."""
     form_data = {
         "term_code": term_code,
         "subj_code": dept_code,
@@ -256,10 +197,6 @@ def fetch_department_textbooks(session, term_code, term_name, dept_code):
 
     return parse_textbook_response(html, term_name, dept_code)
 
-
-# ---------------------------------------------------------------------------
-# CSV helpers
-# ---------------------------------------------------------------------------
 def append_csv(rows, filepath):
     if not rows:
         return
@@ -271,9 +208,7 @@ def append_csv(rows, filepath):
             writer.writeheader()
         writer.writerows(rows)
 
-
 def get_scraped_departments(filepath):
-    """Return set of (term, dept_code) already scraped."""
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
     scraped = set()
@@ -286,10 +221,6 @@ def get_scraped_departments(filepath):
                 scraped.add((term, dept))
     return scraped
 
-
-# ---------------------------------------------------------------------------
-# Main scraper
-# ---------------------------------------------------------------------------
 def scrape(fresh=False):
     if fresh and os.path.exists(CSV_PATH):
         os.remove(CSV_PATH)
@@ -336,7 +267,6 @@ def scrape(fresh=False):
     print(f"Total rows written this run: {total_rows}")
     print(f"Pairs skipped (already done): {skipped}")
     print(f"CSV: {CSV_PATH}")
-
 
 if __name__ == "__main__":
     fresh = "--fresh" in sys.argv

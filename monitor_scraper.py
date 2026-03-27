@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""
-monitor_scraper.py — Monitor the MBS scraper progress in real-time.
-Run alongside the scraper to get early warnings.
-
-Usage: python3 monitor_scraper.py [interval_seconds]
-  Default interval: 30 seconds
-"""
 
 import csv
 import os
@@ -19,7 +12,6 @@ CSV_PATH = os.path.join(
     "south_texas_college__3094183__bks.csv",
 )
 
-# All 117 expected departments (alphabetical)
 ALL_DEPTS = [
     "ACCT","ACNT","AGRI","ANTH","ARCE","ARCH","ARTC","ARTS","AUMT",
     "BIOL","BMGT","BUSG","BUSI",
@@ -43,7 +35,6 @@ ALL_DEPTS = [
     "WLDG",
 ]
 
-
 def read_csv_stats():
     if not os.path.exists(CSV_PATH) or os.path.getsize(CSV_PATH) == 0:
         return 0, set(), {}
@@ -56,7 +47,6 @@ def read_csv_stats():
                 dept_counts[dept] = dept_counts.get(dept, 0) + 1
     total = sum(dept_counts.values())
     return total, set(dept_counts.keys()), dept_counts
-
 
 def main():
     interval = int(sys.argv[1]) if len(sys.argv) > 1 else 30
@@ -73,23 +63,19 @@ def main():
         new_rows = total - prev_rows
         new_depts = depts - prev_depts
 
-        # Check for stalls
         if total > 0 and new_rows == 0:
             stall_count += 1
         else:
             stall_count = 0
 
-        # Status line
         print(f"[{now}] {total} rows | {len(depts)} depts | +{new_rows} rows | +{len(new_depts)} depts", end="")
         if new_depts:
             print(f" NEW: {sorted(new_depts)}", end="")
         print()
 
-        # Warnings
         if stall_count >= 3:
             print(f"  ⚠ WARNING: No new rows for {stall_count * interval}s — scraper may be stuck or blocked!")
 
-        # Check for alphabetical gaps in scraped departments
         if depts:
             sorted_scraped = sorted(depts)
             last_dept = sorted_scraped[-1]
@@ -102,7 +88,6 @@ def main():
         prev_depts = depts
 
         time.sleep(interval)
-
 
 if __name__ == "__main__":
     main()

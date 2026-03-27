@@ -27,7 +27,6 @@ SCHEMA_FIELDS = [
     "downloaded_on",
 ]
 
-
 class HtmlDownloadPipeline:
 
     def open_spider(self, spider):
@@ -58,7 +57,6 @@ class HtmlDownloadPipeline:
         adapter["downloaded_on"] = now
 
         return item
-
 
 class CsvExportPipeline:
 

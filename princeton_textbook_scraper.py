@@ -1,17 +1,4 @@
 #!/usr/bin/env python3
-"""
-princeton_textbook_scraper.py — Scrape textbook/course material information from
-Princeton University's eCampus bookstore at princeton.ecampus.com.
-
-Uses FlareSolverr for Akamai bypass, then plain HTTP requests for API calls.
-
-Usage:
-    python3 princeton_textbook_scraper.py           # scrape only missing departments
-    python3 princeton_textbook_scraper.py --fresh   # delete CSV and scrape everything
-
-To discover semester IDs: bootstrap FlareSolverr, load /shop-by-course,
-and inspect the semester <select> dropdown options in the HTML.
-"""
 
 import csv
 import json
@@ -25,16 +12,12 @@ import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
-# Force unbuffered stdout so prints appear immediately in log files
 sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, 'reconfigure') else None
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 SCHOOL_NAME = "princeton_university"
 SCHOOL_ID = "3061307"
 BASE_URL = "https://princeton.ecampus.com"
-SEMESTER_ID = "148819"  # Spring 2026 — discovered via --discover-terms
+SEMESTER_ID = "148819"
 FLARESOLVERR_URL = "http://localhost:8191/v1"
 
 CSV_FIELDS = [
@@ -64,15 +47,9 @@ OUTPUT_DIR = os.path.join(
 )
 CSV_PATH = os.path.join(OUTPUT_DIR, f"{SCHOOL_NAME}__{SCHOOL_ID}__bks.csv")
 
-
-# ---------------------------------------------------------------------------
-# FlareSolverr bootstrap
-# ---------------------------------------------------------------------------
 FLARESOLVERR_SESSION = "princeton_scraper"
 
-
 def flaresolverr_create_session():
-    """Create a named FlareSolverr session for clean browser state."""
     try:
         requests.post(FLARESOLVERR_URL, json={
             "cmd": "sessions.destroy",
@@ -86,9 +63,7 @@ def flaresolverr_create_session():
     }, timeout=120)
     resp.raise_for_status()
 
-
 def flaresolverr_destroy_session():
-    """Destroy the named FlareSolverr session."""
     try:
         requests.post(FLARESOLVERR_URL, json={
             "cmd": "sessions.destroy",
@@ -97,11 +72,7 @@ def flaresolverr_destroy_session():
     except Exception:
         pass
 
-
 def flaresolverr_get(url, max_timeout=60000):
-    """Use FlareSolverr to GET a URL, bypassing Akamai.
-    Returns (html, cookies_dict, user_agent).
-    """
     resp = requests.post(FLARESOLVERR_URL, json={
         "cmd": "request.get",
         "url": url,
@@ -124,9 +95,7 @@ def flaresolverr_get(url, max_timeout=60000):
 
     return html, cookies, ua
 
-
 def create_session():
-    """Bootstrap a session via FlareSolverr. Returns requests.Session."""
     print("[*] Bootstrapping session via FlareSolverr...")
     flaresolverr_create_session()
     html, cookies, ua = flaresolverr_get(BASE_URL + "/shop-by-course")
@@ -142,12 +111,7 @@ def create_session():
     print(f"[*] Session ready. Cookies: {list(cookies.keys())}")
     return sess
 
-
 def refresh_session(sess):
-    """Destroy current session and create a fresh one via FlareSolverr.
-    Retries up to 5 times with increasing delays.
-    Returns new requests.Session.
-    """
     print("[*] Refreshing session via FlareSolverr...", flush=True)
     for attempt in range(5):
         try:
@@ -159,25 +123,16 @@ def refresh_session(sess):
             if attempt == 4:
                 raise
 
-
-# ---------------------------------------------------------------------------
-# eCampus API functions
-# ---------------------------------------------------------------------------
-# API returns JSON arrays of {"id": "...", "value": "..."}
 API_URL = BASE_URL + "/include/get-course-levels-options"
 
-
 def is_cloudflare_block(text):
-    """Check if the response looks like a Cloudflare/Akamai challenge page."""
     if not text:
         return False
     lower = text[:1000].lower()
     return ("just a moment" in lower or "challenge-platform" in lower or
             "<title>attention" in lower)
 
-
 def api_get(sess, params, retries=3):
-    """GET the eCampus course-levels API with retry logic. Returns parsed JSON list."""
     for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
@@ -201,36 +156,22 @@ def api_get(sess, params, retries=3):
                 raise
     return []
 
-
 def fetch_departments(sess, semester_id):
-    """Fetch all departments. Returns list of dicts with id and value (dept code)."""
     params = {"format": "json", "s": semester_id, "startlevel": "1"}
     return api_get(sess, params)
 
-
 def fetch_courses(sess, semester_id, dept_id):
-    """Fetch courses for a department. Returns list of dicts with id and value (course number)."""
     params = {"format": "json", "s": semester_id, "startlevel": "2", "c1": dept_id}
     return api_get(sess, params)
 
-
 def fetch_sections(sess, semester_id, dept_id, course_id):
-    """Fetch sections for a course. Returns list of dicts with id and value (section number)."""
     params = {
         "format": "json", "s": semester_id, "startlevel": "3",
         "c1": dept_id, "c2": course_id,
     }
     return api_get(sess, params)
 
-
-# ---------------------------------------------------------------------------
-# Course-list fetching & HTML parsing
-# ---------------------------------------------------------------------------
 def fetch_course_list(sess, section_ids):
-    """Fetch the course-list page for a list of section IDs.
-    Uses pipe separator (|) which eCampus requires for batching.
-    Returns HTML string.
-    """
     ids_str = "|".join(str(sid) for sid in section_ids)
     url = f"{BASE_URL}/course-list?sbc=1&c={ids_str}"
     time.sleep(REQUEST_DELAY)
@@ -242,43 +183,12 @@ def fetch_course_list(sess, section_ids):
         raise RuntimeError("Cloudflare challenge on course-list page")
     return text
 
-
 def parse_course_list(html):
-    """Parse course-list HTML for textbook data.
-
-    The HTML structure per course is:
-        <div class="course-wrapper" id="course-wrapper-{section_id}">
-          <div class="course-header">
-            <div class="course-identifiers">
-              <h2><span class="levels1-2">ACC 281</span>
-                  <span class="levels3-4">01 </span>
-                  <span class="semester">Spring 2026</span></h2>
-            </div>
-          </div>
-          <div class="course-name-inst">
-            Course Title <span class="course-inst"> - Instructor</span>
-          </div>
-          <div id="course-books-{section_id}">
-            <div class="course-book ...">
-              <input id="cbitreqm-..." value="required"/>
-              <div class="importance">REQUIRED</div>
-              <div class="course-book-details">
-                <div class="title"><h3>BOOK TITLE</h3></div>
-                <div class="author">AUTHOR NAME</div>
-                <div class="book-data isbn">ISBN13: 9781234567890</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-    Returns list of row dicts (without source_url, school_id, crawled_on).
-    """
     soup = BeautifulSoup(html, "html.parser")
     results = []
 
     wrappers = soup.find_all("div", class_="course-wrapper")
     for wrapper in wrappers:
-        # Extract course identifiers from header spans
         dept_code = ""
         course_num = ""
         section_code = ""
@@ -302,7 +212,6 @@ def parse_course_list(html):
 
         course_code = f"|{course_num}" if course_num else ""
 
-        # Extract course title and instructor
         course_title = ""
         instructor = ""
         name_inst = wrapper.find("div", class_="course-name-inst")
@@ -313,11 +222,9 @@ def parse_course_list(html):
                 inst_span.decompose()
             course_title = name_inst.get_text(strip=True)
 
-        # Find book entries
         book_divs = wrapper.find_all("div", class_="course-book")
 
         if not book_divs:
-            # Check for "no materials" messages
             wrapper_text = wrapper.get_text(" ", strip=True).lower()
             if ("no course materials" in wrapper_text or
                     "not require" in wrapper_text or
@@ -340,7 +247,6 @@ def parse_course_list(html):
             continue
 
         for book_div in book_divs:
-            # Adoption status from hidden input or importance div
             adoption = ""
             req_input = book_div.find("input", id=re.compile(r"^cbitreqm-"))
             if req_input:
@@ -350,20 +256,17 @@ def parse_course_list(html):
                 if imp_div:
                     adoption = imp_div.get_text(strip=True).capitalize()
 
-            # ISBN from isbn div text
             isbn = ""
             isbn_div = book_div.find("div", class_="isbn")
             if isbn_div:
                 isbn_match = re.search(r"(\d[\d-]{8,})", isbn_div.get_text())
                 if isbn_match:
                     isbn = isbn_match.group(1).replace("-", "").strip()
-            # Fallback: try isbnupc attribute on any checkbox
             if not isbn:
                 isbn_el = book_div.find(attrs={"isbnupc": True})
                 if isbn_el:
                     isbn = (isbn_el.get("isbnupc", "") or "").replace("-", "").strip()
 
-            # Title from h3 inside .title div
             title = ""
             title_div = book_div.find("div", class_="title")
             if title_div:
@@ -371,7 +274,6 @@ def parse_course_list(html):
                 if h3:
                     title = h3.get_text(strip=True)
 
-            # Author
             author = ""
             author_div = book_div.find("div", class_="author")
             if author_div:
@@ -392,12 +294,7 @@ def parse_course_list(html):
 
     return results
 
-
-# ---------------------------------------------------------------------------
-# CSV helpers
-# ---------------------------------------------------------------------------
 def append_csv(rows, filepath):
-    """Append rows to CSV (create with header if new)."""
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     file_exists = os.path.exists(filepath) and os.path.getsize(filepath) > 0
     with open(filepath, "a", newline="", encoding="utf-8") as f:
@@ -406,9 +303,7 @@ def append_csv(rows, filepath):
             writer.writeheader()
         writer.writerows(rows)
 
-
 def get_scraped_departments(filepath):
-    """Read existing CSV and return set of department codes already scraped."""
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
     scraped = set()
@@ -420,16 +315,11 @@ def get_scraped_departments(filepath):
                 scraped.add(dept)
     return scraped
 
-
-# ---------------------------------------------------------------------------
-# Main scraper
-# ---------------------------------------------------------------------------
 def scrape(fresh=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d 00:00:00")
     source_url = BASE_URL + "/"
     term_name = "SPRING 2026"
 
-    # Fresh run — delete existing CSV
     if fresh and os.path.exists(CSV_PATH):
         os.remove(CSV_PATH)
         print("[*] Fresh run — deleted existing CSV.")
@@ -439,10 +329,8 @@ def scrape(fresh=False):
         print(f"[*] {len(done_depts)} departments already scraped: {sorted(done_depts)}")
         print("[*] Will only scrape missing departments.")
 
-    # Bootstrap session via FlareSolverr
     sess = create_session()
 
-    # Fetch all departments — API returns [{"id":"ACC","value":"ACC"}, ...]
     print("[*] Fetching departments...")
     depts = fetch_departments(sess, SEMESTER_ID)
     print(f"    Found {len(depts)} departments")
@@ -456,12 +344,11 @@ def scrape(fresh=False):
     debug_dumped = False
 
     for dept in tqdm(depts, desc="Departments"):
-        dept_code = dept["id"]  # e.g. "ACC"
+        dept_code = dept["id"]
 
         if dept_code in done_depts:
             continue
 
-        # Fetch courses — returns [{"id":"281","value":"281"}, ...]
         try:
             courses = fetch_courses(sess, SEMESTER_ID, dept_code)
         except Exception as e:
@@ -493,10 +380,9 @@ def scrape(fresh=False):
             total_rows += 1
             continue
 
-        # Collect all section IDs for this department
         all_section_ids = []
         for course in courses:
-            course_num = course["id"]  # e.g. "281"
+            course_num = course["id"]
             try:
                 sections = fetch_sections(sess, SEMESTER_ID, dept_code, course_num)
             except Exception as e:
@@ -509,7 +395,6 @@ def scrape(fresh=False):
         if not all_section_ids:
             continue
 
-        # Batch section IDs and fetch course-list HTML
         batches = [
             all_section_ids[i:i + BATCH_SIZE]
             for i in range(0, len(all_section_ids), BATCH_SIZE)
@@ -522,7 +407,6 @@ def scrape(fresh=False):
                 try:
                     html = fetch_course_list(sess, batch)
 
-                    # Debug: dump first HTML response for inspection
                     if not debug_dumped:
                         debug_path = os.path.join(OUTPUT_DIR, "debug_course_list.html")
                         os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -546,7 +430,7 @@ def scrape(fresh=False):
                         dept_rows += len(rows)
                         total_rows += len(rows)
 
-                    break  # Success
+                    break
 
                 except Exception as e:
                     print(f"\n  [!] Batch {batch_idx} attempt {attempt + 1} failed: {e}", flush=True)
@@ -557,10 +441,8 @@ def scrape(fresh=False):
 
         tqdm.write(f"    [{dept_code}] +{dept_rows} rows (total: {total_rows})")
 
-    # Cleanup
     flaresolverr_destroy_session()
 
-    # Final summary
     print(f"\n{'='*60}")
     print(f"SCRAPE COMPLETE")
     print(f"{'='*60}")
@@ -575,10 +457,7 @@ def scrape(fresh=False):
     else:
         print(f"\n[OK] All {len(all_expected_depts)} departments scraped successfully!")
 
-
 def discover_terms():
-    """Bootstrap FlareSolverr and discover available semester IDs from the
-    shop-by-course page dropdown. Prints IDs so you can set SEMESTER_ID."""
     print("[*] Discovering available terms...")
     flaresolverr_create_session()
     html, cookies, ua = flaresolverr_get(BASE_URL + "/shop-by-course")
@@ -586,7 +465,6 @@ def discover_terms():
 
     soup = BeautifulSoup(html, "html.parser")
 
-    # Look for semester dropdown — could be <select>, or JS-rendered options
     select = soup.find("select", id=re.compile(r"semester|term|ddlSemester", re.I))
     if not select:
         select = soup.find("select", {"name": re.compile(r"s|semester", re.I)})
@@ -599,20 +477,17 @@ def discover_terms():
             if val and val != "0":
                 print(f"  ID: {val:>10}  →  {text}")
     else:
-        # Fallback: search for semester data in JavaScript
         print("[*] No <select> found. Searching JavaScript for semester data...")
         scripts = soup.find_all("script")
         for script in scripts:
             text = script.get_text()
             if "semester" in text.lower() or "term" in text.lower():
-                # Look for ID patterns
                 matches = re.findall(r'"id"\s*:\s*"?(\d+)"?\s*,\s*"value"\s*:\s*"([^"]+)"', text)
                 if matches:
                     print("\nFound terms in script:")
                     for tid, tname in matches:
                         print(f"  ID: {tid:>10}  →  {tname}")
 
-        # Also dump raw HTML for manual inspection
         debug_path = os.path.join(OUTPUT_DIR, "debug_shop_by_course.html")
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         with open(debug_path, "w", encoding="utf-8") as f:
@@ -620,7 +495,6 @@ def discover_terms():
         print(f"\n[*] Full HTML saved to {debug_path} for manual inspection.")
 
     print("\nSet SEMESTER_ID at the top of this script to the desired term ID.")
-
 
 if __name__ == "__main__":
     if "--discover-terms" in sys.argv:

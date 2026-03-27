@@ -13,7 +13,6 @@ INDEX_URL = (
 
 SCHOOL_ID = "3042636"
 
-
 class WccSyllabiSpider(scrapy.Spider):
     name = "wcc_syllabi"
     allowed_domains = ["www.wccnet.edu"]
@@ -28,7 +27,6 @@ class WccSyllabiSpider(scrapy.Spider):
             text = link.css("::text").get("").strip()
             if "/syllabi/" not in href or not text:
                 continue
-            # Extract dept code from text like "Accounting (ACC)"
             dept_match = re.search(r"\(([A-Z]{2,5})\)", text)
             if not dept_match:
                 continue
@@ -47,14 +45,12 @@ class WccSyllabiSpider(scrapy.Spider):
     def parse_discipline(self, response, dept_code, dept_name):
         now = datetime.now(timezone.utc).isoformat()
 
-        # Try table rows first
         rows = response.css("table tr")
         if rows:
             yield from self._parse_table(response, rows, dept_code,
                                          dept_name, now)
             return
 
-        # Fall back to definition list or plain links
         yield from self._parse_links(response, dept_code, dept_name, now)
 
     def _parse_table(self, response, rows, dept_code, dept_name, now):
@@ -69,7 +65,6 @@ class WccSyllabiSpider(scrapy.Spider):
 
             course_code, course_title = self._parse_course_text(text, dept_code)
 
-            # Last updated date is in the second td
             date_text = row.css("td:last-child::text").get("").strip()
 
             pdf_url = response.urljoin(href)
@@ -134,10 +129,7 @@ class WccSyllabiSpider(scrapy.Spider):
 
     @staticmethod
     def _parse_course_text(text, dept_code):
-        """Parse 'CIS110. Introduction to CIS' → ('CIS-110', 'Introduction to CIS')"""
-        # Normalize whitespace (some link texts span multiple lines)
         cleaned = re.sub(r"\s+", " ", text.strip())
-        # Pattern: DEPT + optional space + NUMBER + separator + title
         match = re.match(
             r"^([A-Z]{2,5})\s*(\d{3}[A-Z]?)[\.\s]+(.+)$",
             cleaned, re.IGNORECASE,
@@ -146,7 +138,6 @@ class WccSyllabiSpider(scrapy.Spider):
             code = f"{match.group(1).upper()}-{match.group(2)}"
             title = match.group(3).strip()
             return code, title
-        # Try pattern without title (just code): "ENG100S."
         match2 = re.match(
             r"^([A-Z]{2,5})\s*(\d{3}[A-Z]?)\.?\s*$",
             cleaned, re.IGNORECASE,
@@ -154,5 +145,4 @@ class WccSyllabiSpider(scrapy.Spider):
         if match2:
             code = f"{match2.group(1).upper()}-{match2.group(2)}"
             return code, ""
-        # Fallback: use full text as title
         return f"{dept_code}-UNKNOWN", cleaned

@@ -16,7 +16,6 @@ LASERFICHE_SEARCH_TEMPLATE = (
 
 SCHOOL_ID = "3061268"
 
-
 def _build_page_url(page_num):
     params = {
         "catoid": "8",
@@ -28,7 +27,6 @@ def _build_page_url(page_num):
     }
     return f"{COURSE_LIST_URL}?{urlencode(params)}"
 
-
 def _parse_course_code(text):
     text = text.strip()
     match = re.match(r"^([A-Z]{2,5}-\d{3}[A-Z]?)\s+(.+)$", text)
@@ -38,7 +36,6 @@ def _parse_course_code(text):
         dept = code.split("-")[0]
         return code, title, dept
     return None, None, None
-
 
 class BergenSyllabiSpider(scrapy.Spider):
     name = "bergen_syllabi"
@@ -148,7 +145,6 @@ class BergenSyllabiSpider(scrapy.Spider):
                 return True
             if f"cpage%5D={next_page_num}" in href or f"cpage]={next_page_num}" in href:
                 return True
-
 
         pagination_text = response.css("body").re(r"Page:.*")
         if pagination_text:

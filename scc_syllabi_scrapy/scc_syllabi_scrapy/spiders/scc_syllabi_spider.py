@@ -14,7 +14,6 @@ TOTAL_PAGES = 8
 
 SCHOOL_ID = "3088556"
 
-
 class SccSyllabiSpider(scrapy.Spider):
     name = "scc_syllabi"
     allowed_domains = ["catalog.sccsc.edu"]

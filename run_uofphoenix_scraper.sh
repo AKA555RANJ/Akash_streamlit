@@ -22,12 +22,23 @@ sudo rm -f /etc/apt/sources.list.d/yarn.list \
 sudo sed -i '/dl.yarnpkg.com/d' /etc/apt/sources.list 2>/dev/null || true
 
 sudo apt-get update -q 2>&1 | grep -v "^W:\|^E:.*yarn" || true
-sudo apt-get install -y -q xvfb chromium-browser 2>/dev/null || \
-  sudo apt-get install -y -q xvfb chromium
+sudo apt-get install -y -q xvfb
 
-CHROME_BIN=$(which chromium-browser 2>/dev/null || which chromium 2>/dev/null || true)
+# chromium-browser in Ubuntu 24.04 Codespaces is a snap stub — not usable.
+# Install real Chromium via playwright's bundled binary instead.
+CHROME_BIN=$(find /root/.cache/ms-playwright /home/*/.cache/ms-playwright \
+  -name "chrome" -type f 2>/dev/null | head -1)
+
 if [ -z "$CHROME_BIN" ]; then
-  echo "[ERROR] Could not find chromium."
+  echo "    Installing Playwright + Chromium..."
+  pip install -q playwright
+  python3 -m playwright install chromium
+  CHROME_BIN=$(find /root/.cache/ms-playwright /home/*/.cache/ms-playwright \
+    -name "chrome" -type f 2>/dev/null | head -1)
+fi
+
+if [ -z "$CHROME_BIN" ]; then
+  echo "[ERROR] Could not find or install Chromium."
   exit 1
 fi
 echo "    Chrome binary: $CHROME_BIN"

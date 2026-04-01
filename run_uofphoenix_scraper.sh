@@ -181,7 +181,8 @@ cd "$SCRIPT_DIR"
 git config user.email "scraper@codespace" 2>/dev/null || true
 git config user.name  "Codespace Scraper"  2>/dev/null || true
 
-git add \
+# data/ is in .gitignore — force-add the UofPhoenix output specifically
+git add -f \
   "$OUTPUT_DATA_DIR/" \
   2>/dev/null || true
 

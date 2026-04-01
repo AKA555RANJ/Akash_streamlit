@@ -160,6 +160,41 @@ echo ""
 echo "    FlareSolverr startup log:"
 cat /tmp/flaresolverr.log
 
+# --- Diagnostic: test request.fetch_post before scraper starts ---
+echo ""
+echo "[DIAG] Testing request.fetch_post command..."
+python3 - <<'PYEOF'
+import requests, json, time
+
+# Create a test session
+r = requests.post("http://localhost:8191/v1",
+    json={"cmd": "sessions.create", "session": "diag_test"}, timeout=30)
+print("  session.create:", r.json().get("status"))
+
+# Test fetch_post against a real endpoint
+r = requests.post("http://localhost:8191/v1", json={
+    "cmd": "request.fetch_post",
+    "url": "https://svc.bkstr.com/store/config?storeName=uofphoenixstore",
+    "session": "diag_test",
+    "maxTimeout": 30000,
+    "postData": "{}"
+}, timeout=60)
+resp = r.json()
+print("  fetch_post status (HTTP):", r.status_code)
+print("  fetch_post status (FS):", resp.get("status"))
+print("  fetch_post message:", resp.get("message", "")[:200])
+if resp.get("solution"):
+    sol = resp["solution"]
+    print("  fetch_post response code:", sol.get("status") or sol.get("statusCode"))
+    body = sol.get("response") or sol.get("body") or ""
+    print("  fetch_post body[:200]:", str(body)[:200])
+
+# Destroy test session
+requests.post("http://localhost:8191/v1",
+    json={"cmd": "sessions.destroy", "session": "diag_test"}, timeout=10)
+PYEOF
+echo "[DIAG] Done."
+
 # --- 5. Run scraper ---
 echo ""
 echo "[5/5] Running scraper..."

@@ -160,12 +160,37 @@ cat /tmp/flaresolverr.log
 echo ""
 echo "[5/5] Running scraper..."
 echo "--------------------------------------"
-DISPLAY=:99 python3 uofphoenix_textbook_scraper.py "$@"
+DISPLAY=:99 python3 uofphoenix_textbook_scraper.py "$@" || true
 
 # Cleanup
 echo ""
 echo "Cleaning up..."
 kill $FLARE_PID 2>/dev/null || true
 kill $XVFB_PID 2>/dev/null || true
+
+# --- 6. Push debug output + results to GitHub so they can be reviewed ---
+echo ""
+echo "[6/6] Pushing debug output and results to GitHub..."
+
+OUTPUT_DATA_DIR="$SCRIPT_DIR/data/university_of_phoenix_arizona__2990835__bks"
+
+# Copy FlareSolverr log into the output dir so it gets committed
+cp /tmp/flaresolverr.log "$OUTPUT_DATA_DIR/flaresolverr.log" 2>/dev/null || true
+
+cd "$SCRIPT_DIR"
+git config user.email "scraper@codespace" 2>/dev/null || true
+git config user.name  "Codespace Scraper"  2>/dev/null || true
+
+git add \
+  "$OUTPUT_DATA_DIR/" \
+  2>/dev/null || true
+
+if git diff --cached --quiet; then
+  echo "    Nothing new to push."
+else
+  git commit -m "Add scraper debug output and results $(date -u '+%Y-%m-%d %H:%M UTC')"
+  git push origin claude/test-scraping-query-NLiow
+  echo "    Pushed! Check the data/ folder on the branch."
+fi
 
 echo "Done."

@@ -153,6 +153,7 @@ def create_session():
     print("[*] Bootstrapping session via FlareSolverr...")
     flaresolverr_create_session()
 
+    # Visit the store home first to establish PerimeterX cookies
     print(f"[*] Visiting SPA page: {STORE_HOME}")
     html, cookies, ua = flaresolverr_get(STORE_HOME, max_timeout=120000)
     cookie_names = [c["name"] for c in cookies if c.get("name")]
@@ -165,10 +166,14 @@ def create_session():
 
     if is_blocked(html):
         print("[!] Bootstrap page appears blocked. Retrying...")
-        time.sleep(10)
+        time.sleep(15)
         html, cookies, ua = flaresolverr_get(STORE_HOME, max_timeout=120000)
         if is_blocked(html):
             raise RuntimeError("Cannot bypass protection on bootstrap page")
+
+    # Let PerimeterX / Cloudflare cookies fully settle before hitting the API
+    print("[*] Waiting 8s for session cookies to settle...")
+    time.sleep(8)
 
     return ua
 

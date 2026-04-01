@@ -209,8 +209,11 @@ def create_session():
     })
     for c in cookies:
         if c.get("name") and c.get("value"):
-            _api_session.cookies.set(c["name"], c["value"],
-                                     domain=c.get("domain", ".bkstr.com"))
+            # Normalize to root domain so cookies reach svc.bkstr.com too
+            raw_domain = c.get("domain", ".bkstr.com")
+            if "bkstr.com" in raw_domain and not raw_domain.startswith("."):
+                raw_domain = ".bkstr.com"
+            _api_session.cookies.set(c["name"], c["value"], domain=raw_domain)
     print(f"[*] {len(cookies)} cookies loaded into requests session.")
     return ua
 
@@ -232,6 +235,10 @@ def _is_px_blocked(resp):
     """Return True if the response is a PerimeterX / Cloudflare block page."""
     if resp.status_code in (403, 429):
         ct = resp.headers.get("Content-Type", "")
+        text = resp.text[:1000]
+        print(f"  [DEBUG] HTTP {resp.status_code} from {resp.url}")
+        print(f"  [DEBUG] Content-Type: {ct}")
+        print(f"  [DEBUG] Body[:500]: {text[:500]}")
         if "json" not in ct:
             return True
         try:
@@ -240,8 +247,7 @@ def _is_px_blocked(resp):
                 return True
         except Exception:
             pass
-        text = resp.text[:500].lower()
-        if "px-captcha" in text or "perimeterx" in text or "just a moment" in text:
+        if "px-captcha" in text.lower() or "perimeterx" in text.lower() or "just a moment" in text.lower():
             return True
     return False
 
@@ -309,8 +315,10 @@ def svc_post(endpoint, payload, retries=3):
 def fetch_store_config():
     print("[*] Fetching store config...")
     data = svc_get("store/config", {"storeName": STORE_SLUG})
+    print(f"    store/config keys: {list(data.keys()) if isinstance(data, dict) else data}")
     store_id = data.get("storeId", "")
-    catalog_id = data.get("catalogId", "")
+    catalog_id = (data.get("catalogId") or data.get("catId") or
+                  data.get("catalog_id") or data.get("defaultCatalogId") or "")
     print(f"    storeId={store_id}, catalogId={catalog_id}")
     return str(store_id), str(catalog_id)
 

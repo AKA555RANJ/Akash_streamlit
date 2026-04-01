@@ -40,6 +40,16 @@ CSV_FIELDS = [
 
 REQUEST_DELAY = 1.0
 
+# Shared requests session — populated with PX cookies after FlareSolverr bootstrap
+_api_session = requests.Session()
+_api_session.headers.update({
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Content-Type": "application/json",
+    "Origin": BASE_URL if 'BASE_URL' in dir() else "https://www.bkstr.com",
+    "Referer": "https://www.bkstr.com/",
+})
+
 OUTPUT_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "data",
@@ -161,10 +171,11 @@ def format_code(code):
 
 
 def create_session():
+    global _api_session
     print("[*] Bootstrapping session via FlareSolverr...")
     flaresolverr_create_session()
 
-    # Visit the store home first to establish PerimeterX cookies
+    # Visit the store home to establish PerimeterX / Cloudflare cookies
     print(f"[*] Visiting SPA page: {STORE_HOME}")
     html, cookies, ua = flaresolverr_get(STORE_HOME, max_timeout=120000)
     cookie_names = [c["name"] for c in cookies if c.get("name")]
@@ -182,10 +193,25 @@ def create_session():
         if is_blocked(html):
             raise RuntimeError("Cannot bypass protection on bootstrap page")
 
-    # Let PerimeterX / Cloudflare cookies fully settle before hitting the API
+    # Let PerimeterX cookies fully settle
     print("[*] Waiting 8s for session cookies to settle...")
     time.sleep(8)
 
+    # Load all harvested cookies into the shared requests session
+    _api_session = requests.Session()
+    _api_session.headers.update({
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Content-Type": "application/json",
+        "Origin": BASE_URL,
+        "Referer": STORE_HOME,
+        "User-Agent": ua or "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    })
+    for c in cookies:
+        if c.get("name") and c.get("value"):
+            _api_session.cookies.set(c["name"], c["value"],
+                                     domain=c.get("domain", ".bkstr.com"))
+    print(f"[*] {len(cookies)} cookies loaded into requests session.")
     return ua
 
 
@@ -202,38 +228,44 @@ def refresh_session():
                 raise
 
 
-def svc_get(endpoint, params=None, retries=3):
-    qs = ""
-    if params:
-        qs = "&".join(f"{k}={v}" for k, v in params.items())
-    url = f"{SVC_URL}/{endpoint}" + (f"?{qs}" if qs else "")
+def _is_px_blocked(resp):
+    """Return True if the response is a PerimeterX / Cloudflare block page."""
+    if resp.status_code in (403, 429):
+        ct = resp.headers.get("Content-Type", "")
+        if "json" not in ct:
+            return True
+        try:
+            body = resp.json()
+            if isinstance(body, dict) and body.get("type") in ("px", "captcha"):
+                return True
+        except Exception:
+            pass
+        text = resp.text[:500].lower()
+        if "px-captcha" in text or "perimeterx" in text or "just a moment" in text:
+            return True
+    return False
 
+
+def svc_get(endpoint, params=None, retries=3):
+    url = f"{SVC_URL}/{endpoint}"
     for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
-            html, _, _ = flaresolverr_get(url)
-
-            if is_blocked(html):
+            resp = _api_session.get(url, params=params, timeout=30)
+            if _is_px_blocked(resp):
                 if attempt < retries - 1:
                     print(f"  [WARN] Blocked on {endpoint} (attempt {attempt + 1}), refreshing...")
                     refresh_session()
                     continue
                 raise RuntimeError(f"Blocked on {endpoint} after {retries} attempts")
-
-            data = extract_json(html)
-            if data is not None:
-                return data
-
-            if not html.strip():
-                return {}
-            print(f"  [WARN] Non-JSON response from {endpoint}: {html[:200]}")
-            return {}
+            resp.raise_for_status()
+            return resp.json()
         except json.JSONDecodeError:
             if attempt < retries - 1:
                 print(f"  [WARN] JSON parse error on {endpoint} (attempt {attempt + 1})")
                 time.sleep(2)
             else:
-                print(f"  [ERROR] JSON parse failed for {endpoint}: {html[:200]}")
+                print(f"  [ERROR] JSON parse failed for {endpoint}: {resp.text[:200]}")
                 return {}
         except Exception as e:
             if attempt < retries - 1:
@@ -246,34 +278,24 @@ def svc_get(endpoint, params=None, retries=3):
 
 def svc_post(endpoint, payload, retries=3):
     url = f"{SVC_URL}/{endpoint}"
-    post_data = json.dumps(payload)
-
     for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
-            html, _, _ = flaresolverr_post(url, post_data)
-
-            if is_blocked(html):
+            resp = _api_session.post(url, json=payload, timeout=30)
+            if _is_px_blocked(resp):
                 if attempt < retries - 1:
                     print(f"  [WARN] Blocked on POST {endpoint} (attempt {attempt + 1}), refreshing...")
                     refresh_session()
                     continue
                 raise RuntimeError(f"Blocked on POST {endpoint} after {retries} attempts")
-
-            data = extract_json(html)
-            if data is not None:
-                return data
-
-            if not html.strip():
-                return {}
-            print(f"  [WARN] Non-JSON POST response from {endpoint}: {html[:200]}")
-            return {}
+            resp.raise_for_status()
+            return resp.json()
         except json.JSONDecodeError:
             if attempt < retries - 1:
                 print(f"  [WARN] JSON parse error on POST {endpoint} (attempt {attempt + 1})")
                 time.sleep(2)
             else:
-                print(f"  [ERROR] JSON parse failed for POST {endpoint}: {html[:200]}")
+                print(f"  [ERROR] JSON parse failed for POST {endpoint}: {resp.text[:200]}")
                 return {}
         except Exception as e:
             if attempt < retries - 1:

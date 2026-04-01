@@ -193,9 +193,20 @@ def create_session():
         if is_blocked(html):
             raise RuntimeError("Cannot bypass protection on bootstrap page")
 
-    # Let PerimeterX cookies fully settle
+    # Let PerimeterX / Akamai cookies fully settle
     print("[*] Waiting 8s for session cookies to settle...")
     time.sleep(8)
+
+    # Also warm up svc.bkstr.com via FlareSolverr so Akamai sets _abck for that subdomain
+    svc_warmup_url = f"{SVC_URL}/store/config?storeName={STORE_SLUG}"
+    print(f"[*] Warming up svc.bkstr.com via FlareSolverr...")
+    try:
+        _, svc_cookies, _ = flaresolverr_get(svc_warmup_url, max_timeout=60000)
+        print(f"    svc cookies: {[c['name'] for c in svc_cookies if c.get('name')]}")
+        cookies = cookies + [c for c in svc_cookies
+                             if c.get("name") not in {x.get("name") for x in cookies}]
+    except Exception as e:
+        print(f"  [WARN] svc warmup failed: {e}")
 
     # Load all harvested cookies into the shared requests session
     _api_session = requests.Session()
@@ -209,12 +220,13 @@ def create_session():
     })
     for c in cookies:
         if c.get("name") and c.get("value"):
-            # Normalize to root domain so cookies reach svc.bkstr.com too
+            # Normalize to .bkstr.com so cookies reach svc.bkstr.com
             raw_domain = c.get("domain", ".bkstr.com")
             if "bkstr.com" in raw_domain and not raw_domain.startswith("."):
                 raw_domain = ".bkstr.com"
             _api_session.cookies.set(c["name"], c["value"], domain=raw_domain)
-    print(f"[*] {len(cookies)} cookies loaded into requests session.")
+    akamai_cookies = [c["name"] for c in cookies if c.get("name") in ("_abck", "bm_sz", "ak_bmsc")]
+    print(f"[*] {len(cookies)} cookies loaded. Akamai cookies present: {akamai_cookies}")
     return ua
 
 
@@ -317,8 +329,10 @@ def fetch_store_config():
     data = svc_get("store/config", {"storeName": STORE_SLUG})
     print(f"    store/config keys: {list(data.keys()) if isinstance(data, dict) else data}")
     store_id = data.get("storeId", "")
-    catalog_id = (data.get("catalogId") or data.get("catId") or
-                  data.get("catalog_id") or data.get("defaultCatalogId") or "")
+    default_catalog = data.get("defaultCatalog") or {}
+    catalog_id = (data.get("catalogId") or
+                  (default_catalog.get("catalogId") if isinstance(default_catalog, dict) else default_catalog) or
+                  data.get("catId") or "")
     print(f"    storeId={store_id}, catalogId={catalog_id}")
     return str(store_id), str(catalog_id)
 

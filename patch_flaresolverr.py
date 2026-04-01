@@ -104,8 +104,13 @@ def _cmd_request_fetch_post(req) -> V1ResponseBase:
             sys.exit(1)
         src = src.replace(marker, IMPL + marker)
         print("  [+] Added _cmd_request_fetch_post implementation")
+    elif "res.solution = challenge_res" not in src:
+        # Function present but uses wrong res.result — fix it in-place
+        src = src.replace("res.result  = challenge_res", "res.solution = challenge_res")
+        src = src.replace("res.result = challenge_res", "res.solution = challenge_res")
+        print("  [+] Fixed res.result -> res.solution in _cmd_request_fetch_post")
     else:
-        print("  [=] _cmd_request_fetch_post function already present")
+        print("  [=] _cmd_request_fetch_post function already present and correct")
 
     open(path, "w").write(src)
     print(f"  [OK] Patched: {path}")

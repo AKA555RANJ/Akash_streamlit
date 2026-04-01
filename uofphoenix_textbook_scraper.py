@@ -85,7 +85,7 @@ def flaresolverr_get(url, max_timeout=90000):
     if data.get("status") != "ok":
         raise RuntimeError(f"FlareSolverr error: {data}")
     sol = data["solution"]
-    return sol.get("response", ""), sol.get("cookies", []), sol.get("userAgent", "")
+    return sol.get("response") or "", sol.get("cookies") or [], sol.get("userAgent") or ""
 
 
 def flaresolverr_post(url, post_data, max_timeout=90000):
@@ -101,7 +101,7 @@ def flaresolverr_post(url, post_data, max_timeout=90000):
     if data.get("status") != "ok":
         raise RuntimeError(f"FlareSolverr error: {data}")
     sol = data["solution"]
-    return sol.get("response", ""), sol.get("cookies", []), sol.get("userAgent", "")
+    return sol.get("response") or "", sol.get("cookies") or [], sol.get("userAgent") or ""
 
 
 def is_blocked(text):

@@ -96,10 +96,26 @@ echo ""
 echo "[3/5] Starting Xvfb virtual display..."
 pkill -f "Xvfb :99" 2>/dev/null || true
 sleep 1
-Xvfb :99 -screen 0 1920x1080x24 -nolisten tcp &
+
+# Codespaces runs as non-root; Xvfb needs /tmp/.X11-unix to exist first
+sudo mkdir -p /tmp/.X11-unix
+sudo chmod 1777 /tmp/.X11-unix
+
+Xvfb :99 -screen 0 1920x1080x24 &
 XVFB_PID=$!
-sleep 2
-echo "    Xvfb PID: $XVFB_PID"
+sleep 3
+
+# Verify the display socket actually exists
+if [ ! -S /tmp/.X11-unix/X99 ]; then
+  echo "[ERROR] Xvfb display :99 socket not found. Xvfb may have failed."
+  echo "        Falling back to Chromium headless mode (--headless=new)..."
+  kill $XVFB_PID 2>/dev/null || true
+  XVFB_PID=""
+  USE_HEADLESS=true
+else
+  USE_HEADLESS=false
+  echo "    Xvfb PID: $XVFB_PID (display :99 OK)"
+fi
 
 # --- 4. Start FlareSolverr ---
 echo ""
@@ -107,13 +123,15 @@ echo "[4/5] Starting FlareSolverr (HEADLESS=false, stealth mode)..."
 pkill -f "flaresolverr" 2>/dev/null || true
 sleep 1
 
-DISPLAY=:99 \
-CHROME_EXE_PATH="$CHROME_BIN" \
-HEADLESS=false \
-HOST=0.0.0.0 \
-PORT=8191 \
-LANG=en-US \
-  python3 -m flaresolverr > /tmp/flaresolverr.log 2>&1 &
+if [ "$USE_HEADLESS" = "true" ]; then
+  DISPLAY="" CHROME_EXE_PATH="$CHROME_BIN" HEADLESS=true \
+  HOST=0.0.0.0 PORT=8191 LANG=en-US \
+    python3 -m flaresolverr > /tmp/flaresolverr.log 2>&1 &
+else
+  DISPLAY=:99 CHROME_EXE_PATH="$CHROME_BIN" HEADLESS=false \
+  HOST=0.0.0.0 PORT=8191 LANG=en-US \
+    python3 -m flaresolverr > /tmp/flaresolverr.log 2>&1 &
+fi
 FLARE_PID=$!
 
 # Wait for FlareSolverr to be ready
@@ -132,10 +150,13 @@ for i in $(seq 1 25); do
 done
 
 if [ "$STATUS" != "ok" ]; then
-  echo "[ERROR] FlareSolverr did not start. Logs:"
-  cat /tmp/flaresolverr.log
+  echo "[ERROR] FlareSolverr did not start. Last logs:"
+  tail -30 /tmp/flaresolverr.log
   exit 1
 fi
+echo ""
+echo "    FlareSolverr startup log:"
+cat /tmp/flaresolverr.log
 
 # --- 5. Run scraper ---
 echo ""

@@ -1,0 +1,611 @@
+2026-04-01 09:14:03 INFO     FlareSolverr 3.3.21
+2026-04-01 09:14:03 INFO     Testing web browser installation...
+2026-04-01 09:14:03 INFO     Platform: Linux-6.8.0-1044-azure-x86_64-with-glibc2.39
+2026-04-01 09:14:03 INFO     Chrome / Chromium path: /home/codespace/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome
+2026-04-01 09:14:03 INFO     Chrome / Chromium major version: 145
+2026-04-01 09:14:03 INFO     Launching web browser...
+2026-04-01 09:14:05 INFO     FlareSolverr User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
+2026-04-01 09:14:05 INFO     Test successful!
+2026-04-01 09:14:05 INFO     Serving on http://0.0.0.0:8191
+2026-04-01 09:14:06 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.list'}
+2026-04-01 09:14:06 INFO     Response in 0.001 s
+2026-04-01 09:14:06 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:14:06 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:14:06 ERROR    Error: The session doesn't exist.
+2026-04-01 09:14:06 INFO     Response in 0.0 s
+2026-04-01 09:14:06 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:14:06 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:14:07 INFO     Response in 0.564 s
+2026-04-01 09:14:07 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:14:07 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:14:11 INFO     Challenge not detected!
+2026-04-01 09:14:11 INFO     Response in 3.764 s
+2026-04-01 09:14:11 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:14:19 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:14:21 INFO     Challenge not detected!
+2026-04-01 09:14:21 INFO     Response in 2.414 s
+2026-04-01 09:14:21 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:14:26 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:14:26 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:14:26 INFO     Response in 0.0 s
+2026-04-01 09:14:26 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:14:30 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:14:30 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:14:30 INFO     Response in 0.0 s
+2026-04-01 09:14:30 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:14:37 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:14:37 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:14:37 INFO     Response in 0.0 s
+2026-04-01 09:14:37 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:14:37 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:14:38 INFO     Response in 1.058 s
+2026-04-01 09:14:38 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:14:43 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:14:43 ERROR    Error: The session doesn't exist.
+2026-04-01 09:14:43 INFO     Response in 0.0 s
+2026-04-01 09:14:43 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:14:43 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:14:44 INFO     Response in 0.531 s
+2026-04-01 09:14:44 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:14:44 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:14:48 INFO     Challenge not detected!
+2026-04-01 09:14:48 INFO     Response in 4.437 s
+2026-04-01 09:14:48 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:14:56 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:14:59 INFO     Challenge not detected!
+2026-04-01 09:14:59 INFO     Response in 2.534 s
+2026-04-01 09:14:59 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:15:00 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:15:00 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:15:00 INFO     Response in 0.001 s
+2026-04-01 09:15:00 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:15:04 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:15:04 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:15:04 INFO     Response in 0.0 s
+2026-04-01 09:15:04 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:15:11 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:15:11 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:15:11 INFO     Response in 0.001 s
+2026-04-01 09:15:11 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:15:12 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "731", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:15:12 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:15:12 INFO     Response in 0.0 s
+2026-04-01 09:15:12 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:15:16 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "731", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:15:16 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:15:16 INFO     Response in 0.001 s
+2026-04-01 09:15:16 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:15:23 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "731", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:15:23 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:15:23 INFO     Response in 0.0 s
+2026-04-01 09:15:23 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:15:23 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:15:24 INFO     Response in 1.051 s
+2026-04-01 09:15:24 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:15:29 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:15:29 ERROR    Error: The session doesn't exist.
+2026-04-01 09:15:29 INFO     Response in 0.0 s
+2026-04-01 09:15:29 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:15:29 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:15:29 INFO     Response in 0.633 s
+2026-04-01 09:15:29 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:15:29 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:15:34 INFO     Challenge not detected!
+2026-04-01 09:15:35 INFO     Response in 5.189 s
+2026-04-01 09:15:35 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:15:43 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:15:45 INFO     Challenge not detected!
+2026-04-01 09:15:45 INFO     Response in 2.543 s
+2026-04-01 09:15:45 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:15:46 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "731", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:15:46 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:15:46 INFO     Response in 0.0 s
+2026-04-01 09:15:46 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:15:50 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "731", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:15:50 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:15:50 INFO     Response in 0.0 s
+2026-04-01 09:15:50 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:15:57 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "731", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:15:57 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:15:57 INFO     Response in 0.0 s
+2026-04-01 09:15:57 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:15:58 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "732", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:15:58 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:15:58 INFO     Response in 0.0 s
+2026-04-01 09:15:58 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:16:02 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "732", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:16:02 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:16:02 INFO     Response in 0.0 s
+2026-04-01 09:16:02 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:16:09 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "732", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:16:09 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:16:09 INFO     Response in 0.0 s
+2026-04-01 09:16:09 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:16:09 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:16:10 INFO     Response in 1.029 s
+2026-04-01 09:16:10 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:16:15 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:16:15 ERROR    Error: The session doesn't exist.
+2026-04-01 09:16:15 INFO     Response in 0.001 s
+2026-04-01 09:16:15 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:16:15 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:16:16 INFO     Response in 0.562 s
+2026-04-01 09:16:16 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:16:16 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:16:19 INFO     Challenge not detected!
+2026-04-01 09:16:19 INFO     Response in 3.162 s
+2026-04-01 09:16:19 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:16:27 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:16:30 INFO     Challenge not detected!
+2026-04-01 09:16:30 INFO     Response in 2.581 s
+2026-04-01 09:16:30 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:16:31 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "732", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:16:31 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:16:31 INFO     Response in 0.0 s
+2026-04-01 09:16:31 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:16:35 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "732", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:16:35 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:16:35 INFO     Response in 0.0 s
+2026-04-01 09:16:35 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:16:42 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "BUS", "courseName": "732", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:16:42 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:16:42 INFO     Response in 0.0 s
+2026-04-01 09:16:42 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:16:43 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CCMH", "courseName": "502", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:16:43 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:16:43 INFO     Response in 0.0 s
+2026-04-01 09:16:43 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:16:47 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CCMH", "courseName": "502", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:16:47 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:16:47 INFO     Response in 0.0 s
+2026-04-01 09:16:47 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:16:54 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CCMH", "courseName": "502", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:16:54 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:16:54 INFO     Response in 0.0 s
+2026-04-01 09:16:54 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:16:54 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:16:55 INFO     Response in 1.211 s
+2026-04-01 09:16:55 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:17:00 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:17:00 ERROR    Error: The session doesn't exist.
+2026-04-01 09:17:00 INFO     Response in 0.001 s
+2026-04-01 09:17:00 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:17:00 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:17:00 INFO     Response in 0.554 s
+2026-04-01 09:17:00 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:17:00 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:17:03 INFO     Challenge not detected!
+2026-04-01 09:17:03 INFO     Response in 2.595 s
+2026-04-01 09:17:03 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:17:11 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:17:13 INFO     Challenge not detected!
+2026-04-01 09:17:13 INFO     Response in 2.5 s
+2026-04-01 09:17:13 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:17:14 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CCMH", "courseName": "502", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:17:14 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:17:14 INFO     Response in 0.001 s
+2026-04-01 09:17:14 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:17:18 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CCMH", "courseName": "502", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:17:18 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:17:18 INFO     Response in 0.0 s
+2026-04-01 09:17:18 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:17:26 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CCMH", "courseName": "502", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:17:26 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:17:26 INFO     Response in 0.0 s
+2026-04-01 09:17:26 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:17:27 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CCMH", "courseName": "561", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:17:27 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:17:27 INFO     Response in 0.0 s
+2026-04-01 09:17:27 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:17:31 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CCMH", "courseName": "561", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:17:31 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:17:31 INFO     Response in 0.001 s
+2026-04-01 09:17:31 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:17:38 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CCMH", "courseName": "561", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:17:38 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:17:38 INFO     Response in 0.0 s
+2026-04-01 09:17:38 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:17:38 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:17:39 INFO     Response in 1.046 s
+2026-04-01 09:17:39 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:17:44 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:17:44 ERROR    Error: The session doesn't exist.
+2026-04-01 09:17:44 INFO     Response in 0.0 s
+2026-04-01 09:17:44 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:17:44 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:17:44 INFO     Response in 0.678 s
+2026-04-01 09:17:44 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:17:44 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:17:47 INFO     Challenge not detected!
+2026-04-01 09:17:47 INFO     Response in 2.774 s
+2026-04-01 09:17:47 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:17:55 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:17:58 INFO     Challenge not detected!
+2026-04-01 09:17:58 INFO     Response in 2.663 s
+2026-04-01 09:17:58 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:17:59 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CCMH", "courseName": "561", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:17:59 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:17:59 INFO     Response in 0.001 s
+2026-04-01 09:17:59 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:18:03 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CCMH", "courseName": "561", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:18:03 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:18:03 INFO     Response in 0.0 s
+2026-04-01 09:18:03 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:18:10 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CCMH", "courseName": "561", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:18:10 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:18:10 INFO     Response in 0.0 s
+2026-04-01 09:18:10 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:18:11 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CNSL", "courseName": "502", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:18:11 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:18:11 INFO     Response in 0.001 s
+2026-04-01 09:18:11 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:18:15 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CNSL", "courseName": "502", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:18:15 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:18:15 INFO     Response in 0.0 s
+2026-04-01 09:18:15 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:18:22 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CNSL", "courseName": "502", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:18:22 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:18:22 INFO     Response in 0.0 s
+2026-04-01 09:18:22 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:18:22 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:18:23 INFO     Response in 1.065 s
+2026-04-01 09:18:23 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:18:28 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:18:28 ERROR    Error: The session doesn't exist.
+2026-04-01 09:18:28 INFO     Response in 0.001 s
+2026-04-01 09:18:28 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:18:28 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:18:28 INFO     Response in 0.584 s
+2026-04-01 09:18:28 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:18:28 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:18:33 INFO     Challenge not detected!
+2026-04-01 09:18:33 INFO     Response in 4.407 s
+2026-04-01 09:18:33 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:18:41 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:18:43 INFO     Challenge not detected!
+2026-04-01 09:18:43 INFO     Response in 2.581 s
+2026-04-01 09:18:43 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:18:44 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CNSL", "courseName": "502", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:18:44 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:18:44 INFO     Response in 0.0 s
+2026-04-01 09:18:44 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:18:48 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CNSL", "courseName": "502", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:18:48 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:18:48 INFO     Response in 0.0 s
+2026-04-01 09:18:48 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:18:55 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CNSL", "courseName": "502", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:18:55 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:18:55 INFO     Response in 0.0 s
+2026-04-01 09:18:55 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:18:56 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CUR", "courseName": "722", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:18:56 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:18:56 INFO     Response in 0.0 s
+2026-04-01 09:18:56 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:19:00 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CUR", "courseName": "722", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:19:00 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:19:00 INFO     Response in 0.0 s
+2026-04-01 09:19:00 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:19:07 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CUR", "courseName": "722", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:19:07 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:19:07 INFO     Response in 0.0 s
+2026-04-01 09:19:07 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:19:07 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:19:08 INFO     Response in 1.02 s
+2026-04-01 09:19:08 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:19:13 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:19:13 ERROR    Error: The session doesn't exist.
+2026-04-01 09:19:13 INFO     Response in 0.0 s
+2026-04-01 09:19:13 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:19:13 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:19:14 INFO     Response in 0.573 s
+2026-04-01 09:19:14 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:19:14 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:19:18 INFO     Challenge not detected!
+2026-04-01 09:19:18 INFO     Response in 3.592 s
+2026-04-01 09:19:18 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:19:26 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:19:28 INFO     Challenge not detected!
+2026-04-01 09:19:28 INFO     Response in 2.522 s
+2026-04-01 09:19:28 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:19:29 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CUR", "courseName": "722", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:19:29 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:19:29 INFO     Response in 0.001 s
+2026-04-01 09:19:29 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:19:33 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CUR", "courseName": "722", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:19:33 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:19:33 INFO     Response in 0.0 s
+2026-04-01 09:19:33 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:19:40 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "CUR", "courseName": "722", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:19:40 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:19:40 INFO     Response in 0.0 s
+2026-04-01 09:19:40 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:19:41 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:19:41 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:19:41 INFO     Response in 0.0 s
+2026-04-01 09:19:41 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:19:45 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:19:45 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:19:45 INFO     Response in 0.0 s
+2026-04-01 09:19:45 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:19:52 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:19:52 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:19:52 INFO     Response in 0.001 s
+2026-04-01 09:19:52 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:19:52 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:19:53 INFO     Response in 1.04 s
+2026-04-01 09:19:53 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:19:58 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:19:58 ERROR    Error: The session doesn't exist.
+2026-04-01 09:19:58 INFO     Response in 0.0 s
+2026-04-01 09:19:58 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:19:58 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:19:59 INFO     Response in 0.568 s
+2026-04-01 09:19:59 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:19:59 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:20:01 INFO     Challenge not detected!
+2026-04-01 09:20:01 INFO     Response in 2.612 s
+2026-04-01 09:20:01 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:20:09 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:20:12 INFO     Challenge not detected!
+2026-04-01 09:20:12 INFO     Response in 2.471 s
+2026-04-01 09:20:12 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:20:13 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:20:13 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:20:13 INFO     Response in 0.0 s
+2026-04-01 09:20:13 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:20:17 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:20:17 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:20:17 INFO     Response in 0.0 s
+2026-04-01 09:20:17 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:20:24 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:20:24 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:20:24 INFO     Response in 0.0 s
+2026-04-01 09:20:24 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:20:25 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "715", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:20:25 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:20:25 INFO     Response in 0.0 s
+2026-04-01 09:20:25 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:20:29 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "715", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:20:29 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:20:29 INFO     Response in 0.0 s
+2026-04-01 09:20:29 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:20:36 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "715", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:20:36 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:20:36 INFO     Response in 0.001 s
+2026-04-01 09:20:36 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:20:36 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:20:37 INFO     Response in 1.065 s
+2026-04-01 09:20:37 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:20:42 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:20:42 ERROR    Error: The session doesn't exist.
+2026-04-01 09:20:42 INFO     Response in 0.0 s
+2026-04-01 09:20:42 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:20:42 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:20:43 INFO     Response in 0.538 s
+2026-04-01 09:20:43 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:20:43 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:20:48 INFO     Challenge not detected!
+2026-04-01 09:20:48 INFO     Response in 4.999 s
+2026-04-01 09:20:48 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:20:56 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:20:58 INFO     Challenge not detected!
+2026-04-01 09:20:58 INFO     Response in 2.471 s
+2026-04-01 09:20:58 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:20:59 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "715", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:20:59 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:20:59 INFO     Response in 0.0 s
+2026-04-01 09:20:59 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:21:03 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "715", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:21:03 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:21:03 INFO     Response in 0.0 s
+2026-04-01 09:21:03 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:21:10 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "715", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:21:10 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:21:10 INFO     Response in 0.0 s
+2026-04-01 09:21:10 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:21:11 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "721", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:21:11 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:21:11 INFO     Response in 0.001 s
+2026-04-01 09:21:11 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:21:15 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "721", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:21:15 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:21:15 INFO     Response in 0.0 s
+2026-04-01 09:21:15 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:21:22 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "721", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:21:22 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:21:22 INFO     Response in 0.0 s
+2026-04-01 09:21:22 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:21:22 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:21:23 INFO     Response in 1.18 s
+2026-04-01 09:21:23 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:21:28 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:21:28 ERROR    Error: The session doesn't exist.
+2026-04-01 09:21:28 INFO     Response in 0.0 s
+2026-04-01 09:21:28 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:21:28 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:21:29 INFO     Response in 0.654 s
+2026-04-01 09:21:29 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:21:29 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:21:32 INFO     Challenge not detected!
+2026-04-01 09:21:32 INFO     Response in 2.716 s
+2026-04-01 09:21:32 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:21:40 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:21:42 INFO     Challenge not detected!
+2026-04-01 09:21:42 INFO     Response in 2.501 s
+2026-04-01 09:21:42 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:21:43 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "721", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:21:43 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:21:43 INFO     Response in 0.0 s
+2026-04-01 09:21:43 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:21:47 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "721", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:21:47 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:21:47 INFO     Response in 0.0 s
+2026-04-01 09:21:47 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:21:54 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DHA", "courseName": "721", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:21:54 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:21:54 INFO     Response in 0.0 s
+2026-04-01 09:21:54 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:21:55 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:21:55 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:21:55 INFO     Response in 0.0 s
+2026-04-01 09:21:55 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:21:59 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:21:59 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:21:59 INFO     Response in 0.0 s
+2026-04-01 09:21:59 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:22:06 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:22:06 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:22:06 INFO     Response in 0.0 s
+2026-04-01 09:22:06 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:22:06 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:22:07 INFO     Response in 1.055 s
+2026-04-01 09:22:07 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:22:12 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:22:12 ERROR    Error: The session doesn't exist.
+2026-04-01 09:22:12 INFO     Response in 0.0 s
+2026-04-01 09:22:12 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:22:12 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:22:13 INFO     Response in 0.719 s
+2026-04-01 09:22:13 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:22:13 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:22:16 INFO     Challenge not detected!
+2026-04-01 09:22:16 INFO     Response in 3.299 s
+2026-04-01 09:22:16 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:22:24 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:22:27 INFO     Challenge not detected!
+2026-04-01 09:22:27 INFO     Response in 2.543 s
+2026-04-01 09:22:27 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:22:28 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:22:28 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:22:28 INFO     Response in 0.001 s
+2026-04-01 09:22:28 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:22:32 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:22:32 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:22:32 INFO     Response in 0.0 s
+2026-04-01 09:22:32 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:22:39 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "700", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:22:39 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:22:39 INFO     Response in 0.0 s
+2026-04-01 09:22:39 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:22:40 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "705", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:22:40 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:22:40 INFO     Response in 0.0 s
+2026-04-01 09:22:40 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:22:44 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "705", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:22:44 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:22:44 INFO     Response in 0.0 s
+2026-04-01 09:22:44 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:22:51 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "705", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:22:51 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:22:51 INFO     Response in 0.0 s
+2026-04-01 09:22:51 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:22:51 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:22:52 INFO     Response in 1.245 s
+2026-04-01 09:22:52 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:22:57 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:22:57 ERROR    Error: The session doesn't exist.
+2026-04-01 09:22:57 INFO     Response in 0.0 s
+2026-04-01 09:22:57 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:22:57 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:22:58 INFO     Response in 0.608 s
+2026-04-01 09:22:58 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:22:58 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:23:01 INFO     Challenge not detected!
+2026-04-01 09:23:01 INFO     Response in 3.017 s
+2026-04-01 09:23:01 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:23:09 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:23:11 INFO     Challenge not detected!
+2026-04-01 09:23:11 INFO     Response in 2.685 s
+2026-04-01 09:23:11 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:23:12 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "705", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:23:12 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:23:12 INFO     Response in 0.0 s
+2026-04-01 09:23:12 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:23:16 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "705", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:23:16 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:23:16 INFO     Response in 0.0 s
+2026-04-01 09:23:16 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:23:23 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "705", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:23:23 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:23:23 INFO     Response in 0.0 s
+2026-04-01 09:23:23 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:23:24 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "715", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:23:24 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:23:24 INFO     Response in 0.0 s
+2026-04-01 09:23:24 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:23:28 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "715", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:23:28 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:23:28 INFO     Response in 0.0 s
+2026-04-01 09:23:28 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:23:35 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "715", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:23:35 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:23:35 INFO     Response in 0.0 s
+2026-04-01 09:23:35 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:23:35 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:23:36 INFO     Response in 1.025 s
+2026-04-01 09:23:36 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:23:41 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:23:41 ERROR    Error: The session doesn't exist.
+2026-04-01 09:23:41 INFO     Response in 0.0 s
+2026-04-01 09:23:41 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:23:41 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:23:42 INFO     Response in 0.699 s
+2026-04-01 09:23:42 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:23:42 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:23:48 INFO     Challenge not detected!
+2026-04-01 09:23:48 INFO     Response in 5.802 s
+2026-04-01 09:23:48 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:23:56 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:23:59 INFO     Challenge not detected!
+2026-04-01 09:23:59 INFO     Response in 2.619 s
+2026-04-01 09:23:59 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:24:00 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "715", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:24:00 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:24:00 INFO     Response in 0.0 s
+2026-04-01 09:24:00 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:24:04 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "715", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:24:04 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:24:04 INFO     Response in 0.0 s
+2026-04-01 09:24:04 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:24:11 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "715", "sectionName": "All"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:24:11 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:24:11 INFO     Response in 0.0 s
+2026-04-01 09:24:11 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:24:12 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "725", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:24:12 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:24:12 INFO     Response in 0.0 s
+2026-04-01 09:24:12 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:24:16 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "725", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:24:16 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:24:16 INFO     Response in 0.001 s
+2026-04-01 09:24:16 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:24:23 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "725", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:24:23 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:24:23 INFO     Response in 0.001 s
+2026-04-01 09:24:23 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:24:23 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:24:24 INFO     Response in 1.182 s
+2026-04-01 09:24:24 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:24:29 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.destroy', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:24:29 ERROR    Error: The session doesn't exist.
+2026-04-01 09:24:29 INFO     Response in 0.0 s
+2026-04-01 09:24:29 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:24:29 INFO     Incoming request => POST /v1 body: {'cmd': 'sessions.create', 'session': 'uofphoenix_bkstr_scraper'}
+2026-04-01 09:24:29 INFO     Response in 0.615 s
+2026-04-01 09:24:29 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:24:29 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://www.bkstr.com/uofphoenixstore/shop/textbooks-and-course-materials', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 120000}
+2026-04-01 09:24:32 INFO     Challenge not detected!
+2026-04-01 09:24:32 INFO     Response in 2.812 s
+2026-04-01 09:24:32 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:24:40 INFO     Incoming request => POST /v1 body: {'cmd': 'request.get', 'url': 'https://svc.bkstr.com/store/config?storeName=uofphoenixstore', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 60000}
+2026-04-01 09:24:43 INFO     Challenge not detected!
+2026-04-01 09:24:43 INFO     Response in 2.524 s
+2026-04-01 09:24:43 INFO     127.0.0.1 POST http://localhost:8191/v1 200 OK
+2026-04-01 09:24:44 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "725", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:24:44 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:24:44 INFO     Response in 0.0 s
+2026-04-01 09:24:44 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error
+2026-04-01 09:24:48 INFO     Incoming request => POST /v1 body: {'cmd': 'request.fetch_post', 'url': 'https://svc.bkstr.com/courseMaterial/results', 'session': 'uofphoenix_bkstr_scraper', 'maxTimeout': 90000, 'postData': '{"storeId": "489905", "langId": "-1", "catalogId": "11077", "requestType": "DDCSBrowse", "courses": [{"divisionName": "", "departmentName": "DNP", "courseName": "725", "sectionName": "ALL"}], "programId": "4727", "termId": "100093036"}'}
+2026-04-01 09:24:48 ERROR    Error: name '_cmd_request_fetch_post' is not defined
+2026-04-01 09:24:48 INFO     Response in 0.001 s
+2026-04-01 09:24:48 INFO     127.0.0.1 POST http://localhost:8191/v1 500 Internal Server Error

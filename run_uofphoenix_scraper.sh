@@ -145,19 +145,30 @@ else
 fi
 FLARE_PID=$!
 
-# Wait for FlareSolverr to be ready
+# Wait for FlareSolverr to be ready (print log every 5 attempts)
 STATUS=""
-for i in $(seq 1 25); do
-  sleep 2
+LAST_LOG_LINE=0
+for i in $(seq 1 40); do
+  sleep 3
+  # Print any new log lines so user can see what's happening
+  CURRENT_LINES=$(wc -l < /tmp/flaresolverr.log 2>/dev/null || echo 0)
+  if [ "$CURRENT_LINES" -gt "$LAST_LOG_LINE" ]; then
+    tail -n +"$((LAST_LOG_LINE + 1))" /tmp/flaresolverr.log | sed 's/^/    [flaresolverr] /'
+    LAST_LOG_LINE=$CURRENT_LINES
+  fi
+  # Check if process is still running
+  if ! kill -0 $FLARE_PID 2>/dev/null; then
+    echo "    [!] FlareSolverr process exited early."
+    break
+  fi
   STATUS=$(curl -s http://localhost:8191/v1 -X POST \
     -H "Content-Type: application/json" \
     -d '{"cmd":"sessions.list"}' 2>/dev/null \
     | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || true)
   if [ "$STATUS" = "ok" ]; then
-    echo "    FlareSolverr ready (attempt $i)"
+    echo "    FlareSolverr ready! (attempt $i)"
     break
   fi
-  echo "    Waiting for FlareSolverr... ($i/25)"
 done
 
 if [ "$STATUS" != "ok" ]; then

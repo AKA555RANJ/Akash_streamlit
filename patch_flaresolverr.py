@@ -58,6 +58,7 @@ def _cmd_request_fetch_post(req) -> V1ResponseBase:
         "try{"
         "var r = await fetch(" + url_safe + ",{"
         "method:'POST',"
+        "credentials:'include',"
         "headers:{'Content-Type':'application/json','Accept':'application/json,text/plain,*/*'},"
         "body:" + body_safe
         + "});"
@@ -104,13 +105,20 @@ def _cmd_request_fetch_post(req) -> V1ResponseBase:
             sys.exit(1)
         src = src.replace(marker, IMPL + marker)
         print("  [+] Added _cmd_request_fetch_post implementation")
-    elif "res.solution = challenge_res" not in src:
-        # Function present but uses wrong res.result — fix it in-place
-        src = src.replace("res.result  = challenge_res", "res.solution = challenge_res")
-        src = src.replace("res.result = challenge_res", "res.solution = challenge_res")
-        print("  [+] Fixed res.result -> res.solution in _cmd_request_fetch_post")
     else:
-        print("  [=] _cmd_request_fetch_post function already present and correct")
+        changed = False
+        if "res.solution = challenge_res" not in src:
+            src = src.replace("res.result  = challenge_res", "res.solution = challenge_res")
+            src = src.replace("res.result = challenge_res", "res.solution = challenge_res")
+            print("  [+] Fixed res.result -> res.solution in _cmd_request_fetch_post")
+            changed = True
+        if "credentials:" not in src:
+            src = src.replace("'method':'POST',", "'method':'POST','credentials':'include',")
+            src = src.replace("\"method:'POST',", "\"method:'POST',credentials:'include',")
+            print("  [+] Added credentials:include to fetch() in _cmd_request_fetch_post")
+            changed = True
+        if not changed:
+            print("  [=] _cmd_request_fetch_post function already present and correct")
 
     open(path, "w").write(src)
     print(f"  [OK] Patched: {path}")

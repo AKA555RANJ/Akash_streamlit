@@ -213,20 +213,13 @@ def create_session():
         if is_blocked(html):
             raise RuntimeError("Cannot bypass protection on bootstrap page")
 
-    # Let PerimeterX / Akamai cookies fully settle
-    print("[*] Waiting 8s for session cookies to settle...")
-    time.sleep(8)
-
-    # Also warm up svc.bkstr.com via FlareSolverr so Akamai sets _abck for that subdomain
-    svc_warmup_url = f"{SVC_URL}/store/config?storeName={STORE_SLUG}"
-    print(f"[*] Warming up svc.bkstr.com via FlareSolverr...")
-    try:
-        _, svc_cookies, _ = flaresolverr_get(svc_warmup_url, max_timeout=60000)
-        print(f"    svc cookies: {[c['name'] for c in svc_cookies if c.get('name')]}")
-        cookies = cookies + [c for c in svc_cookies
-                             if c.get("name") not in {x.get("name") for x in cookies}]
-    except Exception as e:
-        print(f"  [WARN] svc warmup failed: {e}")
+    # Let PerimeterX / Akamai sensor fully settle on www.bkstr.com before any API calls.
+    # DO NOT navigate the browser to svc.bkstr.com — that's a raw JSON page with no
+    # Akamai scripts, so _abck never gets set there. Keeping the browser on www.bkstr.com
+    # means fetch() calls to svc.bkstr.com execute from a properly-initialized Akamai
+    # context, matching what the real Angular SPA does.
+    print("[*] Waiting 12s for Akamai sensor to initialize on www.bkstr.com...")
+    time.sleep(12)
 
     # Load all harvested cookies into the shared requests session
     _api_session = requests.Session()

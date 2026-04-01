@@ -10,6 +10,10 @@ echo "======================================"
 echo " UofPhoenix Scraper - Codespace Setup"
 echo "======================================"
 
+# Always pull latest fixes before running
+echo "[0/5] Pulling latest code from GitHub..."
+git pull --no-rebase origin claude/test-scraping-query-NLiow 2>&1 || echo "    git pull failed (continuing anyway)"
+
 # --- 1. System deps (Xvfb + Chromium) ---
 echo ""
 echo "[1/5] Installing system dependencies..."

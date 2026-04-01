@@ -85,7 +85,10 @@ def flaresolverr_get(url, max_timeout=90000):
     if data.get("status") != "ok":
         raise RuntimeError(f"FlareSolverr error: {data}")
     sol = data["solution"]
-    return sol.get("response") or "", sol.get("cookies") or [], sol.get("userAgent") or ""
+    response = sol.get("response")
+    if isinstance(response, (dict, list)):
+        response = json.dumps(response)
+    return response or "", sol.get("cookies") or [], sol.get("userAgent") or ""
 
 
 def flaresolverr_post(url, post_data, max_timeout=90000):
@@ -101,11 +104,16 @@ def flaresolverr_post(url, post_data, max_timeout=90000):
     if data.get("status") != "ok":
         raise RuntimeError(f"FlareSolverr error: {data}")
     sol = data["solution"]
-    return sol.get("response") or "", sol.get("cookies") or [], sol.get("userAgent") or ""
+    response = sol.get("response")
+    if isinstance(response, (dict, list)):
+        response = json.dumps(response)
+    return response or "", sol.get("cookies") or [], sol.get("userAgent") or ""
 
 
 def is_blocked(text):
     if not text:
+        return False
+    if not isinstance(text, str):
         return False
     lower = text[:2000].lower()
     return ("just a moment" in lower or "challenge-platform" in lower or
@@ -114,6 +122,9 @@ def is_blocked(text):
 
 
 def extract_json(html):
+    # FlareSolverr/DrissionPage may return already-parsed dicts for JSON endpoints
+    if isinstance(html, (dict, list)):
+        return html
     if not html or not html.strip():
         return None
     text = html.strip()

@@ -104,6 +104,83 @@ open(path, 'w').write(src)
 print("    Stealth patch applied OK")
 PYEOF
 
+# Patch FlareSolverr flaresolverr_service.py to add request.fetch_post command
+# (uses JS fetch() inside the browser — bypasses Akamai which blocks direct HTTP POSTs)
+FLARE_SVC=$(python3 -c "import flaresolverr.flaresolverr_service as s; print(s.__file__)")
+echo "    Patching $FLARE_SVC for JS fetch_post..."
+python3 - "$FLARE_SVC" <<'PYEOF'
+import sys
+path = sys.argv[1]
+src = open(path).read()
+
+# Add fetch_post command dispatch if not already patched
+if "request.fetch_post" not in src:
+    src = src.replace(
+        "    elif req.cmd == 'request.post':\n        res = _cmd_request_post(req)\n    else:",
+        "    elif req.cmd == 'request.post':\n        res = _cmd_request_post(req)\n"
+        "    elif req.cmd == 'request.fetch_post':\n        res = _cmd_request_fetch_post(req)\n    else:"
+    )
+
+# Add the implementation before _cmd_sessions_create
+impl = '''
+def _cmd_request_fetch_post(req) -> V1ResponseBase:
+    """POST via JS fetch() inside FlareSolverr browser — bypasses Akamai bot checks."""
+    import json as _json
+    if req.postData is None:
+        raise Exception("postData is required for request.fetch_post")
+    if not req.session:
+        raise Exception("session is required for request.fetch_post")
+    session, _ = SESSIONS_STORAGE.get(req.session)
+    driver = session.driver
+    timeout_s = int(req.maxTimeout) / 1000
+    js_run = """
+    window.__fetchResult = null; window.__fetchError = null;
+    (async function() {
+        try {
+            const r = await fetch(""" + _json.dumps(req.url) + """, {
+                method: "POST",
+                headers: {"Content-Type": "application/json", "Accept": "application/json, text/plain, */*"},
+                body: """ + _json.dumps(req.postData) + """
+            });
+            const text = await r.text();
+            window.__fetchResult = {status: r.status, body: text};
+        } catch(e) { window.__fetchError = e.toString(); }
+    })();
+    """
+    driver.run_js(js_run)
+    result = None
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        time.sleep(0.5)
+        result = driver.run_js("return window.__fetchResult;")
+        err = driver.run_js("return window.__fetchError;")
+        if result is not None or err:
+            if err:
+                raise Exception(f"JS fetch error: {err}")
+            break
+    if result is None:
+        raise Exception(f"JS fetch timed out after {timeout_s}s")
+    challenge_res = ChallengeResolutionResultT({})
+    challenge_res.url = req.url
+    challenge_res.status = result.get("status", 0)
+    challenge_res.response = result.get("body", "")
+    challenge_res.cookies = driver.cookies()
+    challenge_res.userAgent = utils.get_user_agent(driver)
+    res = V1ResponseBase({})
+    res.status = STATUS_OK
+    res.message = f"JS fetch POST OK (HTTP {challenge_res.status})"
+    res.result = challenge_res
+    return res
+
+'''
+
+if "_cmd_request_fetch_post" not in src:
+    src = src.replace("def _cmd_sessions_create(", impl + "def _cmd_sessions_create(")
+
+open(path, 'w').write(src)
+print("    fetch_post patch applied OK")
+PYEOF
+
 echo "    Python deps OK"
 
 # --- 3. Start Xvfb ---

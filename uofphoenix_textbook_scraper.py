@@ -101,6 +101,26 @@ def flaresolverr_get(url, max_timeout=90000):
     return response or "", sol.get("cookies") or [], sol.get("userAgent") or ""
 
 
+def flaresolverr_fetch_post(url, post_data_str, max_timeout=90000):
+    """POST via JS fetch() inside FlareSolverr's browser — bypasses Akamai bot checks."""
+    resp = requests.post(FLARESOLVERR_URL, json={
+        "cmd": "request.fetch_post",
+        "url": url,
+        "session": FLARESOLVERR_SESSION,
+        "maxTimeout": max_timeout,
+        "postData": post_data_str,
+    }, timeout=max_timeout // 1000 + 30)
+    resp.raise_for_status()
+    data = resp.json()
+    if data.get("status") != "ok":
+        raise RuntimeError(f"FlareSolverr fetch_post error: {data}")
+    sol = data["solution"]
+    response = sol.get("response")
+    if isinstance(response, (dict, list)):
+        response = json.dumps(response)
+    return response or "", sol.get("cookies") or [], sol.get("userAgent") or ""
+
+
 def flaresolverr_post(url, post_data, max_timeout=90000):
     resp = requests.post(FLARESOLVERR_URL, json={
         "cmd": "request.post",
@@ -296,24 +316,30 @@ def svc_get(endpoint, params=None, retries=3):
 
 def svc_post(endpoint, payload, retries=3):
     url = f"{SVC_URL}/{endpoint}"
+    post_data_str = json.dumps(payload)
     for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
-            resp = _api_session.post(url, json=payload, timeout=30)
-            if _is_px_blocked(resp):
+            html, _, _ = flaresolverr_fetch_post(url, post_data_str)
+            if is_blocked(html):
                 if attempt < retries - 1:
                     print(f"  [WARN] Blocked on POST {endpoint} (attempt {attempt + 1}), refreshing...")
                     refresh_session()
                     continue
                 raise RuntimeError(f"Blocked on POST {endpoint} after {retries} attempts")
-            resp.raise_for_status()
-            return resp.json()
+            data = extract_json(html)
+            if data is not None:
+                return data
+            if not html.strip():
+                return {}
+            print(f"  [WARN] Non-JSON POST response from {endpoint}: {html[:200]}")
+            return {}
         except json.JSONDecodeError:
             if attempt < retries - 1:
                 print(f"  [WARN] JSON parse error on POST {endpoint} (attempt {attempt + 1})")
                 time.sleep(2)
             else:
-                print(f"  [ERROR] JSON parse failed for POST {endpoint}: {resp.text[:200]}")
+                print(f"  [ERROR] JSON parse failed for POST {endpoint}: {html[:200]}")
                 return {}
         except Exception as e:
             if attempt < retries - 1:
@@ -329,10 +355,16 @@ def fetch_store_config():
     data = svc_get("store/config", {"storeName": STORE_SLUG})
     print(f"    store/config keys: {list(data.keys()) if isinstance(data, dict) else data}")
     store_id = data.get("storeId", "")
-    default_catalog = data.get("defaultCatalog") or {}
-    catalog_id = (data.get("catalogId") or
-                  (default_catalog.get("catalogId") if isinstance(default_catalog, dict) else default_catalog) or
-                  data.get("catId") or "")
+    catalog_id = data.get("catalogId", "")
+    if not catalog_id:
+        default_catalog = data.get("defaultCatalog")
+        if isinstance(default_catalog, list) and default_catalog:
+            catalog_id = (default_catalog[0].get("catalogIdentifier", {}).get("uniqueID", "") or
+                          default_catalog[0].get("uniqueID", ""))
+        elif isinstance(default_catalog, dict):
+            catalog_id = (default_catalog.get("catalogIdentifier", {}).get("uniqueID", "") or
+                          default_catalog.get("uniqueID", "") or
+                          default_catalog.get("catalogId", ""))
     print(f"    storeId={store_id}, catalogId={catalog_id}")
     return str(store_id), str(catalog_id)
 

@@ -114,7 +114,7 @@ def flaresolverr_fetch_post(url, post_data_str, max_timeout=90000):
     data = resp.json()
     if data.get("status") != "ok":
         raise RuntimeError(f"FlareSolverr fetch_post error: {data}")
-    sol = data["solution"]
+    sol = data.get("solution") or data.get("result") or {}
     response = sol.get("response")
     if isinstance(response, (dict, list)):
         response = json.dumps(response)

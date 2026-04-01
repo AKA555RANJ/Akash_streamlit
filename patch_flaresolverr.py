@@ -98,27 +98,21 @@ def _cmd_request_fetch_post(req) -> V1ResponseBase:
 
 '''
 
-    if "def _cmd_request_fetch_post(" not in src:
-        marker = "def _cmd_sessions_create("
-        if marker not in src:
-            print("[ERROR] Could not find insertion point in flaresolverr_service.py")
-            sys.exit(1)
-        src = src.replace(marker, IMPL + marker)
-        print("  [+] Added _cmd_request_fetch_post implementation")
-    else:
-        changed = False
-        if "res.solution = challenge_res" not in src:
-            src = src.replace("res.result  = challenge_res", "res.solution = challenge_res")
-            src = src.replace("res.result = challenge_res", "res.solution = challenge_res")
-            print("  [+] Fixed res.result -> res.solution in _cmd_request_fetch_post")
-            changed = True
-        if "credentials:" not in src:
-            src = src.replace("'method':'POST',", "'method':'POST','credentials':'include',")
-            src = src.replace("\"method:'POST',", "\"method:'POST',credentials:'include',")
-            print("  [+] Added credentials:include to fetch() in _cmd_request_fetch_post")
-            changed = True
-        if not changed:
-            print("  [=] _cmd_request_fetch_post function already present and correct")
+    # Always remove any existing version of the function and re-insert from IMPL.
+    # This guarantees the correct implementation regardless of what was patched before.
+    marker = "def _cmd_sessions_create("
+    if marker not in src:
+        print("[ERROR] Could not find insertion point in flaresolverr_service.py")
+        sys.exit(1)
+    if "def _cmd_request_fetch_post(" in src:
+        # Strip out the old function — everything from its def line up to the next def
+        start = src.find("\ndef _cmd_request_fetch_post(")
+        end   = src.find("\n" + marker)
+        if start != -1 and end != -1 and end > start:
+            src = src[:start] + "\n" + src[end:]
+            print("  [~] Removed stale _cmd_request_fetch_post")
+    src = src.replace(marker, IMPL + marker)
+    print("  [+] Inserted fresh _cmd_request_fetch_post implementation")
 
     open(path, "w").write(src)
     print(f"  [OK] Patched: {path}")

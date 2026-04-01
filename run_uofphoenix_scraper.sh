@@ -37,6 +37,10 @@ if [ -z "$CHROME_BIN" ]; then
     -name "chrome" -type f 2>/dev/null | head -1)
 fi
 
+# Install Chrome system library dependencies (libatk, libgbm, etc.)
+echo "    Installing Chrome system dependencies..."
+sudo python3 -m playwright install-deps chromium 2>&1 | tail -5
+
 if [ -z "$CHROME_BIN" ]; then
   echo "[ERROR] Could not find or install Chromium."
   exit 1

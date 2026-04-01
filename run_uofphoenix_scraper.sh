@@ -13,8 +13,16 @@ echo "======================================"
 # --- 1. System deps (Xvfb + Chromium) ---
 echo ""
 echo "[1/5] Installing system dependencies..."
-sudo apt-get update -q
-sudo apt-get install -y -q xvfb chromium-browser || \
+
+# Remove broken Yarn repo that causes GPG errors in Codespaces
+sudo rm -f /etc/apt/sources.list.d/yarn.list \
+           /usr/share/keyrings/yarnkey.gpg 2>/dev/null || true
+sudo apt-get update -q -o Acquire::AllowInsecureRepositories=false \
+  -o Dir::Etc::sourcelist="sources.list" \
+  -o Dir::Etc::sourcelistd="sources.list.d" 2>/dev/null || \
+  sudo apt-get update -q --allow-insecure-repositories || true
+
+sudo apt-get install -y -q xvfb chromium-browser 2>/dev/null || \
   sudo apt-get install -y -q xvfb chromium
 
 CHROME_BIN=$(which chromium-browser 2>/dev/null || which chromium 2>/dev/null || true)

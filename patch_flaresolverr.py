@@ -97,7 +97,7 @@ def _cmd_request_fetch_post(req) -> V1ResponseBase:
 
 '''
 
-    if "_cmd_request_fetch_post" not in src:
+    if "def _cmd_request_fetch_post(" not in src:
         marker = "def _cmd_sessions_create("
         if marker not in src:
             print("[ERROR] Could not find insertion point in flaresolverr_service.py")
@@ -105,7 +105,7 @@ def _cmd_request_fetch_post(req) -> V1ResponseBase:
         src = src.replace(marker, IMPL + marker)
         print("  [+] Added _cmd_request_fetch_post implementation")
     else:
-        print("  [=] _cmd_request_fetch_post already present")
+        print("  [=] _cmd_request_fetch_post function already present")
 
     open(path, "w").write(src)
     print(f"  [OK] Patched: {path}")

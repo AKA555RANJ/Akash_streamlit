@@ -13,8 +13,21 @@ import time
 
 
 def patch_service():
-    import flaresolverr.flaresolverr_service as svc_mod
-    path = svc_mod.__file__
+    import importlib.util
+    spec = importlib.util.find_spec('flaresolverr.flaresolverr_service')
+    if spec is None:
+        print("[ERROR] flaresolverr.flaresolverr_service not found — is flaresolverr installed?")
+        sys.exit(1)
+    path = spec.origin
+    # find_spec returns the .py source path; guard against .pyc just in case
+    if path and path.endswith('.pyc'):
+        py_path = path[:-1]
+        if os.path.exists(py_path):
+            path = py_path
+    print(f"  [*] File: {path}")
+    if not os.path.isfile(path):
+        print(f"[ERROR] Source file not found: {path}")
+        sys.exit(1)
 
     src = open(path).read()
 
@@ -159,4 +172,22 @@ if __name__ == "__main__":
     patch_utils()
     print("[*] Patching FlareSolverr flaresolverr_service.py (fetch_post command)...")
     patch_service()
-    print("[*] All patches applied.")
+
+    # Verify the patch actually took effect
+    print("[*] Verifying patch...")
+    import importlib
+    import flaresolverr.flaresolverr_service as svc
+    importlib.reload(svc)
+    if not hasattr(svc, '_cmd_request_fetch_post'):
+        print("[ERROR] VERIFICATION FAILED: _cmd_request_fetch_post not found after patching!")
+        sys.exit(1)
+    import inspect
+    src = inspect.getsource(svc._cmd_request_fetch_post)
+    if "credentials" not in src:
+        print("[ERROR] VERIFICATION FAILED: credentials:include missing from fetch() call!")
+        sys.exit(1)
+    if "res.solution" not in src:
+        print("[ERROR] VERIFICATION FAILED: res.solution not set in response!")
+        sys.exit(1)
+    print("  [OK] _cmd_request_fetch_post verified: credentials + res.solution present")
+    print("[*] All patches applied successfully.")

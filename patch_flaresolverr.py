@@ -92,7 +92,7 @@ def _cmd_request_fetch_post(req) -> V1ResponseBase:
     res = V1ResponseBase({})
     res.status  = STATUS_OK
     res.message = "JS fetch POST OK (HTTP " + str(challenge_res.status) + ")"
-    res.result  = challenge_res
+    res.solution = challenge_res
     return res
 
 '''

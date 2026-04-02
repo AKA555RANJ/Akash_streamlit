@@ -408,9 +408,14 @@ def scrape(fresh=False, headless=None):
         # Bootstrap: visit SPA so PX can fingerprint the browser session
         # -------------------------------------------------------------------
         print(f"[*] Loading SPA: {STORE_HOME}")
-        spa_page.goto(STORE_HOME, wait_until="networkidle", timeout=90000)
-        # Extra dwell time so PX sensor data fully initialises
-        time.sleep(10)
+        try:
+            spa_page.goto(STORE_HOME, wait_until="networkidle", timeout=60000)
+        except PWTimeout:
+            print("    [INFO] networkidle timed out, falling back to domcontentloaded")
+            spa_page.goto(STORE_HOME, wait_until="domcontentloaded", timeout=60000)
+        # Dwell time so PX sensor data fully initialises
+        print("[*] Waiting for PX to initialize...")
+        time.sleep(15)
 
         # Save bootstrap HTML for debugging
         with open(os.path.join(OUTPUT_DIR, "debug_bootstrap.html"), "w", encoding="utf-8") as f:

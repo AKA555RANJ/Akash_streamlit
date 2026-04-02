@@ -4,10 +4,16 @@ Cape Fear Community College Bookstore Textbook Scraper
 Platform: bkstr.com (Follett) — svc.bkstr.com REST API
 URL: https://www.bkstr.com/capefearstore/shop/textbooks-and-course-materials
 
-Uses Playwright (headless=False) so that PerimeterX sensor data is generated
-inside the live Chrome session. All API calls — including the POST to
-courseMaterial/results — are executed via page.evaluate() (browser fetch),
-which keeps the PX session intact and avoids 403 blocks.
+Two-page Playwright approach to bypass PerimeterX (PX):
+  - spa_page (page1): stays on the SPA; POSTs run via page.evaluate(fetch())
+    so PX sensor data (_pxde) is preserved.
+  - get_page (page2): navigates to svc.bkstr.com API URLs for GETs using
+    Chrome's real TLS fingerprint.
+Both pages share the same BrowserContext (cookies are shared).
+
+Supports: --fresh (restart), --headless / --headed (display mode).
+Auto-detects headless vs headed based on $DISPLAY; the bash runner
+provides xvfb for headless environments.
 """
 
 import csv
@@ -47,28 +53,30 @@ CSV_PATH = os.path.join(OUTPUT_DIR, f"{SCHOOL_NAME}__{SCHOOL_ID}__bks.csv")
 
 
 
-def page_get(page, url, retries=3):
-    """Send a GET request via Playwright's APIRequestContext.
+def page_get(get_page, url, retries=3):
+    """GET via Chrome navigation on the dedicated GET page (page2).
 
-    page.request uses the browser's cookie store (so _px3 and all bkstr.com
-    cookies are included) without navigating the page away from the SPA.
+    Navigating page2 to the svc.bkstr.com URL uses the real Chrome network
+    stack (correct TLS fingerprint) and shares cookies with the SPA page via
+    the same BrowserContext.  The SPA page (page1) is never disturbed.
     """
     for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
-            resp = page.request.get(url, headers={
-                "Accept":          "application/json, text/plain, */*",
-                "Accept-Language": "en-US,en;q=0.9",
-                "Referer":         STORE_HOME,
-                "Origin":          BASE_URL,
-            })
+            resp = get_page.goto(url, wait_until="load", timeout=30000)
+            if resp is None:
+                print(f"  [WARN] No response for GET {url} (attempt {attempt+1})")
+                if attempt < retries - 1:
+                    time.sleep(3 * (attempt + 1))
+                    continue
+                return {}
             if resp.status == 403:
                 print(f"  [WARN] 403 on GET {url} (attempt {attempt+1})")
                 if attempt < retries - 1:
                     time.sleep(5 * (attempt + 1))
                     continue
                 raise RuntimeError(f"Blocked GET {url}")
-            body = resp.text().strip()
+            body = get_page.inner_text("body").strip()
             if not body:
                 return {}
             return json.loads(body)
@@ -88,27 +96,46 @@ def page_get(page, url, retries=3):
     return {}
 
 
-def page_post(page, url, payload, retries=3):
-    """POST JSON via Playwright's APIRequestContext (same cookie store as browser)."""
+def page_post(spa_page, url, payload, retries=3):
+    """POST via fetch() inside the SPA page (page1).
+
+    Running fetch() from inside the live SPA page preserves the PerimeterX
+    sensor data (_pxde) that PX requires on POST requests.  The SPA page
+    never navigates away, so the PX session stays intact.
+    """
     for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
-            resp = page.request.post(url,
-                data=json.dumps(payload),
-                headers={
-                    "Content-Type":  "application/json",
-                    "Accept":        "application/json, text/plain, */*",
-                    "Referer":       STORE_HOME,
-                    "Origin":        BASE_URL,
-                },
-            )
-            if resp.status == 403:
+            result = spa_page.evaluate("""
+                async ([url, payload]) => {
+                    try {
+                        const r = await fetch(url, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            credentials: 'include',
+                            body: JSON.stringify(payload)
+                        });
+                        const text = await r.text();
+                        return {status: r.status, body: text, ok: r.ok};
+                    } catch (e) {
+                        return {status: 0, body: e.toString(), ok: false};
+                    }
+                }
+            """, [url, payload])
+            status = result.get("status", 0)
+            body = (result.get("body", "") or "").strip()
+            if status == 403:
                 print(f"  [WARN] 403 on POST {url} (attempt {attempt+1})")
                 if attempt < retries - 1:
                     time.sleep(5 * (attempt + 1))
                     continue
                 raise RuntimeError(f"Blocked POST {url}")
-            body = resp.text().strip()
+            if status == 0:
+                print(f"  [WARN] fetch error on POST (attempt {attempt+1}): {body[:200]}")
+                if attempt < retries - 1:
+                    time.sleep(3 * (attempt + 1))
+                    continue
+                return {}
             if not body:
                 return {}
             return json.loads(body)
@@ -132,10 +159,10 @@ def page_post(page, url, payload, retries=3):
 # BKStr API calls
 # ---------------------------------------------------------------------------
 
-def fetch_store_config(page):
+def fetch_store_config(get_page):
     print("[*] Fetching store config...")
     url = f"{SVC_URL}/store/config?storeName={STORE_SLUG}"
-    data = page_get(page, url)
+    data = page_get(get_page, url)
     store_id = str(data.get("storeId", ""))
     catalog_id = ""
     for cat in data.get("defaultCatalog", []):
@@ -148,10 +175,10 @@ def fetch_store_config(page):
     return store_id, catalog_id
 
 
-def fetch_terms(page, store_id):
+def fetch_terms(get_page, store_id):
     print("[*] Fetching terms...")
     url = f"{SVC_URL}/courseMaterial/info?storeId={store_id}"
-    data = page_get(page, url)
+    data = page_get(get_page, url)
     terms = []
     for campus in data.get("finalData", {}).get("campus", []):
         for program in campus.get("program", []):
@@ -168,12 +195,12 @@ def fetch_terms(page, store_id):
     return terms
 
 
-def fetch_courses(page, store_id, term_id, program_id):
+def fetch_courses(get_page, store_id, term_id, program_id):
     qs = f"storeId={store_id}&termId={term_id}"
     if program_id:
         qs += f"&programId={program_id}"
     url = f"{SVC_URL}/courseMaterial/courses?{qs}"
-    data = page_get(page, url)
+    data = page_get(get_page, url)
     rows = []
     for div in data.get("finalDDCSData", {}).get("division", []):
         for dept in div.get("department", []):
@@ -189,7 +216,7 @@ def fetch_courses(page, store_id, term_id, program_id):
     return rows
 
 
-def fetch_results(page, store_id, catalog_id, term_id, program_id,
+def fetch_results(spa_page, store_id, catalog_id, term_id, program_id,
                   dept, course, section):
     url     = f"{SVC_URL}/courseMaterial/results"
     payload = {
@@ -206,7 +233,7 @@ def fetch_results(page, store_id, catalog_id, term_id, program_id,
         "programId": program_id,
         "termId":    term_id,
     }
-    return page_post(page, url, payload)
+    return page_post(spa_page, url, payload)
 
 
 # ---------------------------------------------------------------------------
@@ -317,7 +344,7 @@ def get_scraped_keys(filepath):
 # Main
 # ---------------------------------------------------------------------------
 
-def scrape(fresh=False):
+def scrape(fresh=False, headless=None):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     if fresh and os.path.exists(CSV_PATH):
@@ -330,8 +357,32 @@ def scrape(fresh=False):
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+    # Auto-detect headless: if no display available, default to headless
+    if headless is None:
+        headless = not os.environ.get("DISPLAY")
+
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=False)
+        launch_args = ["--disable-blink-features=AutomationControlled"]
+        if headless:
+            launch_args.append("--disable-gpu")
+
+        # Use PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH env var if set, or auto-detect
+        # pre-installed Playwright Chromium (avoids version-mismatch errors).
+        exe_path = os.environ.get("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH", "")
+        if not exe_path:
+            # Auto-detect pre-installed Playwright Chromium
+            pw_cache = os.path.expanduser("~/.cache/ms-playwright")
+            import glob as _glob
+            candidates = sorted(_glob.glob(f"{pw_cache}/chromium-*/chrome-linux/chrome"))
+            if candidates:
+                exe_path = candidates[-1]  # use latest build
+
+        launch_kw = dict(headless=headless, args=launch_args)
+        if exe_path and os.path.isfile(exe_path):
+            launch_kw["executable_path"] = exe_path
+            print(f"[*] Using Chromium: {exe_path}")
+
+        browser = pw.chromium.launch(**launch_kw)
         ctx     = browser.new_context(
             user_agent=(
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -340,32 +391,44 @@ def scrape(fresh=False):
             ),
             viewport={"width": 1280, "height": 800},
         )
-        page = ctx.new_page()
+
+        # -------------------------------------------------------------------
+        # Two-page approach:
+        #   spa_page  (page1) — stays on STORE_HOME; used for POSTs via
+        #                        page.evaluate(fetch()) so PX sensor data
+        #                        is preserved.
+        #   get_page  (page2) — navigates to svc.bkstr.com API URLs for
+        #                        GETs; uses Chrome's real TLS fingerprint.
+        # Both share the same BrowserContext (cookies are shared).
+        # -------------------------------------------------------------------
+        spa_page = ctx.new_page()
+        get_page = ctx.new_page()
 
         # -------------------------------------------------------------------
         # Bootstrap: visit SPA so PX can fingerprint the browser session
         # -------------------------------------------------------------------
         print(f"[*] Loading SPA: {STORE_HOME}")
-        page.goto(STORE_HOME, wait_until="networkidle", timeout=90000)
+        spa_page.goto(STORE_HOME, wait_until="networkidle", timeout=90000)
         # Extra dwell time so PX sensor data fully initialises
-        time.sleep(8)
+        time.sleep(10)
 
         # Save bootstrap HTML for debugging
         with open(os.path.join(OUTPUT_DIR, "debug_bootstrap.html"), "w", encoding="utf-8") as f:
-            f.write(page.content())
+            f.write(spa_page.content())
         print("[*] SPA loaded and PX session ready.")
 
         # -------------------------------------------------------------------
-        # API calls — all via page.evaluate() so they run inside the live
-        # Chrome session and carry valid PX tokens automatically
+        # API calls
+        #   GETs  → get_page (Chrome navigation, correct TLS fingerprint)
+        #   POSTs → spa_page (browser fetch, PX sensor data intact)
         # -------------------------------------------------------------------
-        store_id, catalog_id = fetch_store_config(page)
+        store_id, catalog_id = fetch_store_config(get_page)
         if not store_id:
             print("[!] Could not get store config. Check debug_bootstrap.html.")
             browser.close()
             return
 
-        terms = fetch_terms(page, store_id)
+        terms = fetch_terms(get_page, store_id)
         if not terms:
             print("[!] No terms found.")
             browser.close()
@@ -380,7 +443,7 @@ def scrape(fresh=False):
             program_id = term["programId"]
 
             print(f"\n[*] Term: {term_name} ({term_id})")
-            course_list = fetch_courses(page, store_id, term_id, program_id)
+            course_list = fetch_courses(get_page, store_id, term_id, program_id)
             if not course_list:
                 print("    No courses found.")
                 continue
@@ -408,7 +471,7 @@ def scrape(fresh=False):
                     )
 
                     try:
-                        data = fetch_results(page, store_id, catalog_id,
+                        data = fetch_results(spa_page, store_id, catalog_id,
                                              term_id, program_id,
                                              dept_code, course_code, section_code)
                     except Exception as e:
@@ -446,4 +509,7 @@ def scrape(fresh=False):
 
 
 if __name__ == "__main__":
-    scrape(fresh="--fresh" in sys.argv)
+    scrape(
+        fresh="--fresh" in sys.argv,
+        headless=True if "--headless" in sys.argv else (False if "--headed" in sys.argv else None),
+    )

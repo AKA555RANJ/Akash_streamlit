@@ -82,6 +82,7 @@ def page_get(spa_page, url, retries=3):
             body = (result.get("body", "") or "").strip()
             if status == 403:
                 print(f"  [WARN] 403 on GET {url} (attempt {attempt+1})")
+                print(f"    Response body (first 300 chars): {body[:300]}")
                 if attempt < retries - 1:
                     time.sleep(5 * (attempt + 1))
                     continue
@@ -457,11 +458,26 @@ def scrape(fresh=False, headless=None):
             f.write(debug_html)
 
         # Check if PX challenge page was shown instead of the SPA
-        if "press & hold" in debug_html.lower() or "blocked" in debug_html.lower():
+        html_lower = debug_html.lower()
+        if "press & hold" in html_lower or "blocked" in html_lower or "access denied" in html_lower:
             print("[!] PX challenge/block detected in bootstrap page!")
             print("    Check debug_bootstrap.html for details.")
         else:
             print("[*] SPA loaded and PX session ready.")
+
+        # Debug: print page title and URL to confirm SPA loaded
+        print(f"    Page title: {spa_page.title()}")
+        print(f"    Page URL:   {spa_page.url}")
+
+        # Debug: check cookies
+        cookies = ctx.cookies()
+        px_cookies = [c for c in cookies if '_px' in c['name'].lower() or 'perimeterx' in c['name'].lower()]
+        print(f"    Total cookies: {len(cookies)}, PX cookies: {len(px_cookies)}")
+        for c in px_cookies:
+            print(f"      {c['name']}={c['value'][:40]}... (domain={c['domain']})")
+
+        # Debug: dump all cookie names
+        print(f"    All cookie names: {[c['name'] for c in cookies]}")
 
         # -------------------------------------------------------------------
         # API calls — all via page.evaluate(fetch()) from the SPA page

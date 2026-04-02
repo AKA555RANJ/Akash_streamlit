@@ -31,11 +31,16 @@ install_sys_deps() {
 
     # Playwright Chromium needs these libs
     for lib in libatk1.0-0 libatk-bridge2.0-0 libcups2 libxdamage1 libxrandr2 \
-               libgbm1 libpango-1.0-0 libcairo2 libasound2 libnspr4 libnss3; do
+               libgbm1 libpango-1.0-0 libcairo2 libnspr4 libnss3; do
         if ! dpkg -s "$lib" &>/dev/null 2>&1; then
             pkgs_needed+=("$lib")
         fi
     done
+
+    # libasound2 was renamed to libasound2t64 on newer Ubuntu/Debian
+    if ! dpkg -s libasound2 &>/dev/null 2>&1 && ! dpkg -s libasound2t64 &>/dev/null 2>&1; then
+        pkgs_needed+=(libasound2t64)
+    fi
 
     if [ ${#pkgs_needed[@]} -gt 0 ]; then
         echo "    Installing: ${pkgs_needed[*]}"

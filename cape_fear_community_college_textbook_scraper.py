@@ -4,12 +4,10 @@ Cape Fear Community College Bookstore Textbook Scraper
 Platform: bkstr.com (Follett) — svc.bkstr.com REST API
 URL: https://www.bkstr.com/capefearstore/shop/textbooks-and-course-materials
 
-Two-page Playwright approach to bypass PerimeterX (PX):
-  - spa_page (page1): stays on the SPA; POSTs run via page.evaluate(fetch())
-    so PX sensor data (_pxde) is preserved.
-  - get_page (page2): navigates to svc.bkstr.com API URLs for GETs using
-    Chrome's real TLS fingerprint.
-Both pages share the same BrowserContext (cookies are shared).
+Playwright approach to bypass PerimeterX (PX):
+  - Single SPA page stays on STORE_HOME permanently.
+  - All API calls (GET + POST) run via page.evaluate(fetch()) from inside
+    the live SPA page, preserving PX sensor data (_pxde) and cookies.
 
 Supports: --fresh (restart), --headless / --headed (display mode).
 Auto-detects headless vs headed based on $DISPLAY; the bash runner
@@ -53,30 +51,48 @@ CSV_PATH = os.path.join(OUTPUT_DIR, f"{SCHOOL_NAME}__{SCHOOL_ID}__bks.csv")
 
 
 
-def page_get(get_page, url, retries=3):
-    """GET via Chrome navigation on the dedicated GET page (page2).
+def page_get(spa_page, url, retries=3):
+    """GET via fetch() inside the SPA page.
 
-    Navigating page2 to the svc.bkstr.com URL uses the real Chrome network
-    stack (correct TLS fingerprint) and shares cookies with the SPA page via
-    the same BrowserContext.  The SPA page (page1) is never disturbed.
+    Like page_post, this runs fetch() from inside the live SPA so that
+    PX sensor data and cookies are included.  svc.bkstr.com allows CORS
+    from *.bkstr.com, so cross-origin GETs with credentials work.
     """
     for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
-            resp = get_page.goto(url, wait_until="load", timeout=30000)
-            if resp is None:
-                print(f"  [WARN] No response for GET {url} (attempt {attempt+1})")
-                if attempt < retries - 1:
-                    time.sleep(3 * (attempt + 1))
-                    continue
-                return {}
-            if resp.status == 403:
+            result = spa_page.evaluate("""
+                async (url) => {
+                    try {
+                        const r = await fetch(url, {
+                            method: 'GET',
+                            credentials: 'include',
+                            headers: {
+                                'Accept': 'application/json, text/plain, */*'
+                            }
+                        });
+                        const text = await r.text();
+                        return {status: r.status, body: text, ok: r.ok};
+                    } catch (e) {
+                        return {status: 0, body: e.toString(), ok: false};
+                    }
+                }
+            """, url)
+            status = result.get("status", 0)
+            body = (result.get("body", "") or "").strip()
+            if status == 403:
                 print(f"  [WARN] 403 on GET {url} (attempt {attempt+1})")
                 if attempt < retries - 1:
                     time.sleep(5 * (attempt + 1))
                     continue
                 raise RuntimeError(f"Blocked GET {url}")
-            body = get_page.inner_text("body").strip()
+            if status == 0:
+                # Could be CORS error or network failure
+                print(f"  [WARN] fetch error on GET (attempt {attempt+1}): {body[:200]}")
+                if attempt < retries - 1:
+                    time.sleep(3 * (attempt + 1))
+                    continue
+                return {}
             if not body:
                 return {}
             return json.loads(body)
@@ -393,16 +409,11 @@ def scrape(fresh=False, headless=None):
         )
 
         # -------------------------------------------------------------------
-        # Two-page approach:
-        #   spa_page  (page1) — stays on STORE_HOME; used for POSTs via
-        #                        page.evaluate(fetch()) so PX sensor data
-        #                        is preserved.
-        #   get_page  (page2) — navigates to svc.bkstr.com API URLs for
-        #                        GETs; uses Chrome's real TLS fingerprint.
-        # Both share the same BrowserContext (cookies are shared).
+        # Single SPA page approach:
+        #   All requests (GET + POST) run via page.evaluate(fetch()) from
+        #   inside the live SPA page, preserving PX sensor data.
         # -------------------------------------------------------------------
         spa_page = ctx.new_page()
-        get_page = ctx.new_page()
 
         # -------------------------------------------------------------------
         # Bootstrap: visit SPA so PX can fingerprint the browser session
@@ -423,17 +434,15 @@ def scrape(fresh=False, headless=None):
         print("[*] SPA loaded and PX session ready.")
 
         # -------------------------------------------------------------------
-        # API calls
-        #   GETs  → get_page (Chrome navigation, correct TLS fingerprint)
-        #   POSTs → spa_page (browser fetch, PX sensor data intact)
+        # API calls — all via page.evaluate(fetch()) from the SPA page
         # -------------------------------------------------------------------
-        store_id, catalog_id = fetch_store_config(get_page)
+        store_id, catalog_id = fetch_store_config(spa_page)
         if not store_id:
             print("[!] Could not get store config. Check debug_bootstrap.html.")
             browser.close()
             return
 
-        terms = fetch_terms(get_page, store_id)
+        terms = fetch_terms(spa_page, store_id)
         if not terms:
             print("[!] No terms found.")
             browser.close()
@@ -448,7 +457,7 @@ def scrape(fresh=False, headless=None):
             program_id = term["programId"]
 
             print(f"\n[*] Term: {term_name} ({term_id})")
-            course_list = fetch_courses(get_page, store_id, term_id, program_id)
+            course_list = fetch_courses(spa_page, store_id, term_id, program_id)
             if not course_list:
                 print("    No courses found.")
                 continue

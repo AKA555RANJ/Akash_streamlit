@@ -378,7 +378,13 @@ def scrape(fresh=False, headless=None):
         headless = not os.environ.get("DISPLAY")
 
     with sync_playwright() as pw:
-        launch_args = ["--disable-blink-features=AutomationControlled"]
+        launch_args = [
+            "--disable-blink-features=AutomationControlled",
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-web-security",          # bypass CORS restrictions
+            "--disable-features=IsolateOrigins,site-per-process",
+        ]
         if headless:
             launch_args.append("--disable-gpu")
 
@@ -386,12 +392,11 @@ def scrape(fresh=False, headless=None):
         # pre-installed Playwright Chromium (avoids version-mismatch errors).
         exe_path = os.environ.get("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH", "")
         if not exe_path:
-            # Auto-detect pre-installed Playwright Chromium
             pw_cache = os.path.expanduser("~/.cache/ms-playwright")
             import glob as _glob
             candidates = sorted(_glob.glob(f"{pw_cache}/chromium-*/chrome-linux/chrome"))
             if candidates:
-                exe_path = candidates[-1]  # use latest build
+                exe_path = candidates[-1]
 
         launch_kw = dict(headless=headless, args=launch_args)
         if exe_path and os.path.isfile(exe_path):
@@ -401,19 +406,25 @@ def scrape(fresh=False, headless=None):
         browser = pw.chromium.launch(**launch_kw)
         ctx     = browser.new_context(
             user_agent=(
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
+                "Chrome/131.0.0.0 Safari/537.36"
             ),
             viewport={"width": 1280, "height": 800},
+            locale="en-US",
+            timezone_id="America/New_York",
         )
 
         # -------------------------------------------------------------------
-        # Single SPA page approach:
-        #   All requests (GET + POST) run via page.evaluate(fetch()) from
-        #   inside the live SPA page, preserving PX sensor data.
+        # Stealth: patch navigator.webdriver so PX doesn't detect automation
         # -------------------------------------------------------------------
         spa_page = ctx.new_page()
+        spa_page.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+            Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
+            Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
+            window.chrome = {runtime: {}};
+        """)
 
         # -------------------------------------------------------------------
         # Bootstrap: visit SPA so PX can fingerprint the browser session
@@ -422,16 +433,35 @@ def scrape(fresh=False, headless=None):
         try:
             spa_page.goto(STORE_HOME, wait_until="networkidle", timeout=60000)
         except PWTimeout:
-            print("    [INFO] networkidle timed out, falling back to domcontentloaded")
-            spa_page.goto(STORE_HOME, wait_until="domcontentloaded", timeout=60000)
+            print("    [INFO] networkidle timed out, retrying with domcontentloaded")
+            try:
+                spa_page.goto(STORE_HOME, wait_until="domcontentloaded", timeout=30000)
+            except PWTimeout:
+                print("    [INFO] domcontentloaded also timed out, continuing anyway")
+
         # Dwell time so PX sensor data fully initialises
         print("[*] Waiting for PX to initialize...")
-        time.sleep(15)
+        time.sleep(20)
+
+        # Simulate minor user interaction to help PX fingerprinting
+        try:
+            spa_page.mouse.move(640, 400)
+            spa_page.mouse.move(300, 200)
+            time.sleep(2)
+        except Exception:
+            pass
 
         # Save bootstrap HTML for debugging
+        debug_html = spa_page.content()
         with open(os.path.join(OUTPUT_DIR, "debug_bootstrap.html"), "w", encoding="utf-8") as f:
-            f.write(spa_page.content())
-        print("[*] SPA loaded and PX session ready.")
+            f.write(debug_html)
+
+        # Check if PX challenge page was shown instead of the SPA
+        if "press & hold" in debug_html.lower() or "blocked" in debug_html.lower():
+            print("[!] PX challenge/block detected in bootstrap page!")
+            print("    Check debug_bootstrap.html for details.")
+        else:
+            print("[*] SPA loaded and PX session ready.")
 
         # -------------------------------------------------------------------
         # API calls — all via page.evaluate(fetch()) from the SPA page

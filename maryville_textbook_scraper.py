@@ -205,6 +205,11 @@ def fetch_books(sess, prefix, cn, sct, retries=3):
     return ""
 
 
+def clean_text(text):
+    """Replace Unicode replacement character (U+FFFD) with registered trademark ® where applicable."""
+    return text.replace("\ufffd", "\u00ae")
+
+
 def parse_books(html, prefix, cn, section_info, crawled_on):
     """
     Parse show-books.php HTML fragment.
@@ -217,6 +222,7 @@ def parse_books(html, prefix, cn, section_info, crawled_on):
         MATERIAL TYPE<br>
         <a ...>Library Material</a>
     """
+    html = clean_text(html)
     soup = BeautifulSoup(html, "html.parser")
     ul = soup.find("ul")
 

@@ -1,4 +1,19 @@
 #!/usr/bin/env python3
+"""
+Everett Community College Bookstore Textbook Scraper
+Platform: bkstr.com (Follett) — svc.bkstr.com REST API
+URL: https://www.bkstr.com/everettstore/shop/textbooks-and-course-materials
+
+Session strategy:
+  1. FlareSolverr visits STORE_HOME  → sets _px3, _pxvid, pxcts, x_efollett_uuid, efollett_rt
+  2. FlareSolverr visits svc store/config → triggers svc.bkstr.com PX challenge → sets _pxhd
+  3. Merge all cookies; hand to curl_cffi (Chrome TLS) for all subsequent API calls.
+
+Key fixes (from browser DevTools inspection):
+  - POST URL carries requestType/langId/catalogId as query params
+  - POST body uses *DisplayName field names + secondaryvalues
+  - Response is a list; materials live in [0]['courseSectionDTO'][*]['courseMaterialResultsList']
+"""
 
 import csv
 import json
@@ -7,39 +22,29 @@ import re
 import sys
 import time
 from datetime import datetime, timezone
-from urllib.parse import urlencode, quote
 
 import requests
-from bs4 import BeautifulSoup
+from curl_cffi import requests as curl_requests
 from tqdm import tqdm
 
 sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, 'reconfigure') else None
 
 SCHOOL_NAME = "everett_community_college"
-SCHOOL_ID = "3108881"
-STORE_SLUG = "everettstore"
-BASE_URL = "https://www.bkstr.com"
-STORE_HOME = f"{BASE_URL}/{STORE_SLUG}/home"
-SERVLET_BASE = f"{BASE_URL}/webapp/wcs/stores/servlet"
-FLARESOLVERR_URL = "http://localhost:8191/v1"
+SCHOOL_ID   = "3108881"
+STORE_SLUG  = "everettstore"
+BASE_URL    = "https://www.bkstr.com"
+SVC_URL     = "https://svc.bkstr.com"
+STORE_HOME  = f"{BASE_URL}/{STORE_SLUG}/shop/textbooks-and-course-materials"
+FLARESOLVERR_URL     = "http://localhost:8191/v1"
+FLARESOLVERR_SESSION = "everett_bkstr_scraper"
+
+REQUEST_DELAY = 1.0
 
 CSV_FIELDS = [
-    "source_url",
-    "school_id",
-    "department_code",
-    "course_code",
-    "course_title",
-    "section",
-    "section_instructor",
-    "term",
-    "isbn",
-    "title",
-    "author",
-    "material_adoption_code",
-    "crawled_on",
+    "source_url", "school_id", "department_code", "course_code", "course_title",
+    "section", "section_instructor", "term", "isbn", "title", "author",
+    "material_adoption_code", "crawled_on", "updated_on",
 ]
-
-REQUEST_DELAY = 0.5
 
 OUTPUT_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -48,487 +53,350 @@ OUTPUT_DIR = os.path.join(
 )
 CSV_PATH = os.path.join(OUTPUT_DIR, f"{SCHOOL_NAME}__{SCHOOL_ID}__bks.csv")
 
-FLARESOLVERR_SESSION = "everett_bkstr_scraper"
 
-def flaresolverr_create_session():
+# ---------------------------------------------------------------------------
+# FlareSolverr helpers
+# ---------------------------------------------------------------------------
+
+def fs_create():
     try:
-        requests.post(FLARESOLVERR_URL, json={
-            "cmd": "sessions.destroy",
-            "session": FLARESOLVERR_SESSION,
-        }, timeout=10)
+        requests.post(FLARESOLVERR_URL, json={"cmd": "sessions.destroy", "session": FLARESOLVERR_SESSION}, timeout=10)
     except Exception:
         pass
-    resp = requests.post(FLARESOLVERR_URL, json={
-        "cmd": "sessions.create",
-        "session": FLARESOLVERR_SESSION,
-    }, timeout=120)
-    resp.raise_for_status()
+    requests.post(FLARESOLVERR_URL, json={"cmd": "sessions.create", "session": FLARESOLVERR_SESSION}, timeout=120).raise_for_status()
 
-def flaresolverr_destroy_session():
+
+def fs_destroy():
     try:
-        requests.post(FLARESOLVERR_URL, json={
-            "cmd": "sessions.destroy",
-            "session": FLARESOLVERR_SESSION,
-        }, timeout=10)
+        requests.post(FLARESOLVERR_URL, json={"cmd": "sessions.destroy", "session": FLARESOLVERR_SESSION}, timeout=10)
     except Exception:
         pass
 
-def flaresolverr_get(url, max_timeout=60000):
+
+def fs_get(url, max_timeout=120000):
     resp = requests.post(FLARESOLVERR_URL, json={
-        "cmd": "request.get",
-        "url": url,
-        "session": FLARESOLVERR_SESSION,
-        "maxTimeout": max_timeout,
-    }, timeout=120)
+        "cmd": "request.get", "url": url,
+        "session": FLARESOLVERR_SESSION, "maxTimeout": max_timeout,
+    }, timeout=180)
     resp.raise_for_status()
     data = resp.json()
     if data.get("status") != "ok":
         raise RuntimeError(f"FlareSolverr error: {data}")
-
     sol = data["solution"]
-    html = sol.get("response", "")
-    ua = sol.get("userAgent", "")
+    return sol.get("response", ""), sol.get("cookies", []), sol.get("userAgent", "")
 
-    cookies = {}
-    for c in sol.get("cookies", []):
-        if c.get("name"):
-            cookies[c["name"]] = c["value"]
 
-    return html, cookies, ua
+# ---------------------------------------------------------------------------
+# Session bootstrap
+# ---------------------------------------------------------------------------
 
 def create_session():
-    print("[*] Bootstrapping session via FlareSolverr...")
-    flaresolverr_create_session()
-    html, cookies, ua = flaresolverr_get(STORE_HOME)
+    """Two-step FlareSolverr bootstrap to capture _pxhd.
 
-    sess = requests.Session()
-    sess.cookies.update(cookies)
-    sess.headers.update({
-        "User-Agent": ua,
-        "Referer": STORE_HOME,
-        "Accept": "application/json, text/html, */*",
-        "X-Requested-With": "XMLHttpRequest",
-    })
+    Step 1: Visit STORE_HOME  → bkstr.com PX challenge → _px3, efollett_rt, etc.
+    Step 2: Visit svc store/config → svc.bkstr.com PX challenge → _pxhd
+    Merge all cookies into a curl_cffi session (Chrome TLS impersonation).
+    """
+    print("[*] Creating FlareSolverr session...")
+    fs_create()
 
-    print(f"[*] Session ready. Cookies: {list(cookies.keys())}")
+    print(f"[*] Step 1 — visiting SPA: {STORE_HOME}")
+    html, cookies1, ua = fs_get(STORE_HOME)
+    cmap = {c["name"]: c["value"] for c in cookies1 if c.get("name")}
+    print(f"    Cookies so far: {list(cmap.keys())}")
+
+    svc_config_url = f"{SVC_URL}/store/config?storeName={STORE_SLUG}"
+    print(f"[*] Step 2 — visiting svc endpoint to get _pxhd: {svc_config_url}")
+    _, cookies2, _ = fs_get(svc_config_url)
+    cmap2 = {c["name"]: c["value"] for c in cookies2 if c.get("name")}
+    cmap.update(cmap2)
+    print(f"    All merged cookies: {list(cmap.keys())}")
+    print(f"    _pxhd present: {bool(cmap.get('_pxhd'))}")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    debug_path = os.path.join(OUTPUT_DIR, "debug_bootstrap.html")
-    with open(debug_path, "w", encoding="utf-8") as f:
+    with open(os.path.join(OUTPUT_DIR, "debug_bootstrap.html"), "w", encoding="utf-8") as f:
         f.write(html)
-    print(f"    Bootstrap HTML saved to {debug_path}")
 
+    fs_destroy()
+
+    sess = curl_requests.Session(impersonate="chrome120")
+    for name, value in cmap.items():
+        sess.cookies.set(name, value)
+    sess.headers.update({
+        "User-Agent": ua,
+        "Referer": STORE_HOME + "/",
+        "Origin": BASE_URL,
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+    })
+
+    print("[*] Session ready.")
     return sess, html
 
-def refresh_session(sess):
-    print("[*] Refreshing session via FlareSolverr...", flush=True)
-    for attempt in range(5):
+
+def refresh_session():
+    print("[*] Refreshing session...", flush=True)
+    for attempt in range(4):
         try:
-            flaresolverr_destroy_session()
-            time.sleep(5 * (attempt + 1))
-            return create_session()
+            time.sleep(8 * (attempt + 1))
+            sess, _ = create_session()
+            return sess
         except Exception as e:
-            print(f"  [WARN] Session refresh attempt {attempt + 1} failed: {e}", flush=True)
-            if attempt == 4:
+            print(f"  [WARN] Refresh attempt {attempt+1} failed: {e}", flush=True)
+            if attempt == 3:
                 raise
 
-def is_cloudflare_block(text):
+
+# ---------------------------------------------------------------------------
+# API helpers
+# ---------------------------------------------------------------------------
+
+def is_px_block(text):
     if not text:
         return False
-    lower = text[:1000].lower()
-    return ("just a moment" in lower or "challenge-platform" in lower or
-            "<title>attention" in lower)
-
-def is_server_error(text):
-    if not text:
-        return False
-    lower = text[:500].lower()
-    return "server error" in lower or "502" in lower or "503" in lower
-
-def discover_store_id(sess, bootstrap_html):
-    print("[*] Discovering store ID...")
-
-    patterns = [
-        r'"storeId"\s*:\s*"?(\d+)"?',
-        r"storeId[=:]\s*['\"]?(\d+)",
-        r'data-store-id[="\s]+(\d+)',
-        r'storeNumber["\s:=]+["\']?(\d+)',
-    ]
-
-    for pattern in patterns:
-        m = re.search(pattern, bootstrap_html)
-        if m:
-            store_id = m.group(1)
-            print(f"    Found store ID in HTML: {store_id}")
-            cat_m = re.search(r'"catalogId"\s*:\s*"?(\d+)"?', bootstrap_html)
-            catalog_id = cat_m.group(1) if cat_m else "10001"
-            return store_id, catalog_id
-
-    script_urls = re.findall(r'src=["\']([^"\']*(?:main|app|config)[^"\']*\.js[^"\']*)["\']',
-                              bootstrap_html)
-    for script_url in script_urls[:5]:
-        if not script_url.startswith("http"):
-            script_url = BASE_URL + "/" + script_url.lstrip("/")
-        try:
-            time.sleep(REQUEST_DELAY)
-            resp = sess.get(script_url, timeout=30)
-            if resp.status_code == 200:
-                js_text = resp.text
-                for pattern in patterns:
-                    m = re.search(pattern, js_text)
-                    if m:
-                        store_id = m.group(1)
-                        print(f"    Found store ID in JS bundle: {store_id}")
-                        return store_id, "10001"
-        except Exception:
-            continue
-
     try:
-        url = f"{SERVLET_BASE}/StoreCatalogDisplay?langId=-1&catalogId=10001&storeId=10001"
-        time.sleep(REQUEST_DELAY)
-        resp = sess.get(url, timeout=30)
-        if resp.status_code == 200:
-            for pattern in patterns:
-                m = re.search(pattern, resp.text)
-                if m:
-                    store_id = m.group(1)
-                    print(f"    Found store ID via StoreCatalogDisplay: {store_id}")
-                    return store_id, "10001"
-    except Exception as e:
-        print(f"    StoreCatalogDisplay failed: {e}")
+        d = json.loads(text) if isinstance(text, str) else text
+        return isinstance(d, dict) and "appId" in d and "jsClientSrc" in d
+    except Exception:
+        return False
 
-    raise RuntimeError(
-        "Could not discover store ID. Check debug_bootstrap.html in output dir."
-    )
 
-def servlet_get(sess, params, retries=3):
-    url = f"{SERVLET_BASE}/LocateCourseMaterialsServlet"
+def svc_get(sess, endpoint, params=None, retries=3):
+    qs = "&".join(f"{k}={v}" for k, v in (params or {}).items())
+    url = f"{SVC_URL}/{endpoint}" + (f"?{qs}" if qs else "")
     for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
-            resp = sess.get(url, params=params, timeout=30)
+            resp = sess.get(url, timeout=30)
+            text = resp.text
+            if resp.status_code == 403 or is_px_block(text):
+                print(f"  [WARN] PX block on GET {endpoint} (attempt {attempt+1})")
+                if attempt < retries - 1:
+                    time.sleep(5 * (attempt + 1))
+                    continue
+                raise RuntimeError(f"Blocked GET {endpoint}")
             resp.raise_for_status()
-            text = resp.text.strip()
-
-            if is_cloudflare_block(text):
-                raise RuntimeError("Cloudflare challenge detected")
-            if is_server_error(text):
-                raise RuntimeError("Server error (502/503)")
-
-            if not text:
-                return {}
-
-            data = json.loads(text)
-            return data
+            return json.loads(text)
         except json.JSONDecodeError:
-            if attempt < retries - 1:
-                print(f"  [WARN] Non-JSON response (attempt {attempt + 1})")
-                time.sleep(2 * (attempt + 1))
-            else:
-                print(f"  [ERROR] Non-JSON response: {text[:200]}")
-                return {}
+            print(f"  [WARN] Non-JSON GET {endpoint}: {text[:200]}")
+            return {}
+        except RuntimeError:
+            raise
         except Exception as e:
             if attempt < retries - 1:
-                print(f"  [WARN] Servlet call failed (attempt {attempt + 1}): {e}")
-                time.sleep(2 * (attempt + 1))
+                print(f"  [WARN] svc_get {endpoint} attempt {attempt+1}: {e}")
+                time.sleep(3 * (attempt + 1))
             else:
                 raise
     return {}
 
-def fetch_terms(sess, store_id, catalog_id):
-    data = servlet_get(sess, {
-        "requestType": "TERMS",
-        "storeId": store_id,
-        "catalogId": catalog_id,
-        "langId": "-1",
-        "demoKey": "d",
-        "programId": "",
-    })
-    if isinstance(data, list):
-        return data
-    if isinstance(data, dict):
-        return data.get("data", data.get("terms", []))
-    return []
 
-def fetch_departments(sess, store_id, catalog_id, term_id):
-    data = servlet_get(sess, {
-        "requestType": "DEPARTMENTS",
-        "storeId": store_id,
-        "catalogId": catalog_id,
-        "langId": "-1",
-        "demoKey": "d",
-        "programId": "",
-        "termId": term_id,
-    })
-    if isinstance(data, list):
-        return data
-    if isinstance(data, dict):
-        return data.get("data", data.get("departments", []))
-    return []
-
-def fetch_courses(sess, store_id, catalog_id, term_id, dept_name):
-    data = servlet_get(sess, {
-        "requestType": "COURSES",
-        "storeId": store_id,
-        "catalogId": catalog_id,
-        "langId": "-1",
-        "demoKey": "d",
-        "programId": "",
-        "termId": term_id,
-        "departmentName": dept_name,
-    })
-    if isinstance(data, list):
-        return data
-    if isinstance(data, dict):
-        return data.get("data", data.get("courses", []))
-    return []
-
-def fetch_sections(sess, store_id, catalog_id, term_id, dept_name, course_name):
-    data = servlet_get(sess, {
-        "requestType": "SECTIONS",
-        "storeId": store_id,
-        "catalogId": catalog_id,
-        "langId": "-1",
-        "demoKey": "d",
-        "programId": "",
-        "termId": term_id,
-        "departmentName": dept_name,
-        "courseName": course_name,
-    })
-    if isinstance(data, list):
-        return data
-    if isinstance(data, dict):
-        return data.get("data", data.get("sections", []))
-    return []
-
-def fetch_booklist(sess, store_id, term_id, dept_name, course_name, section_name):
-    url = f"{SERVLET_BASE}/booklookServlet"
-    params = {
-        "bookstore_id-1": store_id,
-        "term_id-1": term_id,
-        "div-1": "",
-        "dept-1": dept_name,
-        "course-1": course_name,
-        "section-1": section_name,
+def svc_post_results(sess, store_id, catalog_id, term_id, program_id,
+                     dept, course, section, retries=3):
+    """POST to courseMaterial/results with the correct URL + payload format
+    as observed in browser DevTools."""
+    url = (f"{SVC_URL}/courseMaterial/results"
+           f"?storeId={store_id}&langId=-1&catalogId={catalog_id}&requestType=DDCSBrowse")
+    payload = {
+        "storeId":   store_id,
+        "termId":    term_id,
+        "programId": program_id,
+        "courses": [{
+            "secondaryvalues":      f"{dept}/{course}/{section}",
+            "divisionDisplayName":  "",
+            "departmentDisplayName": dept,
+            "courseDisplayName":    course,
+            "sectionDisplayName":   section,
+        }],
     }
-    for attempt in range(3):
+    for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
-            resp = sess.get(url, params=params, timeout=30)
-            resp.raise_for_status()
+            resp = sess.post(url, json=payload, timeout=60)
             text = resp.text
-
-            if is_cloudflare_block(text):
-                raise RuntimeError("Cloudflare challenge detected")
-            if is_server_error(text):
-                raise RuntimeError("Server error (502/503)")
-
-            return text
+            if resp.status_code == 403 or is_px_block(text):
+                print(f"  [WARN] PX block on POST results (attempt {attempt+1})")
+                if attempt < retries - 1:
+                    time.sleep(5 * (attempt + 1))
+                    continue
+                raise RuntimeError("Blocked POST courseMaterial/results")
+            resp.raise_for_status()
+            return json.loads(text)
+        except json.JSONDecodeError:
+            print(f"  [WARN] Non-JSON POST results: {text[:200]}")
+            return []
+        except RuntimeError:
+            raise
         except Exception as e:
-            if attempt < 2:
-                print(f"  [WARN] booklookServlet failed (attempt {attempt + 1}): {e}")
-                time.sleep(2 * (attempt + 1))
+            if attempt < retries - 1:
+                print(f"  [WARN] svc_post attempt {attempt+1}: {e}")
+                time.sleep(3 * (attempt + 1))
             else:
                 raise
-    return ""
+    return []
 
-def parse_booklist_html(html_text, source_url, dept_code, course_code,
-                         section_code, term_name):
+
+# ---------------------------------------------------------------------------
+# BKStr API
+# ---------------------------------------------------------------------------
+
+def fetch_store_config(sess):
+    print("[*] Fetching store config...")
+    data = svc_get(sess, "store/config", {"storeName": STORE_SLUG})
+    store_id = str(data.get("storeId", ""))
+    catalog_id = ""
+    for cat in data.get("defaultCatalog", []):
+        catalog_id = cat.get("catalogIdentifier", {}).get("uniqueID", "")
+        if catalog_id:
+            break
+    if not catalog_id:
+        catalog_id = str(data.get("catalogId", ""))
+    print(f"    storeId={store_id}, catalogId={catalog_id}")
+    return store_id, catalog_id
+
+
+def fetch_terms(sess, store_id):
+    print("[*] Fetching terms...")
+    data = svc_get(sess, "courseMaterial/info", {"storeId": store_id})
+    terms = []
+    for campus in data.get("finalData", {}).get("campus", []):
+        for program in campus.get("program", []):
+            program_id = program.get("programId", "")
+            for term in program.get("term", []):
+                terms.append({
+                    "termId":    term.get("termId", ""),
+                    "termName":  term.get("termName", ""),
+                    "programId": program_id,
+                })
+    print(f"    Found {len(terms)} terms")
+    for t in terms:
+        print(f"      {t['termId']}: {t['termName']} (program={t['programId']})")
+    return terms
+
+
+def fetch_courses(sess, store_id, term_id, program_id):
+    params = {"storeId": store_id, "termId": term_id}
+    if program_id:
+        params["programId"] = program_id
+    data = svc_get(sess, "courseMaterial/courses", params)
     rows = []
+    for div in data.get("finalDDCSData", {}).get("division", []):
+        for dept in div.get("department", []):
+            dep_name = dept.get("depName", "")
+            for course in dept.get("course", []):
+                course_name = course.get("courseName", "")
+                for section in course.get("section", []):
+                    rows.append({
+                        "department": dep_name,
+                        "course":     course_name,
+                        "section":    section.get("sectionName", ""),
+                    })
+    # Deduplicate — API sometimes returns the same section multiple times
+    seen = set()
+    unique = []
+    for r in rows:
+        key = (r["department"], r["course"], r["section"])
+        if key not in seen:
+            seen.add(key)
+            unique.append(r)
+    return unique
 
-    if not html_text or not html_text.strip():
-        rows.append({
-            "source_url": source_url,
-            "department_code": dept_code,
-            "course_code": course_code,
-            "course_title": "",
-            "section": section_code,
-            "section_instructor": "",
-            "term": normalize_term(term_name),
-            "isbn": "",
-            "title": "",
-            "author": "",
-            "material_adoption_code": "This course does not require any course materials",
-        })
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+def normalize_term(s):
+    return re.sub(r'\s*\(.*?\)\s*', ' ', s or "").strip().upper()
+
+
+def fmt(code):
+    code = (code or "").strip()
+    return f"|{code}" if code and not code.startswith("|") else code
+
+
+def parse_results(raw, source_url, dept, course, section, term_name):
+    """Parse the list response from courseMaterial/results.
+
+    Response shape:
+      [ { "courseSectionDTO": [ { "courseMaterialResultsList": [...] } ] } ]
+    """
+    rows = []
+    base = {"department_code": dept, "course_code": fmt(course),
+            "section": fmt(section), "term": normalize_term(term_name),
+            "source_url": source_url}
+
+    if not isinstance(raw, list) or not raw:
+        rows.append({**base, "course_title": "", "section_instructor": "",
+                     "isbn": "", "title": "", "author": "",
+                     "material_adoption_code": "This course does not require any course materials"})
         return rows
 
-    soup = BeautifulSoup(html_text, "html.parser")
+    for store_data in raw:
+        for sec in store_data.get("courseSectionDTO", []):
+            instructor   = sec.get("instructor", "") or sec.get("instructorName", "")
+            raw_title    = sec.get("courseName", "") or ""
+            # API returns course number in courseName (duplicate of course_code) — blank it
+            course_title = "" if raw_title.strip() == course.strip() else raw_title
+            materials    = sec.get("courseMaterialResultsList", [])
 
-    course_title = ""
-    title_el = soup.select_one(".book-list-course-title, .course-info h3, .courseTitle")
-    if title_el:
-        course_title = title_el.get_text(strip=True)
+            if not materials:
+                rows.append({**base, "course_title": course_title,
+                             "section_instructor": instructor,
+                             "isbn": "", "title": "", "author": "",
+                             "material_adoption_code": "This course does not require any course materials"})
+                continue
 
-    instructor = ""
-    instr_el = soup.select_one(".instructor, .professorName, .book-list-instructor")
-    if instr_el:
-        instructor = instr_el.get_text(strip=True)
+            for mat in materials:
+                isbn  = str(mat.get("isbn13", mat.get("isbn", ""))).replace("-", "").strip()
+                title = mat.get("title", "") or ""
+                author = mat.get("author", "") or ""
 
-    book_items = soup.select(
-        ".book-list-item, .cf-book, .material-group .material-item, "
-        ".book_info, tr.book-row, .adoption-item"
-    )
-
-    if not book_items:
-        script_tags = soup.select('script[type="application/json"], script[type="application/ld+json"]')
-        for script in script_tags:
-            try:
-                jdata = json.loads(script.string)
-                if isinstance(jdata, list):
-                    for item in jdata:
-                        if isinstance(item, dict) and ("isbn" in item or "ISBN" in item):
-                            book_items.append(item)
-            except (json.JSONDecodeError, TypeError):
-                pass
-
-    no_materials_patterns = [
-        "no course materials",
-        "no books required",
-        "no textbooks",
-        "materials have not been",
-        "not yet posted",
-    ]
-    page_text = soup.get_text().lower()
-    has_no_materials = any(p in page_text for p in no_materials_patterns)
-
-    if not book_items and has_no_materials:
-        rows.append({
-            "source_url": source_url,
-            "department_code": dept_code,
-            "course_code": course_code,
-            "course_title": course_title,
-            "section": section_code,
-            "section_instructor": instructor,
-            "term": normalize_term(term_name),
-            "isbn": "",
-            "title": "",
-            "author": "",
-            "material_adoption_code": "This course does not require any course materials",
-        })
-        return rows
-
-    if not book_items:
-        book_items = soup.select("table tr")
-        book_items = [tr for tr in book_items if tr.find("td")]
-
-    for item in book_items:
-        if isinstance(item, dict):
-            isbn = str(item.get("isbn", item.get("ISBN", item.get("isbn13", "")))).replace("-", "").strip()
-            title = str(item.get("title", item.get("bookTitle", "")))
-            author = str(item.get("author", item.get("bookAuthor", "")))
-            adoption = str(item.get("required", item.get("status", item.get("adoptionCode", ""))))
-        else:
-            isbn = ""
-            title = ""
-            author = ""
-            adoption = ""
-
-            isbn_el = item.select_one(".isbn, [data-isbn], .book-isbn")
-            if isbn_el:
-                isbn_text = isbn_el.get_text(strip=True)
-                isbn_match = re.search(r'(\d[\d-]{9,})', isbn_text)
-                if isbn_match:
-                    isbn = isbn_match.group(1).replace("-", "")
-            if not isbn:
-                all_text = item.get_text()
-                isbn_match = re.search(r'ISBN[:\s]*(\d[\d-]{9,})', all_text, re.I)
-                if isbn_match:
-                    isbn = isbn_match.group(1).replace("-", "")
-
-            title_el = item.select_one(".book-title, .title, h4, .material-title, a.title")
-            if title_el:
-                title = title_el.get_text(strip=True)
-
-            author_el = item.select_one(".book-author, .author, .material-author")
-            if author_el:
-                author_text = author_el.get_text(strip=True)
-                author = re.sub(r'^(?:by|author:?)\s*', '', author_text, flags=re.I)
-
-            adopt_el = item.select_one(".adoption-status, .required, .requirement, .adoption-code")
-            if adopt_el:
-                adoption = adopt_el.get_text(strip=True)
-            if not adoption:
-                item_text = item.get_text().lower()
-                if "required" in item_text:
+                req_type = mat.get("requirementType", "")
+                req_map  = store_data.get("requirementTypeLabelMap", {})
+                adoption = req_map.get(req_type, req_type)
+                if not adoption:
                     adoption = "Required"
-                elif "recommended" in item_text:
-                    adoption = "Recommended"
-                elif "optional" in item_text:
-                    adoption = "Optional"
 
-        if adoption.lower() in ("true", "yes", "required"):
-            adoption = "Required"
-        elif adoption.lower() in ("false", "no", "recommended"):
-            adoption = "Recommended"
-        elif adoption.lower() in ("optional",):
-            adoption = "Optional"
-
-        if isbn or title:
-            rows.append({
-                "source_url": source_url,
-                "department_code": dept_code,
-                "course_code": course_code,
-                "course_title": course_title,
-                "section": section_code,
-                "section_instructor": instructor,
-                "term": normalize_term(term_name),
-                "isbn": isbn,
-                "title": title,
-                "author": author,
-                "material_adoption_code": adoption or "Required",
-            })
+                if isbn or title:
+                    rows.append({**base, "course_title": course_title,
+                                 "section_instructor": instructor,
+                                 "isbn": isbn, "title": title, "author": author,
+                                 "material_adoption_code": adoption})
 
     if not rows:
-        rows.append({
-            "source_url": source_url,
-            "department_code": dept_code,
-            "course_code": course_code,
-            "course_title": course_title,
-            "section": section_code,
-            "section_instructor": instructor,
-            "term": normalize_term(term_name),
-            "isbn": "",
-            "title": "",
-            "author": "",
-            "material_adoption_code": "This course does not require any course materials",
-        })
-
+        rows.append({**base, "course_title": "", "section_instructor": "",
+                     "isbn": "", "title": "", "author": "",
+                     "material_adoption_code": "This course does not require any course materials"})
     return rows
 
-def get_field(obj, *keys, default=""):
-    for key in keys:
-        if key in obj:
-            val = obj[key]
-            if val is not None:
-                return str(val)
-    return default
 
-def normalize_term(term_str):
-    if not term_str:
-        return ""
-    return term_str.strip().upper()
+# ---------------------------------------------------------------------------
+# CSV helpers
+# ---------------------------------------------------------------------------
 
 def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    file_exists = os.path.exists(filepath) and os.path.getsize(filepath) > 0
+    new_file = not os.path.exists(filepath) or os.path.getsize(filepath) == 0
     with open(filepath, "a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
-        if not file_exists:
+        if new_file:
             writer.writeheader()
         writer.writerows(rows)
 
-def get_scraped_departments(filepath):
+
+def get_scraped_keys(filepath):
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
-    scraped = set()
     with open(filepath, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            dept = row.get("department_code", "").strip()
-            term = row.get("term", "").strip()
-            if dept:
-                scraped.add((term, dept))
-    return scraped
+        return {(r.get("term",""), r.get("department_code",""),
+                 r.get("course_code",""), r.get("section",""))
+                for r in csv.DictReader(f)}
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
 def scrape(fresh=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -537,187 +405,97 @@ def scrape(fresh=False):
         os.remove(CSV_PATH)
         print("[*] Fresh run — deleted existing CSV.")
 
-    done_depts = get_scraped_departments(CSV_PATH)
-    if done_depts:
-        print(f"[*] {len(done_depts)} (term, dept) combos already scraped.")
-        print("[*] Will only scrape missing departments.")
+    done_keys = get_scraped_keys(CSV_PATH)
+    if done_keys:
+        print(f"[*] {len(done_keys)} combos already scraped, resuming.")
 
-    sess, bootstrap_html = create_session()
+    sess, _ = create_session()
 
-    store_id, catalog_id = discover_store_id(sess, bootstrap_html)
-    print(f"[*] Store ID: {store_id}, Catalog ID: {catalog_id}")
-
-    print("[*] Fetching terms...")
-    terms = fetch_terms(sess, store_id, catalog_id)
-    if not terms:
-        print("[!] No terms found. Exiting.")
-        flaresolverr_destroy_session()
+    store_id, catalog_id = fetch_store_config(sess)
+    if not store_id:
+        print("[!] Could not get store config. Exiting.")
         return
 
-    print(f"    Found {len(terms)} terms:")
-    for t in terms:
-        term_id = get_field(t, "id", "termId", "term_id", "value")
-        term_name = get_field(t, "name", "termName", "term_name", "label", "text")
-        print(f"      {term_id}: {term_name}")
+    terms = fetch_terms(sess, store_id)
+    if not terms:
+        print("[!] No terms found. Exiting.")
+        return
 
-    total_rows = 0
-    debug_dumped = False
+    total_rows  = 0
+    debug_saved = False
 
-    for term_obj in terms:
-        term_id = get_field(term_obj, "id", "termId", "term_id", "value")
-        term_name = get_field(term_obj, "name", "termName", "term_name", "label", "text")
-        if not term_id:
+    for term in terms:
+        term_id    = term["termId"]
+        term_name  = term["termName"]
+        program_id = term["programId"]
+
+        print(f"\n[*] Term: {term_name} ({term_id})")
+        course_list = fetch_courses(sess, store_id, term_id, program_id)
+        if not course_list:
+            print("    No courses found.")
             continue
 
-        print(f"\n[*] Processing term: {term_name} ({term_id})")
+        dept_groups = {}
+        for c in course_list:
+            dept_groups.setdefault(c["department"], []).append(c)
+        print(f"    {len(dept_groups)} departments, {len(course_list)} course/sections")
 
-        print("[*] Fetching departments...")
-        departments = fetch_departments(sess, store_id, catalog_id, term_id)
-        if not departments:
-            print("    No departments found for this term.")
-            continue
-
-        print(f"    Found {len(departments)} departments")
-
-        for dept_obj in tqdm(departments, desc=f"  {term_name}"):
-            dept_name = get_field(dept_obj, "categoryName", "name", "departmentName",
-                                  "label", "text", "value")
-            dept_code = get_field(dept_obj, "code", "departmentCode", "abrev",
-                                  default=dept_name)
-
-            if not dept_name:
-                continue
-
-            if (normalize_term(term_name), dept_code) in done_depts:
-                continue
-
-            try:
-                courses = fetch_courses(sess, store_id, catalog_id, term_id, dept_name)
-            except Exception as e:
-                print(f"\n  [ERROR] fetch_courses dept={dept_code}: {e}", flush=True)
-                try:
-                    sess, _ = refresh_session(sess)
-                    courses = fetch_courses(sess, store_id, catalog_id, term_id, dept_name)
-                except Exception as e2:
-                    print(f"  [ERROR] Retry failed for dept={dept_code}: {e2}", flush=True)
-                    continue
-
-            if not courses:
-                append_csv([{
-                    "source_url": STORE_HOME,
-                    "school_id": SCHOOL_ID,
-                    "department_code": dept_code,
-                    "course_code": "",
-                    "course_title": "",
-                    "section": "",
-                    "section_instructor": "",
-                    "term": normalize_term(term_name),
-                    "isbn": "",
-                    "title": "",
-                    "author": "",
-                    "material_adoption_code": "This course does not require any course materials",
-                    "crawled_on": crawled_on,
-                }], CSV_PATH)
-                total_rows += 1
-                continue
-
+        for dept_code, courses in tqdm(dept_groups.items(), desc=f"  {term_name}"):
             dept_rows = 0
-
-            for course_obj in courses:
-                course_name = get_field(course_obj, "categoryName", "name", "courseName",
-                                        "label", "text", "value")
-                course_code = get_field(course_obj, "code", "courseCode",
-                                        default=course_name)
-
-                if not course_name:
+            for entry in courses:
+                course_code  = entry["course"]
+                section_code = entry["section"]
+                check_key = (normalize_term(term_name), dept_code,
+                             fmt(course_code), fmt(section_code))
+                if check_key in done_keys:
                     continue
 
+                source_url = (f"{SVC_URL}/courseMaterial/results"
+                              f"?storeId={store_id}&termId={term_id}"
+                              f"&dept={dept_code}&course={course_code}&section={section_code}")
                 try:
-                    sections = fetch_sections(sess, store_id, catalog_id, term_id,
-                                              dept_name, course_name)
-                except Exception as e:
-                    print(f"\n  [WARN] fetch_sections {dept_code}/{course_code}: {e}")
-                    sections = []
-
-                if not sections:
-                    source_url = (f"{SERVLET_BASE}/booklookServlet?"
-                                  f"bookstore_id-1={store_id}&term_id-1={term_id}"
-                                  f"&dept-1={quote(dept_name)}&course-1={quote(course_name)}"
-                                  f"&section-1=")
+                    raw = svc_post_results(sess, store_id, catalog_id, term_id, program_id,
+                                           dept_code, course_code, section_code)
+                except RuntimeError as e:
+                    tqdm.write(f"\n  [ERROR] {dept_code}/{course_code}/{section_code}: {e}")
+                    tqdm.write("  [INFO] Session likely expired — refreshing...")
                     try:
-                        bl_html = fetch_booklist(sess, store_id, term_id,
-                                                 dept_name, course_name, "")
-                    except Exception as e:
-                        print(f"\n  [WARN] booklookServlet {dept_code}/{course_code}: {e}")
-                        bl_html = ""
+                        sess = refresh_session()
+                        store_id, catalog_id = fetch_store_config(sess)
+                        raw = svc_post_results(sess, store_id, catalog_id, term_id, program_id,
+                                               dept_code, course_code, section_code)
+                    except Exception as e2:
+                        tqdm.write(f"  [ERROR] Retry failed: {e2}")
+                        raw = []
+                except Exception as e:
+                    tqdm.write(f"\n  [ERROR] {dept_code}/{course_code}/{section_code}: {e}")
+                    raw = []
 
-                    if not debug_dumped and bl_html:
-                        debug_path = os.path.join(OUTPUT_DIR, "debug_booklist.html")
-                        with open(debug_path, "w", encoding="utf-8") as df:
-                            df.write(bl_html)
-                        print(f"\n    [DEBUG] First booklist response saved to {debug_path}")
-                        debug_dumped = True
+                if not debug_saved and raw:
+                    with open(os.path.join(OUTPUT_DIR, "debug_results.json"), "w", encoding="utf-8") as df:
+                        json.dump(raw, df, indent=2, ensure_ascii=False)
+                    tqdm.write(f"\n    [DEBUG] First result saved to debug_results.json")
+                    debug_saved = True
 
-                    rows = parse_booklist_html(bl_html, source_url, dept_code,
-                                               course_code, "", term_name)
-                    for row in rows:
-                        row["school_id"] = SCHOOL_ID
-                        row["crawled_on"] = crawled_on
-                    if rows:
-                        append_csv(rows, CSV_PATH)
-                        dept_rows += len(rows)
-                        total_rows += len(rows)
-                else:
-                    for sec_obj in sections:
-                        sec_name = get_field(sec_obj, "categoryName", "name", "sectionName",
-                                             "label", "text", "value")
-                        if not sec_name:
-                            continue
+                rows = parse_results(raw, source_url, dept_code, course_code, section_code, term_name)
+                for row in rows:
+                    row["school_id"]  = SCHOOL_ID
+                    row["crawled_on"] = crawled_on
+                    row["updated_on"] = crawled_on
 
-                        source_url = (f"{SERVLET_BASE}/booklookServlet?"
-                                      f"bookstore_id-1={store_id}&term_id-1={term_id}"
-                                      f"&dept-1={quote(dept_name)}&course-1={quote(course_name)}"
-                                      f"&section-1={quote(sec_name)}")
-                        try:
-                            bl_html = fetch_booklist(sess, store_id, term_id,
-                                                     dept_name, course_name, sec_name)
-                        except Exception as e:
-                            print(f"\n  [WARN] booklookServlet {dept_code}/{course_code}/{sec_name}: {e}")
-                            bl_html = ""
-
-                        if not debug_dumped and bl_html:
-                            debug_path = os.path.join(OUTPUT_DIR, "debug_booklist.html")
-                            with open(debug_path, "w", encoding="utf-8") as df:
-                                df.write(bl_html)
-                            print(f"\n    [DEBUG] First booklist response saved to {debug_path}")
-                            debug_dumped = True
-
-                        rows = parse_booklist_html(bl_html, source_url, dept_code,
-                                                   course_code, sec_name, term_name)
-                        for row in rows:
-                            row["school_id"] = SCHOOL_ID
-                            row["crawled_on"] = crawled_on
-                        if rows:
-                            append_csv(rows, CSV_PATH)
-                            dept_rows += len(rows)
-                            total_rows += len(rows)
+                append_csv(rows, CSV_PATH)
+                dept_rows  += len(rows)
+                total_rows += len(rows)
 
             if dept_rows:
                 tqdm.write(f"    [{dept_code}] +{dept_rows} rows (total: {total_rows})")
 
-    flaresolverr_destroy_session()
-
     print(f"\n{'='*60}")
-    print(f"SCRAPE COMPLETE")
-    print(f"{'='*60}")
-    print(f"Total rows written: {total_rows}")
+    print(f"SCRAPE COMPLETE — {total_rows} rows written")
     print(f"CSV: {CSV_PATH}")
-
     if total_rows == 0:
-        print("\n[!] No data collected. Check debug files in output directory.")
-        print(f"    - {os.path.join(OUTPUT_DIR, 'debug_bootstrap.html')}")
-        print(f"    - {os.path.join(OUTPUT_DIR, 'debug_booklist.html')}")
+        print("[!] No data. Check debug_bootstrap.html and debug_results.json.")
+
 
 if __name__ == "__main__":
-    fresh = "--fresh" in sys.argv
-    scrape(fresh=fresh)
+    scrape(fresh="--fresh" in sys.argv)

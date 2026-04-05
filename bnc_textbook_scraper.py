@@ -8,6 +8,7 @@ import time
 from datetime import datetime, timezone
 from urllib.parse import urljoin, urlparse, parse_qs
 
+import requests as std_requests
 from bs4 import BeautifulSoup
 from curl_cffi import requests as cffi_requests
 from tqdm import tqdm
@@ -37,9 +38,92 @@ CSV_FIELDS = [
 
 DEFAULT_BATCH_SIZE = 25
 DEFAULT_DELAY = 0.5
+FLARESOLVERR_DEFAULT_URL = "http://localhost:8191/v1"
 
-def make_session() -> cffi_requests.Session:
-    return cffi_requests.Session(impersonate="chrome")
+
+def make_session(cookies: dict | None = None, user_agent: str | None = None) -> cffi_requests.Session:
+    session = cffi_requests.Session(impersonate="chrome")
+    if cookies:
+        for name, value in cookies.items():
+            session.cookies.set(name, value, domain="bncvirtual.com")
+    if user_agent:
+        session.headers.update({"User-Agent": user_agent})
+    return session
+
+
+# ---------------------------------------------------------------------------
+# FlareSolverr helpers
+# ---------------------------------------------------------------------------
+
+def _fs_session_name(fvcusno: str) -> str:
+    return f"bnc_{fvcusno}_scraper"
+
+
+def _fs_create(flaresolverr_url: str, session_name: str) -> None:
+    try:
+        std_requests.post(
+            flaresolverr_url,
+            json={"cmd": "sessions.destroy", "session": session_name},
+            timeout=10,
+        )
+    except Exception:
+        pass
+    std_requests.post(
+        flaresolverr_url,
+        json={"cmd": "sessions.create", "session": session_name},
+        timeout=120,
+    ).raise_for_status()
+
+
+def _fs_destroy(flaresolverr_url: str, session_name: str) -> None:
+    try:
+        std_requests.post(
+            flaresolverr_url,
+            json={"cmd": "sessions.destroy", "session": session_name},
+            timeout=10,
+        )
+    except Exception:
+        pass
+
+
+def _fs_get(flaresolverr_url: str, session_name: str, url: str, max_timeout: int = 120000):
+    resp = std_requests.post(
+        flaresolverr_url,
+        json={
+            "cmd": "request.get",
+            "url": url,
+            "session": session_name,
+            "maxTimeout": max_timeout,
+        },
+        timeout=180,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    if data.get("status") != "ok":
+        raise RuntimeError(f"FlareSolverr error: {data}")
+    sol = data["solution"]
+    return sol.get("response", ""), sol.get("cookies", []), sol.get("userAgent", "")
+
+
+def fs_bootstrap(fvcusno: str, flaresolverr_url: str = FLARESOLVERR_DEFAULT_URL) -> tuple[dict, str, str]:
+    """Use FlareSolverr to load the chooseCourses page, capture cf_clearance cookies,
+    then destroy the FlareSolverr session.
+
+    Returns (cookies_dict, user_agent, html).
+    """
+    session_name = _fs_session_name(fvcusno)
+    url = CHOOSE_COURSES_URL.format(fvcusno=fvcusno)
+
+    print(f"[*] FlareSolverr bootstrap: {url}")
+    _fs_create(flaresolverr_url, session_name)
+    try:
+        html, raw_cookies, user_agent = _fs_get(flaresolverr_url, session_name, url)
+    finally:
+        _fs_destroy(flaresolverr_url, session_name)
+
+    cookies = {c["name"]: c["value"] for c in raw_cookies if c.get("name")}
+    print(f"    Captured cookies: {list(cookies.keys())}")
+    return cookies, user_agent, html
 
 def resolve_fvcusno(url: str | None, fvcusno: str | None) -> str:
     if fvcusno:
@@ -67,11 +151,14 @@ def discover_fvcusno(session: cffi_requests.Session, url: str) -> str:
         return m.group(1)
     raise ValueError(f"Could not discover FVCUSNO from {url}")
 
-def init_session(session: cffi_requests.Session, fvcusno: str) -> dict:
-    url = CHOOSE_COURSES_URL.format(fvcusno=fvcusno)
-    resp = session.get(url)
-    resp.raise_for_status()
-    html = resp.text
+def init_session(session: cffi_requests.Session, fvcusno: str, preloaded_html: str | None = None) -> dict:
+    if preloaded_html:
+        html = preloaded_html
+    else:
+        url = CHOOSE_COURSES_URL.format(fvcusno=fvcusno)
+        resp = session.get(url)
+        resp.raise_for_status()
+        html = resp.text
 
     m = re.search(r"var\s+CSID\s*=\s*'([^']+)'", html)
     if not m:
@@ -191,10 +278,14 @@ def parse_adoption_html(html: str, fvcusno: str, school_id: str) -> list[dict]:
 
     course_headers = soup.find_all("div", class_="cmCourseHeader")
 
+    # supsort_d_desc is written once per batch (always index 1), not per-course.
+    # Fall back to index "1" for any course whose index has no entry.
+    batch_dept_str = dept_map.get("1", "")
+
     for i, header in enumerate(course_headers):
         idx = str(i + 1)
 
-        dept_str = dept_map.get(idx, "")
+        dept_str = dept_map.get(idx) or batch_dept_str
         parts = [p.strip() for p in dept_str.split("|div|")]
         term_name = parts[0] if len(parts) > 0 else ""
         department_name = parts[1] if len(parts) > 1 else ""
@@ -203,15 +294,11 @@ def parse_adoption_html(html: str, fvcusno: str, school_id: str) -> list[dict]:
         cparts = [p.strip() for p in course_str.split("|div|")]
         course_desc = cparts[0] if len(cparts) > 0 else ""
 
-        dept_code, course_code, course_title = parse_course_desc(
+        dept_code, course_code, section, course_title = parse_course_desc(
             course_desc, department_name
         )
 
         source_url = CHOOSE_COURSES_URL.format(fvcusno=fvcusno)
-
-        container = header.find_parent("div", class_=re.compile(r"cmCourseListItem|row"))
-        if container is None:
-            container = header.parent
 
         book_blocks = find_textbook_blocks(header)
 
@@ -222,7 +309,7 @@ def parse_adoption_html(html: str, fvcusno: str, school_id: str) -> list[dict]:
                 "department_code": dept_code,
                 "course_code": course_code,
                 "course_title": course_title,
-                "section": "",
+                "section": section,
                 "section_instructor": "",
                 "term": term_name,
                 "isbn": "",
@@ -239,7 +326,7 @@ def parse_adoption_html(html: str, fvcusno: str, school_id: str) -> list[dict]:
                     "department_code": dept_code,
                     "course_code": course_code,
                     "course_title": course_title,
-                    "section": "",
+                    "section": section,
                     "section_instructor": "",
                     "term": term_name,
                     "isbn": book.get("isbn", ""),
@@ -251,23 +338,54 @@ def parse_adoption_html(html: str, fvcusno: str, school_id: str) -> list[dict]:
 
     return rows
 
-def parse_course_desc(course_desc: str, department_name: str) -> tuple[str, str, str]:
+def parse_course_desc(course_desc: str, department_name: str) -> tuple[str, str, str, str]:
+    """Parse a course description string into (dept_code, course_code, section, course_title).
+
+    Handles two formats:
+      - Fused:    "LAW501 TORTS"                    → ("LAW", "|501", "", "TORTS")
+      - Spaced:   "ACCT 124 1490 Prin of Acctg I"   → ("ACCT", "|124", "|1490", "Prin of Acctg I")
+    """
     if not course_desc:
-        return ("", "", "")
+        return ("", "", "", "")
 
-    tokens = course_desc.split(None, 1)
-    first_token = tokens[0]
-    remaining = tokens[1] if len(tokens) > 1 else ""
+    tokens = course_desc.split()
+    if not tokens:
+        return ("", "", "", "")
 
-    m = re.match(r"^([A-Za-z]+)(\d+.*)$", first_token)
+    first = tokens[0]
+    m = re.match(r"^([A-Za-z]+)(\d[\w.]*)$", first)
     if m:
+        # Fused format: "LAW501"
         dept_code = m.group(1).upper()
-        course_code = m.group(2)
+        course_code = "|" + m.group(2)
+        rest = tokens[1:]
+        # Check if next token is a standalone section number
+        section = ""
+        if rest and re.match(r"^\d+$", rest[0]):
+            section = "|" + rest[0]
+            rest = rest[1:]
+        course_title = " ".join(rest)
+    elif re.match(r"^[A-Za-z]+$", first):
+        # Spaced format: "ACCT 124 1490 Title" or "COMM C1000 0700 Title"
+        # Course codes: optional short letter prefix + digits (e.g., 124, C1000, CS101)
+        dept_code = first.upper()
+        rest = tokens[1:]
+        course_code = ""
+        section = ""
+        if rest and re.match(r"^[A-Za-z]{0,3}\d+[A-Za-z]?$", rest[0]):
+            course_code = "|" + rest[0]
+            rest = rest[1:]
+            if rest and re.match(r"^\d+$", rest[0]):
+                section = "|" + rest[0]
+                rest = rest[1:]
+        course_title = " ".join(rest)
     else:
         dept_code = ""
-        course_code = first_token
+        course_code = "|" + first if re.match(r"^\d", first) else first
+        course_title = " ".join(tokens[1:])
+        section = ""
 
-    return (dept_code, course_code, remaining)
+    return (dept_code, course_code, section, course_title)
 
 def find_textbook_blocks(course_header) -> list[dict]:
     books = []
@@ -321,20 +439,44 @@ def write_csv(rows: list[dict], filepath: str) -> None:
         writer.writeheader()
         writer.writerows(rows)
 
+def _refresh_session(fvcusno: str, flaresolverr_url: str | None, delay: float):
+    """Re-bootstrap the session after a 403. Returns (session, csid)."""
+    if flaresolverr_url:
+        print(f"\n  [WARN] 403 — re-bootstrapping via FlareSolverr...")
+        time.sleep(max(delay * 8, 10))
+        cookies, ua, html = fs_bootstrap(fvcusno, flaresolverr_url)
+        session = make_session(cookies=cookies, user_agent=ua)
+        info = init_session(session, fvcusno, preloaded_html=html)
+    else:
+        print(f"\n  [WARN] 403 — refreshing session (plain curl_cffi)...")
+        time.sleep(delay * 4)
+        session = make_session()
+        info = init_session(session, fvcusno)
+    csid = info["csid"]
+    print(f"  [*] New CSID: {csid}")
+    return session, csid
+
+
 def scrape(
     fvcusno: str,
     school_id: str | None = None,
     batch_size: int = DEFAULT_BATCH_SIZE,
     output_dir: str | None = None,
     delay: float = DEFAULT_DELAY,
+    flaresolverr_url: str | None = None,
 ) -> list[dict]:
     if school_id is None:
         school_id = fvcusno
 
-    session = make_session()
-
     print(f"[*] Initializing session for FVCUSNO={fvcusno}...")
-    info = init_session(session, fvcusno)
+    if flaresolverr_url:
+        cookies, ua, preloaded_html = fs_bootstrap(fvcusno, flaresolverr_url)
+        session = make_session(cookies=cookies, user_agent=ua)
+        info = init_session(session, fvcusno, preloaded_html=preloaded_html)
+    else:
+        session = make_session()
+        info = init_session(session, fvcusno)
+
     csid = info["csid"]
     terms = info["terms"]
     depts = info["depts"]
@@ -354,9 +496,20 @@ def scrape(
     for term_id, term_name in terms:
         for dept_id, dept_name, dept_enckey in depts:
             print(f"[*] Fetching courses: {term_name} / {dept_name}...")
-            courses = fetch_courses(
-                session, csid, fvcusno, term_id, dept_id, dept_enckey, delay
-            )
+            try:
+                courses = fetch_courses(
+                    session, csid, fvcusno, term_id, dept_id, dept_enckey, delay
+                )
+            except Exception as exc:
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                if status == 403:
+                    print(f"  [WARN] 403 on course fetch — refreshing session and retrying...")
+                    session, csid = _refresh_session(fvcusno, flaresolverr_url, delay)
+                    courses = fetch_courses(
+                        session, csid, fvcusno, term_id, dept_id, dept_enckey, delay
+                    )
+                else:
+                    raise
             print(f"    Found {len(courses)} courses")
             for c in courses:
                 all_courses.append((term_name, dept_name, c))
@@ -375,7 +528,20 @@ def scrape(
     ]
 
     for batch in tqdm(batches, desc="Fetching adoptions"):
-        html = fetch_adoptions(session, csid, fvcusno, batch, delay)
+        try:
+            html = fetch_adoptions(session, csid, fvcusno, batch, delay)
+        except Exception as exc:
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            if status == 403:
+                try:
+                    session, csid = _refresh_session(fvcusno, flaresolverr_url, delay)
+                    html = fetch_adoptions(session, csid, fvcusno, batch, delay)
+                except Exception as retry_exc:
+                    print(f"  [ERROR] Retry failed: {retry_exc} — skipping batch")
+                    continue
+            else:
+                print(f"\n  [ERROR] Unexpected error: {exc} — skipping batch")
+                continue
         rows = parse_adoption_html(html, fvcusno, school_id)
         all_rows.extend(rows)
 

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Longwood University Bookstore Textbook Scraper
 Platform: bkstr.com (Follett) — svc.bkstr.com REST API
@@ -55,11 +54,6 @@ OUTPUT_DIR = os.path.join(
 )
 CSV_PATH = os.path.join(OUTPUT_DIR, f"{SCHOOL_NAME}__{SCHOOL_ID}__bks.csv")
 
-
-# ---------------------------------------------------------------------------
-# FlareSolverr helpers (session acquisition only)
-# ---------------------------------------------------------------------------
-
 def fs_create():
     try:
         requests.post(FLARESOLVERR_URL, json={
@@ -73,7 +67,6 @@ def fs_create():
         "session": FLARESOLVERR_SESSION,
     }, timeout=120).raise_for_status()
 
-
 def fs_destroy():
     try:
         requests.post(FLARESOLVERR_URL, json={
@@ -82,7 +75,6 @@ def fs_destroy():
         }, timeout=10)
     except Exception:
         pass
-
 
 def fs_get(url, max_timeout=120000):
     resp = requests.post(FLARESOLVERR_URL, json={
@@ -97,11 +89,6 @@ def fs_get(url, max_timeout=120000):
         raise RuntimeError(f"FlareSolverr error: {data}")
     sol = data["solution"]
     return sol.get("response", ""), sol.get("cookies", []), sol.get("userAgent", "")
-
-
-# ---------------------------------------------------------------------------
-# Session bootstrap
-# ---------------------------------------------------------------------------
 
 def create_session():
     """Two-step FlareSolverr bootstrap to capture _pxhd, then destroy session.
@@ -130,7 +117,6 @@ def create_session():
     with open(os.path.join(OUTPUT_DIR, "debug_bootstrap.html"), "w", encoding="utf-8") as f:
         f.write(html)
 
-    # Destroy FlareSolverr — all subsequent traffic via curl_cffi (Chrome TLS)
     fs_destroy()
     print("[*] FlareSolverr session destroyed. Handing off to curl_cffi.")
 
@@ -148,7 +134,6 @@ def create_session():
     print("[*] Session ready.")
     return sess, html
 
-
 def refresh_session():
     print("[*] Refreshing session...", flush=True)
     for attempt in range(4):
@@ -161,11 +146,6 @@ def refresh_session():
             if attempt == 3:
                 raise
 
-
-# ---------------------------------------------------------------------------
-# API helpers — curl_cffi (Chrome TLS impersonation)
-# ---------------------------------------------------------------------------
-
 def is_px_block(text):
     if not text:
         return False
@@ -174,7 +154,6 @@ def is_px_block(text):
         return isinstance(d, dict) and "appId" in d and "jsClientSrc" in d
     except Exception:
         return False
-
 
 def svc_get(sess, endpoint, params=None, retries=3):
     qs = "&".join(f"{k}={v}" for k, v in (params or {}).items())
@@ -204,7 +183,6 @@ def svc_get(sess, endpoint, params=None, retries=3):
             else:
                 raise
     return {}
-
 
 def svc_post_results(sess, store_id, catalog_id, term_id, program_id,
                      dept, course, section, retries=3):
@@ -250,11 +228,6 @@ def svc_post_results(sess, store_id, catalog_id, term_id, program_id,
                 raise
     return []
 
-
-# ---------------------------------------------------------------------------
-# BKStr API
-# ---------------------------------------------------------------------------
-
 def fetch_store_config(sess):
     print("[*] Fetching store config...")
     data = svc_get(sess, "store/config", {"storeName": STORE_SLUG})
@@ -268,7 +241,6 @@ def fetch_store_config(sess):
         catalog_id = str(data.get("catalogId", ""))
     print(f"    storeId={store_id}, catalogId={catalog_id}")
     return store_id, catalog_id
-
 
 def fetch_terms(sess, store_id):
     print("[*] Fetching terms...")
@@ -288,7 +260,6 @@ def fetch_terms(sess, store_id):
         print(f"      {t['termId']}: {t['termName']} (program={t['programId']})")
     return terms
 
-
 def fetch_courses(sess, store_id, term_id, program_id):
     params = {"storeId": store_id, "termId": term_id}
     if program_id:
@@ -306,7 +277,6 @@ def fetch_courses(sess, store_id, term_id, program_id):
                         "course":     course_name,
                         "section":    section.get("sectionName", ""),
                     })
-    # Deduplicate — API sometimes returns the same section multiple times
     seen = set()
     unique = []
     for r in rows:
@@ -316,19 +286,12 @@ def fetch_courses(sess, store_id, term_id, program_id):
             unique.append(r)
     return unique
 
-
-# ---------------------------------------------------------------------------
-# Utilities
-# ---------------------------------------------------------------------------
-
 def normalize_term(s):
     return re.sub(r'\s*\(.*?\)\s*', ' ', s or "").strip().upper()
-
 
 def fmt(code):
     code = (code or "").strip()
     return f"|{code}" if code and not code.startswith("|") else code
-
 
 def parse_results(raw, source_url, dept, course, section, term_name):
     """Parse the list response from courseMaterial/results.
@@ -355,7 +318,6 @@ def parse_results(raw, source_url, dept, course, section, term_name):
         req_map = store_data.get("requirementTypeLabelMap", {})
         for sec in store_data.get("courseSectionDTO", []):
             instructor = sec.get("instructor", "") or sec.get("instructorName", "")
-            # courseName from this API returns only the course number — leave course_title blank
             materials  = sec.get("courseMaterialResultsList", [])
 
             if not materials:
@@ -387,11 +349,6 @@ def parse_results(raw, source_url, dept, course, section, term_name):
                      "material_adoption_code": "This course does not require any course materials"})
     return rows
 
-
-# ---------------------------------------------------------------------------
-# CSV helpers
-# ---------------------------------------------------------------------------
-
 def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     new_file = not os.path.exists(filepath) or os.path.getsize(filepath) == 0
@@ -401,7 +358,6 @@ def append_csv(rows, filepath):
             writer.writeheader()
         writer.writerows(rows)
 
-
 def get_scraped_keys(filepath):
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
@@ -409,11 +365,6 @@ def get_scraped_keys(filepath):
         return {(r.get("term", ""), r.get("department_code", ""),
                  r.get("course_code", ""), r.get("section", ""))
                 for r in csv.DictReader(f)}
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 def scrape(fresh=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -514,7 +465,6 @@ def scrape(fresh=False):
     print(f"CSV: {CSV_PATH}")
     if total_rows == 0:
         print("[!] No data. Check debug_bootstrap.html and debug_results.json.")
-
 
 if __name__ == "__main__":
     scrape(fresh="--fresh" in sys.argv)

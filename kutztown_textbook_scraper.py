@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Kutztown University of Pennsylvania Bookstore Textbook Scraper
 Platform: Timber (by Herkimer Media) — Drupal-based, custom kubstore instance
@@ -38,7 +37,6 @@ FIND_URL = BASE_URL + "/find-courses"
 MY_COURSES_URL = BASE_URL + "/my-courses"
 REQUEST_DELAY = 0.5
 
-# Kubstore adoption type CSS class → human label
 ADOPTION_MAP = {
     "prepaid": "Prepaid",
     "required": "Required",
@@ -84,25 +82,14 @@ BASE_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-
-# ---------------------------------------------------------------------------
-# Session
-# ---------------------------------------------------------------------------
-
 def create_session():
     sess = requests.Session()
     sess.headers.update(BASE_HEADERS)
     return sess
 
-
-# ---------------------------------------------------------------------------
-# Data helpers
-# ---------------------------------------------------------------------------
-
 def clean_term(label):
     """Strip '(Order Now)' / '(Pre-Order)' suffixes."""
     return re.sub(r"\s*\(.*?\)\s*$", "", label).strip()
-
 
 def format_course_code(code):
     code = code.strip()
@@ -110,13 +97,11 @@ def format_course_code(code):
         return code
     return f"|{code}"
 
-
 def format_section_code(section):
     section = section.strip()
     if not section or section.startswith("|"):
         return section
     return f"|{section}"
-
 
 def split_dept_course(raw):
     """'ACCT 121' → ('ACCT', '|121')."""
@@ -125,11 +110,6 @@ def split_dept_course(raw):
     if len(parts) == 2:
         return parts[0], format_course_code(parts[1])
     return raw, ""
-
-
-# ---------------------------------------------------------------------------
-# HTTP helpers
-# ---------------------------------------------------------------------------
 
 def safe_get(sess, url, retries=3):
     for attempt in range(retries):
@@ -146,11 +126,6 @@ def safe_get(sess, url, retries=3):
             else:
                 raise
     return ""
-
-
-# ---------------------------------------------------------------------------
-# Page parsing
-# ---------------------------------------------------------------------------
 
 def parse_find_courses_page(html):
     """Extract term options from /find-courses.
@@ -171,11 +146,6 @@ def parse_find_courses_page(html):
                 terms.append({"value": val, "label": text})
     return terms
 
-
-# ---------------------------------------------------------------------------
-# Autocomplete: section enumeration
-# ---------------------------------------------------------------------------
-
 def parse_autocomplete_label(label_html):
     """Parse kubstore autocomplete label HTML into section metadata.
 
@@ -193,7 +163,7 @@ def parse_autocomplete_label(label_html):
     course_code = ""
     dept_code_el = soup.find("span", class_="cdept-code")
     if dept_code_el:
-        raw = dept_code_el.get_text(strip=True)   # "ACCT 121"
+        raw = dept_code_el.get_text(strip=True)
         dept_code, course_code = split_dept_course(raw)
 
     course_title = ""
@@ -204,11 +174,10 @@ def parse_autocomplete_label(label_html):
     section = ""
     sec_el = soup.find("span", class_="csection-name")
     if sec_el:
-        sec_text = sec_el.get_text(strip=True)    # "Section 010"
+        sec_text = sec_el.get_text(strip=True)
         section = re.sub(r"^Section\s+", "", sec_text, flags=re.I).strip()
 
     return dept_code, course_code, course_title, section
-
 
 def fetch_autocomplete(sess, tid, query):
     """GET /find-courses/autocomplete?tid={tid}&q={query}.
@@ -245,7 +214,6 @@ def fetch_autocomplete(sess, tid, query):
         })
     return results
 
-
 def enumerate_sections(sess, tid, term_label):
     """Query autocomplete with a–z + 0–9, deduplicate, return all sections."""
     seen = {}
@@ -259,27 +227,18 @@ def enumerate_sections(sess, tid, term_label):
     print(f"    Found {len(seen)} unique sections for {term_label}")
     return list(seen.values())
 
-
-# ---------------------------------------------------------------------------
-# Book data: /my-courses/{section_id}
-# ---------------------------------------------------------------------------
-
 def _clean_title(raw_title):
     """Strip 'Billed To MyKU - ', 'Billed to Account - ', etc. prefixes from titles."""
     raw_title = raw_title.strip()
     raw_title = re.sub(r"^Billed\s+[Tt]o\s+\S+\s+-\s+", "", raw_title).strip()
     return raw_title
 
-
 def _clean_isbn(raw_sku):
     """'I9780137858644' → '9780137858644'. Strip leading alpha prefix."""
     raw = raw_sku.strip()
-    # Remove leading non-digit prefix (e.g. 'I', 'ISBN')
     raw = re.sub(r"^[A-Za-z]+", "", raw)
-    # Remove hyphens
     raw = raw.replace("-", "").strip()
     return raw if re.match(r"^\d{10}$|^\d{13}$", raw) else ""
-
 
 def fetch_section_books(sess, section_id, sec_meta, term_label, crawled_on):
     """GET /my-courses/{section_id} and parse book adoptions.
@@ -302,37 +261,30 @@ def fetch_section_books(sess, section_id, sec_meta, term_label, crawled_on):
     soup = BeautifulSoup(html, "html.parser")
     rows = []
 
-    # Check "not finalized" message
     page_text = soup.get_text(" ", strip=True)
     if "not been finalized" in page_text:
         return [_make_row(dept_code, course_code, course_title, section,
                           term_label, "", "", "", "Not Finalized", crawled_on)]
 
-    # Each adoption group: div.adoption-list-content-group.adoption-type.{type}
     for group in soup.find_all("div", class_=re.compile(r"\badoption-list-content-group\b")):
-        # Determine adoption type from CSS classes
         adoption_type = ""
         for cls in group.get("class", []):
             if cls in ADOPTION_MAP:
                 adoption_type = ADOPTION_MAP[cls]
                 break
         if not adoption_type:
-            # Fallback: look for adoption-type-title h4
             title_h4 = group.find("h4", class_="adoption-type-title")
             if title_h4:
                 adoption_type = title_h4.get_text(strip=True)
 
-        # Each book within this group
         for adoption_row in group.find_all("div", class_=re.compile(r"\badoption-row\b")):
             adoption_left = adoption_row.find("div", class_=re.compile(r"\badoption-left\b"))
             if not adoption_left:
                 continue
 
-            # Title: first h4 in adoption-left (may have "Billed To MyKU - " prefix)
             title_el = adoption_left.find("h4")
             title = _clean_title(title_el.get_text(strip=True)) if title_el else ""
 
-            # Book details table: tr.isbn, tr.author, etc.
             isbn = ""
             author = ""
             table = adoption_left.find("table", class_="adoption-data")
@@ -353,7 +305,6 @@ def fetch_section_books(sess, section_id, sec_meta, term_label, crawled_on):
                                       term_label, isbn, title, author, adoption_type, crawled_on))
 
     if not rows:
-        # Determine why: check for explicit "no materials" text
         if re.search(r"no\s+(textbook|material|book|course material)s?\s+(required|found|needed)", page_text, re.I):
             adoption_note = "No materials required"
         elif re.search(r"no\s+required\s+material", page_text, re.I):
@@ -364,7 +315,6 @@ def fetch_section_books(sess, section_id, sec_meta, term_label, crawled_on):
                               term_label, "", "", "", adoption_note, crawled_on))
 
     return rows
-
 
 def _make_row(dept_code, course_code, course_title, section, term, isbn, title, author, adoption, crawled_on):
     return {
@@ -384,11 +334,6 @@ def _make_row(dept_code, course_code, course_title, section, term, isbn, title, 
         "updated_on": crawled_on,
     }
 
-
-# ---------------------------------------------------------------------------
-# CSV I/O
-# ---------------------------------------------------------------------------
-
 def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     file_exists = os.path.exists(filepath) and os.path.getsize(filepath) > 0
@@ -397,7 +342,6 @@ def append_csv(rows, filepath):
         if not file_exists:
             writer.writeheader()
         writer.writerows(rows)
-
 
 def get_scraped_section_ids(filepath):
     """Return set of (term, dept_code, course_code, section) tuples already in CSV."""
@@ -416,18 +360,12 @@ def get_scraped_section_ids(filepath):
             seen.add(key)
     return seen
 
-
 def dump_debug(html, label):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     path = os.path.join(OUTPUT_DIR, f"debug_{label}.html")
     with open(path, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"    [DEBUG] Saved {len(html)} chars → {path}")
-
-
-# ---------------------------------------------------------------------------
-# Main scrape loop
-# ---------------------------------------------------------------------------
 
 def scrape(fresh=False, discover_only=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d 00:00:00")
@@ -470,7 +408,6 @@ def scrape(fresh=False, discover_only=False):
             print(f"    [!] No sections found for {term_label}")
             continue
 
-        # Skip already-scraped sections
         remaining = [
             sec for sec in sections
             if (
@@ -504,7 +441,6 @@ def scrape(fresh=False, discover_only=False):
     print(f"{'=' * 60}")
     print(f"Total rows written : {total_rows}")
     print(f"CSV                : {CSV_PATH}")
-
 
 if __name__ == "__main__":
     fresh = "--fresh" in sys.argv

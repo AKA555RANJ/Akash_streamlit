@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 import csv
 import os
@@ -61,13 +60,11 @@ HEADERS = {
     "Referer": BASE_URL + "/",
 }
 
-
 def create_session():
     sess = requests.Session()
     sess.headers.update(HEADERS)
     sess.proxies.update(PROXIES)
     return sess
-
 
 def normalize_term(raw):
     """Convert "26/SP", "26/SP1", "26/FA", "26/SU" to readable strings."""
@@ -81,7 +78,6 @@ def normalize_term(raw):
     if session:
         result += f" SESSION {session}"
     return result
-
 
 def fetch_prefixes(sess, retries=3):
     """GET home page and extract all department prefixes."""
@@ -101,7 +97,6 @@ def fetch_prefixes(sess, retries=3):
             else:
                 raise
     return []
-
 
 def fetch_course_numbers(sess, prefix, retries=3):
     """POST pick_course-number.php → list of course number strings."""
@@ -123,7 +118,6 @@ def fetch_course_numbers(sess, prefix, retries=3):
                 print(f"  [ERROR] fetch_course_numbers prefix={prefix}: {e}", flush=True)
     return []
 
-
 def fetch_sections(sess, prefix, cn, retries=3):
     """POST pick_course-section.php → list of section dicts."""
     url = BASE_URL + "/asynch/pick_course-section.php"
@@ -142,7 +136,6 @@ def fetch_sections(sess, prefix, cn, retries=3):
                 print(f"  [ERROR] fetch_sections {prefix} {cn}: {e}", flush=True)
     return []
 
-
 def parse_section_options(html, prefix, cn):
     """
     Parse section <option> elements.
@@ -159,7 +152,6 @@ def parse_section_options(html, prefix, cn):
         full_text = opt.get_text(strip=True)
         tokens = full_text.split()
         if len(tokens) < 2:
-            # Fallback: just store as-is
             results.append({
                 "sct_val": sct_val,
                 "course_title": full_text,
@@ -168,13 +160,11 @@ def parse_section_options(html, prefix, cn):
             })
             continue
 
-        term_raw = tokens[-1]  # e.g. "26/SP"
-        # Course title is everything before "{sct_val} {term_raw}" suffix
+        term_raw = tokens[-1]
         suffix = f" {sct_val} {term_raw}"
         if full_text.endswith(suffix):
             course_title = full_text[: -len(suffix)].strip()
         else:
-            # Fallback: drop last two tokens
             course_title = " ".join(tokens[:-2]).strip()
 
         results.append({
@@ -184,7 +174,6 @@ def parse_section_options(html, prefix, cn):
             "term": normalize_term(term_raw),
         })
     return results
-
 
 def fetch_books(sess, prefix, cn, sct, retries=3):
     """POST show-books.php → raw HTML fragment."""
@@ -204,11 +193,9 @@ def fetch_books(sess, prefix, cn, sct, retries=3):
                 print(f"  [ERROR] fetch_books {prefix} {cn} {sct}: {e}", flush=True)
     return ""
 
-
 def clean_text(text):
     """Replace Unicode replacement character (U+FFFD) with registered trademark ® where applicable."""
     return text.replace("\ufffd", "\u00ae")
-
 
 def parse_books(html, prefix, cn, section_info, crawled_on):
     """
@@ -246,7 +233,6 @@ def parse_books(html, prefix, cn, section_info, crawled_on):
     }
 
     if not ul or not ul.find("li"):
-        # No materials
         row = dict(base_row)
         row.update({"isbn": "", "title": "", "author": "", "material_adoption_code": ""})
         return [row]
@@ -255,15 +241,12 @@ def parse_books(html, prefix, cn, section_info, crawled_on):
     seen_isbns = set()
 
     for li in ul.find_all("li"):
-        # Extract all <em> tags
         ems = li.find_all("em")
         edition = ems[0].get_text(strip=True) if len(ems) > 0 else ""
-        # publisher = ems[1].get_text(strip=True) if len(ems) > 1 else ""  # not in schema
         author = ems[2].get_text(strip=True) if len(ems) > 2 else (
             ems[1].get_text(strip=True) if len(ems) > 1 else ""
         )
 
-        # Title: first NavigableString child (text before first <em>)
         raw_title = ""
         for child in li.children:
             if isinstance(child, Tag):
@@ -279,28 +262,21 @@ def parse_books(html, prefix, cn, section_info, crawled_on):
         else:
             full_title = raw_title
 
-        # ISBN: from text after removing tags
         li_text = li.get_text(" ", strip=True)
         isbn_match = re.search(r'ISBN:\s*(\d[\d\-]{9,})', li_text)
         isbn = isbn_match.group(1).replace("-", "").strip() if isbn_match else ""
 
-        # Material type: line after the ISBN line
-        # Split li text by newline-equivalent (br tags become spaces in get_text)
-        # Better: get_text with separator to detect line structure
         li_lines = [s.strip() for s in li.get_text(separator="\n").splitlines() if s.strip()]
         material_type = ""
         for i, line in enumerate(li_lines):
             if line.startswith("ISBN:"):
-                # Next non-empty line after ISBN should be the material type
                 for j in range(i + 1, len(li_lines)):
                     candidate = li_lines[j].strip()
-                    # Skip link text
                     if candidate and "library material" not in candidate.lower() and not candidate.startswith("http"):
                         material_type = candidate
                         break
                 break
 
-        # Deduplicate by ISBN within this section
         dedup_key = isbn if isbn else full_title
         if dedup_key and dedup_key in seen_isbns:
             continue
@@ -320,7 +296,6 @@ def parse_books(html, prefix, cn, section_info, crawled_on):
         "isbn": "", "title": "", "author": "", "material_adoption_code": "",
     }]
 
-
 def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     file_exists = os.path.exists(filepath) and os.path.getsize(filepath) > 0
@@ -329,7 +304,6 @@ def append_csv(rows, filepath):
         if not file_exists:
             writer.writeheader()
         writer.writerows(rows)
-
 
 def get_scraped_keys(filepath):
     """Return set of (dept, course_code, section) tuples already in the CSV."""
@@ -345,7 +319,6 @@ def get_scraped_keys(filepath):
             if dept:
                 scraped.add((dept, cc, sec))
     return scraped
-
 
 def scrape(fresh=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d 00:00:00")
@@ -429,7 +402,6 @@ def scrape(fresh=False):
     print(f"{'='*60}")
     print(f"Total rows written: {total_rows}")
     print(f"CSV: {CSV_PATH}")
-
 
 if __name__ == "__main__":
     import urllib3

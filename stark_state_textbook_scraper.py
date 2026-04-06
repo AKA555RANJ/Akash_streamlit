@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Stark State College Bookstore Textbook Scraper
 Platform: Timber (by Herkimer Media) — Drupal-based, integrates with Booklog POS
@@ -27,7 +26,6 @@ TIMBER_URL = BASE_URL + "/timber/college"
 TIMBER_AJAX_URL = BASE_URL + "/timber/college/ajax"
 FLARESOLVERR_URL = "http://localhost:8191/v1"
 
-# Maps req-group-{code} class suffix to human-readable adoption label
 ADOPTION_MAP = {
     "R": "Required",
     "O": "Optional",
@@ -63,7 +61,6 @@ CSV_PATH = os.path.join(OUTPUT_DIR, f"{SCHOOL_NAME}__{SCHOOL_ID}__bks.csv")
 
 FLARESOLVERR_SESSION = "stark_state_scraper"
 
-
 def flaresolverr_create_session():
     try:
         requests.post(FLARESOLVERR_URL, json={
@@ -78,7 +75,6 @@ def flaresolverr_create_session():
     }, timeout=120)
     resp.raise_for_status()
 
-
 def flaresolverr_destroy_session():
     try:
         requests.post(FLARESOLVERR_URL, json={
@@ -87,7 +83,6 @@ def flaresolverr_destroy_session():
         }, timeout=10)
     except Exception:
         pass
-
 
 def flaresolverr_get(url, max_timeout=60000):
     resp = requests.post(FLARESOLVERR_URL, json={
@@ -112,7 +107,6 @@ def flaresolverr_get(url, max_timeout=60000):
 
     return html, cookies, ua
 
-
 def create_session():
     print("[*] Bootstrapping session via FlareSolverr...")
     flaresolverr_create_session()
@@ -132,7 +126,6 @@ def create_session():
     print(f"[*] Session ready. Cookies: {list(cookies.keys())}")
     return sess, html
 
-
 def refresh_session(sess):
     print("[*] Refreshing session via FlareSolverr...", flush=True)
     for attempt in range(5):
@@ -145,18 +138,15 @@ def refresh_session(sess):
             if attempt == 4:
                 raise
 
-
 def is_cloudflare_block(text):
     lower = text[:1000].lower()
     return ("just a moment" in lower or
             "challenge-platform" in lower or
             "<title>attention" in lower)
 
-
 def clean_term(label):
     """Strip parenthetical suffixes like '(Order Now)' from term labels."""
     return re.sub(r'\s*\(.*?\)\s*$', '', label).strip()
-
 
 def format_course_code(code):
     """Prefix course code with pipe to preserve leading zeros. E.g. '2301' → '|2301'."""
@@ -167,7 +157,6 @@ def format_course_code(code):
         return code
     return f"|{code}"
 
-
 def format_section_code(section):
     """Prefix section code with pipe to preserve leading zeros."""
     section = section.strip()
@@ -177,7 +166,6 @@ def format_section_code(section):
         return section
     return f"|{section}"
 
-
 def split_dept_course(raw):
     """Split 'ACCT 2301' into ('ACCT', '|2301'). Returns (raw, '') if no space."""
     raw = raw.strip()
@@ -185,7 +173,6 @@ def split_dept_course(raw):
     if len(parts) == 2:
         return parts[0], format_course_code(parts[1])
     return raw, ""
-
 
 def safe_get(sess, url, retries=3):
     for attempt in range(retries):
@@ -204,7 +191,6 @@ def safe_get(sess, url, retries=3):
             else:
                 raise
     return ""
-
 
 def safe_post(sess, url, data=None, json_data=None, retries=3):
     for attempt in range(retries):
@@ -226,7 +212,6 @@ def safe_post(sess, url, data=None, json_data=None, retries=3):
             else:
                 raise
     return ""
-
 
 def parse_drupal_ajax_html(text):
     """Unwrap Drupal Ajax JSON command array into concatenated HTML.
@@ -254,7 +239,6 @@ def parse_drupal_ajax_html(text):
         pass
     return text
 
-
 def timber_ajax_get(sess, path, retries=3):
     """GET /timber/college/ajax?l={encoded_path}.
 
@@ -281,7 +265,6 @@ def timber_ajax_get(sess, path, retries=3):
                 raise
     return ""
 
-
 def parse_tcc_links(html):
     """Parse Timber TCC navigation links from any level.
 
@@ -303,7 +286,6 @@ def parse_tcc_links(html):
         items.append({"value": url_val, "code": code, "label": label})
     return items
 
-
 def split_course_label(label):
     """Split '121 - Introduction to Accounting' into ('121', 'Introduction to Accounting').
 
@@ -314,7 +296,6 @@ def split_course_label(label):
     if m:
         return m.group(1).strip(), m.group(2).strip()
     return label, ""
-
 
 def fetch_book_author(sess, nid, cadoption_id):
     """Fetch author from the Timber book details endpoint.
@@ -343,7 +324,6 @@ def fetch_book_author(sess, nid, cadoption_id):
     except Exception:
         pass
     return ""
-
 
 def parse_timber_materials(sess, html, term_name, dept_code, course_code,
                            course_title, section_code):
@@ -424,7 +404,6 @@ def parse_timber_materials(sess, html, term_name, dept_code, course_code,
 
     return results
 
-
 def parse_terms_from_page(html):
     """Extract available terms from the main Timber college page."""
     soup = BeautifulSoup(html, "html.parser")
@@ -466,7 +445,6 @@ def parse_terms_from_page(html):
 
     return terms
 
-
 def parse_departments_from_html(html):
     """Extract departments from an HTML response."""
     soup = BeautifulSoup(html, "html.parser")
@@ -499,7 +477,6 @@ def parse_departments_from_html(html):
 
     return depts
 
-
 def parse_courses_from_html(html):
     """Extract courses from an HTML response."""
     soup = BeautifulSoup(html, "html.parser")
@@ -525,7 +502,6 @@ def parse_courses_from_html(html):
 
     return courses
 
-
 def parse_sections_from_html(html):
     """Extract sections from an HTML response."""
     soup = BeautifulSoup(html, "html.parser")
@@ -550,7 +526,6 @@ def parse_sections_from_html(html):
             sections.append({"value": val, "label": text})
 
     return sections
-
 
 def discover_ajax_endpoints(html):
     """Discover AJAX endpoints from the page's JavaScript."""
@@ -581,7 +556,6 @@ def discover_ajax_endpoints(html):
         print(f"    [DISCOVER] AJAX URLs: {ajax_urls[:5]}")
 
     return endpoints
-
 
 def parse_materials_page(html, term_name, dept_code):
     """Parse textbook/materials information from a Timber page."""
@@ -718,7 +692,6 @@ def parse_materials_page(html, term_name, dept_code):
 
     return results
 
-
 def parse_by_name_page(html, term_name, dept_code, course_label, section_label=""):
     """Parse the /college/by-name response which shows materials for a specific course."""
     soup = BeautifulSoup(html, "html.parser")
@@ -801,7 +774,6 @@ def parse_by_name_page(html, term_name, dept_code, course_label, section_label="
 
     return results
 
-
 def try_timber_ajax_endpoints(sess, term_value, term_label):
     """Try various known Timber/Drupal AJAX endpoint patterns to load departments."""
     patterns = [
@@ -826,7 +798,6 @@ def try_timber_ajax_endpoints(sess, term_value, term_label):
                 raise
             continue
 
-    # Drupal Views AJAX: POST to the page URL with form fields
     post_patterns = [
         (TIMBER_URL, {"term": term_value, "ajax_page_state[theme]": "timber", "_triggering_element_name": "term"}),
         (TIMBER_URL, {"field_term": term_value, "_triggering_element_name": "field_term"}),
@@ -848,7 +819,6 @@ def try_timber_ajax_endpoints(sess, term_value, term_label):
             continue
 
     return [], ""
-
 
 def try_course_endpoints(sess, term_value, dept_value):
     """Try various endpoint patterns to load courses for a department."""
@@ -874,7 +844,6 @@ def try_course_endpoints(sess, term_value, dept_value):
 
     return [], ""
 
-
 def try_section_endpoints(sess, term_value, dept_value, course_value):
     """Try various endpoint patterns to load sections for a course."""
     patterns = [
@@ -897,7 +866,6 @@ def try_section_endpoints(sess, term_value, dept_value, course_value):
             continue
 
     return [], ""
-
 
 def try_materials_endpoints(sess, term_value, dept_value, course_value,
                             section_value="", term_label="", dept_label="",
@@ -925,7 +893,6 @@ def try_materials_endpoints(sess, term_value, dept_value, course_value,
 
     return "", ""
 
-
 def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     file_exists = os.path.exists(filepath) and os.path.getsize(filepath) > 0
@@ -934,7 +901,6 @@ def append_csv(rows, filepath):
         if not file_exists:
             writer.writeheader()
         writer.writerows(rows)
-
 
 def get_scraped_departments(filepath):
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
@@ -948,7 +914,6 @@ def get_scraped_departments(filepath):
                 scraped.add(dept)
     return scraped
 
-
 def dump_debug(html, label):
     """Save HTML to debug file for analysis."""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -957,7 +922,6 @@ def dump_debug(html, label):
         f.write(html)
     print(f"    [DEBUG] HTML saved to {path} ({len(html)} chars)")
     return path
-
 
 def discover_page_structure(html):
     """Analyze the main page to understand Timber's structure."""
@@ -1006,7 +970,6 @@ def discover_page_structure(html):
     print("[*] === END ANALYSIS ===\n")
     return endpoints
 
-
 def scrape(fresh=False, discover_only=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d 00:00:00")
     source_url = TIMBER_URL
@@ -1028,7 +991,6 @@ def scrape(fresh=False, discover_only=False):
         flaresolverr_destroy_session()
         return
 
-    # Parse terms using TCC link format: <a class='tcc-item-link' url='/college_term/131166'>
     terms = parse_tcc_links(initial_html)
     print(f"[*] Found {len(terms)} terms: {[clean_term(t['code']) for t in terms]}")
 
@@ -1040,11 +1002,10 @@ def scrape(fresh=False, discover_only=False):
     total_rows = 0
 
     for term in terms:
-        term_path = term["value"]          # e.g. /college_term/131166
-        term_label = clean_term(term["code"])  # e.g. SPRING 2026
+        term_path = term["value"]
+        term_label = clean_term(term["code"])
         print(f"\n[*] Processing term: {term_label} (path={term_path})")
 
-        # Selecting the term sets server-side session state and returns departments
         try:
             depts_html = timber_ajax_get(sess, term_path)
         except RuntimeError as e:
@@ -1064,20 +1025,18 @@ def scrape(fresh=False, discover_only=False):
             continue
 
         for dept in tqdm(depts, desc=f"  Depts ({term_label})"):
-            dept_code = dept["code"]   # e.g. ACC
-            dept_path = dept["value"]  # e.g. /college_dept/131073
+            dept_code = dept["code"]
+            dept_path = dept["value"]
 
             if dept_code in done_depts:
                 continue
 
-            # Select dept — server keeps term context, returns courses
             try:
                 courses_html = timber_ajax_get(sess, dept_path)
             except RuntimeError as e:
                 if "Cloudflare" in str(e):
                     tqdm.write(f"\n  [WARN] CF block on dept {dept_code}, refreshing session...")
                     sess, _ = refresh_session(sess)
-                    # Re-select term after session refresh to restore server state
                     timber_ajax_get(sess, term_path)
                     courses_html = timber_ajax_get(sess, dept_path)
                 else:
@@ -1101,13 +1060,11 @@ def scrape(fresh=False, discover_only=False):
             dept_rows = 0
             for course in courses:
                 course_path = course["value"]
-                # Skip aggregate "All" course entries — they don't carry meaningful course codes
                 if course["code"].strip().lower() == "all":
                     course_num, course_title = "", ""
                 else:
                     course_num, course_title = split_course_label(course["code"])
 
-                # Select course — returns sections
                 try:
                     sections_html = timber_ajax_get(sess, course_path)
                 except Exception as e:
@@ -1116,12 +1073,10 @@ def scrape(fresh=False, discover_only=False):
 
                 sections = parse_tcc_links(sections_html)
 
-                # Use specific sections (53008, 53009, …) when available; fall back to "All"
                 non_all = [s for s in sections if s["code"].strip().lower() != "all"]
                 target_sections = non_all if non_all else sections
 
                 if not target_sections:
-                    # No section level — parse materials from course-level HTML directly
                     materials = parse_timber_materials(
                         sess, sections_html, term_label, dept_code,
                         course_num, course_title, ""
@@ -1139,10 +1094,8 @@ def scrape(fresh=False, discover_only=False):
 
                 for sec in target_sections:
                     sec_path = sec["value"]
-                    # "All" aggregated section → store empty section code in CSV
                     sec_code = "" if sec["code"].strip().lower() == "all" else sec["code"].strip()
 
-                    # Select section — returns materials
                     try:
                         mat_html = timber_ajax_get(sess, sec_path)
                     except Exception as e:
@@ -1180,7 +1133,6 @@ def scrape(fresh=False, discover_only=False):
         print("  Re-run without --fresh to scrape only these.")
     else:
         print(f"\n[OK] All departments scraped successfully!")
-
 
 if __name__ == "__main__":
     fresh = "--fresh" in sys.argv

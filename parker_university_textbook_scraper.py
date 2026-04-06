@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Parker University Bookstore Textbook Scraper
 Platform: Timber e-Commerce (Drupal 6, Herkimer Media / bookstorewebsoftware.com)
@@ -34,10 +33,6 @@ from tqdm import tqdm
 
 sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, "reconfigure") else None
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
 SCHOOL_NAME = "parker_university"
 SCHOOL_ID   = "3094167"
 BASE_URL    = "https://share.parker.edu"
@@ -45,7 +40,7 @@ COLLEGE_URL = f"{BASE_URL}/college"
 AJAX_URL    = f"{BASE_URL}/timber/college/ajax"
 DETAILS_URL = f"{BASE_URL}/timber/college/details"
 
-REQUEST_DELAY = 0.6   # seconds between requests
+REQUEST_DELAY = 0.6
 
 CSV_FIELDS = [
     "source_url", "school_id", "department_code", "course_code", "course_title",
@@ -60,10 +55,6 @@ OUTPUT_DIR = os.path.join(
 )
 CSV_PATH = os.path.join(OUTPUT_DIR, f"{SCHOOL_NAME}__{SCHOOL_ID}__bks.csv")
 
-# ---------------------------------------------------------------------------
-# Session
-# ---------------------------------------------------------------------------
-
 def make_session() -> requests.Session:
     sess = requests.Session()
     sess.headers.update({
@@ -77,11 +68,6 @@ def make_session() -> requests.Session:
         "Referer": COLLEGE_URL,
     })
     return sess
-
-
-# ---------------------------------------------------------------------------
-# HTML helpers
-# ---------------------------------------------------------------------------
 
 def parse_tcc_items(html: str) -> list[dict]:
     """
@@ -98,21 +84,14 @@ def parse_tcc_items(html: str) -> list[dict]:
             items.append({"url": url_attr, "text": text})
     return items
 
-
 def extract_id(url_path: str) -> str:
     """Return the trailing numeric ID from a path like /college_term/65576 → '65576'."""
     return url_path.rstrip("/").rsplit("/", 1)[-1]
-
 
 def extract_url_type(url_path: str) -> str:
     """Return the resource type prefix, e.g. 'college_term', 'college_dept', etc."""
     parts = url_path.strip("/").split("/")
     return parts[-2] if len(parts) >= 2 else ""
-
-
-# ---------------------------------------------------------------------------
-# Fetch helpers
-# ---------------------------------------------------------------------------
 
 def timber_ajax_get(sess: requests.Session, path: str) -> str:
     """GET /timber/college/ajax?l={path} and return response text."""
@@ -121,7 +100,6 @@ def timber_ajax_get(sess: requests.Session, path: str) -> str:
     resp = sess.get(url, timeout=30)
     resp.raise_for_status()
     return resp.text
-
 
 def fetch_terms(sess: requests.Session) -> list[dict]:
     """Fetch the main /college page and return list of {id, name} terms."""
@@ -135,7 +113,6 @@ def fetch_terms(sess: requests.Session) -> list[dict]:
             terms.append({"id": extract_id(item["url"]), "name": item["text"]})
     return terms
 
-
 def fetch_departments(sess: requests.Session, term_id: str) -> list[dict]:
     """Return list of {id, code, name} depts for a term."""
     html = timber_ajax_get(sess, f"/college_term/{term_id}")
@@ -147,7 +124,6 @@ def fetch_departments(sess: requests.Session, term_id: str) -> list[dict]:
             depts.append({"id": extract_id(item["url"]), "code": code, "name": name})
     return depts
 
-
 def fetch_courses(sess: requests.Session, dept_id: str) -> list[dict]:
     """Return list of {id, text} courses for a department."""
     html = timber_ajax_get(sess, f"/college_dept/{dept_id}")
@@ -157,7 +133,6 @@ def fetch_courses(sess: requests.Session, dept_id: str) -> list[dict]:
         if "/college_course/" in item["url"]:
             courses.append({"id": extract_id(item["url"]), "text": item["text"]})
     return courses
-
 
 def fetch_sections(sess: requests.Session, course_id: str) -> list[dict]:
     """
@@ -170,7 +145,6 @@ def fetch_sections(sess: requests.Session, course_id: str) -> list[dict]:
     sections = []
     for item in items:
         node_id = extract_id(item["url"])
-        # Try to parse "Required - Section 001 - Instructor" or similar
         adoption, section_text = _split_adoption_prefix(item["text"])
         sections.append({
             "id":            node_id,
@@ -180,7 +154,6 @@ def fetch_sections(sess: requests.Session, course_id: str) -> list[dict]:
             "url":           item["url"],
         })
     return sections
-
 
 def fetch_details(sess: requests.Session, nid: str) -> dict:
     """
@@ -196,11 +169,6 @@ def fetch_details(sess: requests.Session, nid: str) -> dict:
     resp.raise_for_status()
     return _parse_details_html(resp.text)
 
-
-# ---------------------------------------------------------------------------
-# Parsing helpers
-# ---------------------------------------------------------------------------
-
 def _split_dept(text: str) -> tuple[str, str]:
     """
     'DC - DOCTOR OF CHIROPRACTIC' → ('DC', 'DOCTOR OF CHIROPRACTIC')
@@ -212,7 +180,6 @@ def _split_dept(text: str) -> tuple[str, str]:
         return code.strip(), name.strip()
     return text.strip(), text.strip()
 
-
 def _split_adoption_prefix(text: str) -> tuple[str, str]:
     """
     Try to peel off a leading adoption label like 'Required', 'Optional', etc.
@@ -222,7 +189,6 @@ def _split_adoption_prefix(text: str) -> tuple[str, str]:
     if m:
         return m.group(1).capitalize(), text[m.end():].strip()
     return "", text
-
 
 def _parse_details_html(html: str) -> dict:
     """
@@ -244,18 +210,15 @@ def _parse_details_html(html: str) -> dict:
         "adoption_code": "", "instructor": "", "section_num": "",
     }
 
-    # Title from first <h2> (may be wrapped in <a>)
     h2 = soup.find("h2")
     if h2:
         result["title"] = h2.get_text(strip=True)
 
-    # Parse all <p><strong>Label:</strong> value</p> blocks
     for p in soup.find_all("p"):
         strong = p.find("strong")
         if not strong:
             continue
         label = strong.get_text(strip=True).rstrip(":").lower()
-        # Value: everything after the <strong> tag
         strong.extract()
         value = p.get_text(strip=True).lstrip(":").strip()
 
@@ -272,7 +235,6 @@ def _parse_details_html(html: str) -> dict:
 
     return result
 
-
 def _parse_course_text(text: str) -> tuple[str, str, str]:
     """
     Parse course item text into (dept_code, course_code, course_title).
@@ -285,20 +247,15 @@ def _parse_course_text(text: str) -> tuple[str, str, str]:
     """
     t = text.strip()
 
-    # Format 1: LETTERS+DIGITS - TITLE (no space between letters and digits)
-    # e.g. "BASC5101 - BIOLOGY OF CELLS AND TISSUE"
     m = re.match(r"^([A-Za-z]{2,10})(\d[\w\-]*)\s*[-–]\s*(.*)", t)
     if m:
         return m.group(1).upper(), fmt(m.group(2)), m.group(3).strip()
 
-    # Format 2: LETTERS SPACE DIGITS SPACE TITLE  (with optional " - " separator)
-    # e.g. "MHCM 510 Healthcare Management"  or  "BCIS 3311 - IT PROJECT AND SERVICE MGMT"
     m = re.match(r"^([A-Za-z]{2,10})\s+(\d[\w\-]*)\s*(?:[-–]\s*)?(.*)", t)
     if m:
         return m.group(1).upper(), fmt(m.group(2)), m.group(3).strip()
 
     return "", "", t
-
 
 def _parse_section_text(text: str) -> tuple[str, str]:
     """
@@ -317,25 +274,17 @@ def _parse_section_text(text: str) -> tuple[str, str]:
         return sec, instructor
     return t, ""
 
-
 def _clean_isbn(value: str) -> str:
     return re.sub(r"[-\s]", "", value).strip()
-
 
 def fmt(code: str) -> str:
     """Prefix code with | to preserve leading zeros."""
     code = (code or "").strip()
     return f"|{code}" if code and not code.startswith("|") else code
 
-
 def normalize_term(s: str) -> str:
     """Strip ordering suffixes like '(Order Now)', '(Pre-Order)', etc."""
     return re.sub(r"\s*\(.*?\)\s*", " ", s or "").strip().upper()
-
-
-# ---------------------------------------------------------------------------
-# CSV helpers
-# ---------------------------------------------------------------------------
 
 def append_csv(rows: list[dict], filepath: str) -> None:
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -346,7 +295,6 @@ def append_csv(rows: list[dict], filepath: str) -> None:
             writer.writeheader()
         writer.writerows(rows)
 
-
 def get_scraped_keys(filepath: str) -> set:
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
@@ -356,11 +304,6 @@ def get_scraped_keys(filepath: str) -> set:
              r.get("course_code", ""), r.get("section", ""))
             for r in csv.DictReader(f)
         }
-
-
-# ---------------------------------------------------------------------------
-# Main scrape
-# ---------------------------------------------------------------------------
 
 def scrape(fresh: bool = False) -> None:
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -375,7 +318,6 @@ def scrape(fresh: bool = False) -> None:
 
     sess = make_session()
 
-    # Step 1: terms
     print(f"[*] Fetching terms from {COLLEGE_URL} ...")
     terms = fetch_terms(sess)
     if not terms:
@@ -392,7 +334,6 @@ def scrape(fresh: bool = False) -> None:
         term_name = normalize_term(term["name"])
         print(f"\n[*] Term: {term_name} (id={term_id})")
 
-        # Step 2: departments
         depts = fetch_departments(sess, term_id)
         if not depts:
             print(f"    [!] No departments found for {term_name}.")
@@ -403,7 +344,6 @@ def scrape(fresh: bool = False) -> None:
             dept_id   = dept["id"]
             dept_code = dept["code"]
 
-            # Step 3: courses
             courses = fetch_courses(sess, dept_id)
             if not courses:
                 tqdm.write(f"    [!] {term_name} / {dept_code}: 0 courses, skipping.")
@@ -417,13 +357,10 @@ def scrape(fresh: bool = False) -> None:
                 inferred_dept, course_code, course_title = _parse_course_text(raw_course)
                 if not course_code:
                     course_code = fmt(course_id)
-                # Use inferred dept code from course text if available, else fall back
                 effective_dept = inferred_dept or dept_code
 
-                # Step 4: sections / items
                 sections = fetch_sections(sess, course_id)
                 if not sections:
-                    # Emit a no-materials row so the course is represented
                     check_key = (term_name, effective_dept, course_code, "")
                     if check_key not in done_keys:
                         row = _build_row(
@@ -442,7 +379,6 @@ def scrape(fresh: bool = False) -> None:
                     nid           = sec["id"]
                     adoption_code = sec["adoption_code"]
 
-                    # Step 5: details
                     details = fetch_details(sess, nid)
 
                     if not debug_saved and details:
@@ -453,14 +389,12 @@ def scrape(fresh: bool = False) -> None:
                         tqdm.write(f"    [DEBUG] First details saved → {dbg}")
                         debug_saved = True
 
-                    # Prefer adoption code from details page if available
                     final_adoption = (
                         details.get("adoption_code")
                         or adoption_code
                         or ""
                     )
 
-                    # Section number + instructor: prefer details page, else parse item text
                     if details.get("section_num"):
                         section_num = details["section_num"]
                         instructor  = details.get("instructor", "")
@@ -476,7 +410,6 @@ def scrape(fresh: bool = False) -> None:
                     author = details.get("author", "")
 
                     if not (isbn or title):
-                        # No book data on details page — record section with empty material
                         final_adoption = final_adoption or "This course does not require any course materials"
 
                     row = _build_row(
@@ -499,11 +432,9 @@ def scrape(fresh: bool = False) -> None:
     if total_rows == 0:
         print("[!] No data collected. The active term may not have course adoptions yet.")
         print("    Re-run when the bookstore loads materials for the upcoming term.")
-        # Still write the CSV header so the file exists
         if not os.path.exists(CSV_PATH) or os.path.getsize(CSV_PATH) == 0:
             append_csv([], CSV_PATH)
             print(f"    (Header-only CSV written to {CSV_PATH})")
-
 
 def _build_row(
     term: str, dept_code: str, course_code: str, course_title: str,
@@ -526,11 +457,6 @@ def _build_row(
         "crawled_on":           crawled_on,
         "updated_on":           crawled_on,
     }
-
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     scrape(fresh="--fresh" in sys.argv)

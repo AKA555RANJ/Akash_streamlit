@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Indiana University of Pennsylvania - Main Campus Bookstore Textbook Scraper
 Platform: Timber e-Commerce (Drupal 6, Herkimer Media / bookstorewebsoftware.com)
@@ -37,17 +36,13 @@ from tqdm import tqdm
 
 sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, "reconfigure") else None
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
 SCHOOL_NAME = "indiana_university_of_pennsylvania_main_campus"
 SCHOOL_ID   = "3083583"
 BASE_URL    = "https://www.iupstore.com"
 COLLEGE_URL = f"{BASE_URL}/timber/college"
 AJAX_URL    = f"{BASE_URL}/timber/college/ajax"
 
-REQUEST_DELAY = 0.6   # seconds between requests
+REQUEST_DELAY = 0.6
 
 ADOPTION_CLASS_MAP = {
     "req-group-r": "Required",
@@ -69,10 +64,6 @@ OUTPUT_DIR = os.path.join(
 )
 CSV_PATH = os.path.join(OUTPUT_DIR, f"{SCHOOL_NAME}__{SCHOOL_ID}__bks.csv")
 
-# ---------------------------------------------------------------------------
-# Session
-# ---------------------------------------------------------------------------
-
 def make_session() -> requests.Session:
     sess = requests.Session()
     sess.headers.update({
@@ -86,11 +77,6 @@ def make_session() -> requests.Session:
         "Referer": COLLEGE_URL,
     })
     return sess
-
-
-# ---------------------------------------------------------------------------
-# HTML helpers
-# ---------------------------------------------------------------------------
 
 def parse_tcc_items(html: str) -> list[dict]:
     """
@@ -107,15 +93,9 @@ def parse_tcc_items(html: str) -> list[dict]:
             items.append({"url": url_attr, "text": text})
     return items
 
-
 def extract_id(url_path: str) -> str:
     """Return the trailing numeric ID from a path like /college_term/65576 → '65576'."""
     return url_path.rstrip("/").rsplit("/", 1)[-1]
-
-
-# ---------------------------------------------------------------------------
-# Fetch helpers
-# ---------------------------------------------------------------------------
 
 def timber_ajax_get(sess: requests.Session, path: str) -> str:
     """GET /timber/college/ajax?l={path} and return response text."""
@@ -124,7 +104,6 @@ def timber_ajax_get(sess: requests.Session, path: str) -> str:
     resp = sess.get(url, timeout=30)
     resp.raise_for_status()
     return resp.text
-
 
 def fetch_terms(sess: requests.Session) -> list[dict]:
     """Fetch the main /timber/college page and return list of {id, name} terms."""
@@ -137,7 +116,6 @@ def fetch_terms(sess: requests.Session) -> list[dict]:
         for item in items if "/college_term/" in item["url"]
     ]
 
-
 def fetch_departments(sess: requests.Session, term_id: str) -> list[dict]:
     """Return list of {id, code, name} depts for a term."""
     html = timber_ajax_get(sess, f"/college_term/{term_id}")
@@ -149,7 +127,6 @@ def fetch_departments(sess: requests.Session, term_id: str) -> list[dict]:
             depts.append({"id": extract_id(item["url"]), "code": code, "name": name})
     return depts
 
-
 def fetch_courses(sess: requests.Session, dept_id: str) -> list[dict]:
     """Return list of {id, text} courses for a department."""
     html = timber_ajax_get(sess, f"/college_dept/{dept_id}")
@@ -158,7 +135,6 @@ def fetch_courses(sess: requests.Session, dept_id: str) -> list[dict]:
         {"id": extract_id(item["url"]), "text": item["text"]}
         for item in items if "/college_course/" in item["url"]
     ]
-
 
 def fetch_sections(sess: requests.Session, course_id: str) -> list[dict]:
     """
@@ -178,7 +154,6 @@ def fetch_sections(sess: requests.Session, course_id: str) -> list[dict]:
                 "raw_text":   item["text"],
             })
     return sections
-
 
 def fetch_materials(sess: requests.Session, section_id: str) -> list[dict]:
     """
@@ -200,18 +175,12 @@ def fetch_materials(sess: requests.Session, section_id: str) -> list[dict]:
     html = timber_ajax_get(sess, f"/college_section/{section_id}")
     return _parse_materials_html(html)
 
-
-# ---------------------------------------------------------------------------
-# Parsing helpers
-# ---------------------------------------------------------------------------
-
 def _parse_materials_html(html: str) -> list[dict]:
     """Parse tcc-product div for all book items with adoption codes."""
     soup = BeautifulSoup(html, "html.parser")
     books = []
 
     for req_group in soup.find_all("div", class_=re.compile(r"\breq-group\b")):
-        # Determine adoption code from CSS class
         adoption = ""
         for cls in req_group.get("class", []):
             adoption = ADOPTION_CLASS_MAP.get(cls.lower(), "")
@@ -228,7 +197,6 @@ def _parse_materials_html(html: str) -> list[dict]:
             isbn   = ""
             if sku_span:
                 raw_sku = sku_span.get_text(strip=True)
-                # Format: "(9781265745349)" — strip parens then clean
                 isbn = _clean_isbn(raw_sku.strip("()"))
 
             if title or isbn:
@@ -240,7 +208,6 @@ def _parse_materials_html(html: str) -> list[dict]:
                 })
 
     return books
-
 
 def _split_dept(text: str) -> tuple[str, str]:
     """
@@ -254,7 +221,6 @@ def _split_dept(text: str) -> tuple[str, str]:
         return code.strip(), name.strip()
     return text.strip(), text.strip()
 
-
 def _parse_course_text(text: str) -> tuple[str, str, str]:
     """
     Parse course item text into (dept_code, course_code, course_title).
@@ -264,23 +230,19 @@ def _parse_course_text(text: str) -> tuple[str, str, str]:
     """
     t = text.strip()
 
-    # Format 1: LETTERS+DIGITS - TITLE (e.g. "BASC5101 - BIOLOGY OF CELLS")
     m = re.match(r"^([A-Za-z]{2,10})(\d[\w\-]*)\s*[-–]\s*(.*)", t)
     if m:
         return m.group(1).upper(), fmt(m.group(2)), m.group(3).strip()
 
-    # Format 2: LETTERS SPACE DIGITS SPACE/DASH TITLE (e.g. "ACCT 2301 - Title")
     m = re.match(r"^([A-Za-z]{2,10})\s+(\d[\w\-]*)\s*(?:[-–]\s*)?(.*)", t)
     if m:
         return m.group(1).upper(), fmt(m.group(2)), m.group(3).strip()
 
-    # Format 3: DIGITS - TITLE (IUP format, e.g. "201 - Accounting Principles I")
     m = re.match(r"^(\d[\w\-]*)\s*[-–]\s*(.*)", t)
     if m:
         return "", fmt(m.group(1)), m.group(2).strip()
 
     return "", "", t
-
 
 def _parse_section_text(text: str) -> tuple[str, str]:
     """
@@ -293,25 +255,17 @@ def _parse_section_text(text: str) -> tuple[str, str]:
         return m.group(1).strip(), m.group(2).strip()
     return t, ""
 
-
 def _clean_isbn(value: str) -> str:
     return re.sub(r"[-\s]", "", value).strip()
-
 
 def fmt(code: str) -> str:
     """Prefix code with | to preserve leading zeros."""
     code = (code or "").strip()
     return f"|{code}" if code and not code.startswith("|") else code
 
-
 def normalize_term(s: str) -> str:
     """Strip ordering suffixes like '(Order Now)', '(Pre-Order)', etc."""
     return re.sub(r"\s*\(.*?\)\s*", " ", s or "").strip().upper()
-
-
-# ---------------------------------------------------------------------------
-# CSV helpers
-# ---------------------------------------------------------------------------
 
 def append_csv(rows: list[dict], filepath: str) -> None:
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -322,7 +276,6 @@ def append_csv(rows: list[dict], filepath: str) -> None:
             writer.writeheader()
         writer.writerows(rows)
 
-
 def get_scraped_keys(filepath: str) -> set:
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
@@ -332,11 +285,6 @@ def get_scraped_keys(filepath: str) -> set:
              r.get("course_code", ""), r.get("section", ""))
             for r in csv.DictReader(f)
         }
-
-
-# ---------------------------------------------------------------------------
-# Main scrape
-# ---------------------------------------------------------------------------
 
 def scrape(fresh: bool = False) -> None:
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -351,7 +299,6 @@ def scrape(fresh: bool = False) -> None:
 
     sess = make_session()
 
-    # Step 1: terms
     print(f"[*] Fetching terms from {COLLEGE_URL} ...")
     terms = fetch_terms(sess)
     if not terms:
@@ -367,7 +314,6 @@ def scrape(fresh: bool = False) -> None:
         term_name = normalize_term(term["name"])
         print(f"\n[*] Term: {term_name} (id={term_id})")
 
-        # Step 2: departments
         depts = fetch_departments(sess, term_id)
         if not depts:
             print(f"    [!] No departments found for {term_name}.")
@@ -378,7 +324,6 @@ def scrape(fresh: bool = False) -> None:
             dept_id   = dept["id"]
             dept_code = dept["code"]
 
-            # Step 3: courses
             courses = fetch_courses(sess, dept_id)
             if not courses:
                 tqdm.write(f"    [!] {term_name} / {dept_code}: 0 courses, skipping.")
@@ -394,7 +339,6 @@ def scrape(fresh: bool = False) -> None:
                     course_code = fmt(course_id)
                 effective_dept = inferred_dept or dept_code
 
-                # Step 4: sections
                 sections = fetch_sections(sess, course_id)
                 if not sections:
                     check_key = (term_name, effective_dept, course_code, "")
@@ -420,7 +364,6 @@ def scrape(fresh: bool = False) -> None:
                     if check_key in done_keys:
                         continue
 
-                    # Step 5: materials for this section
                     books = fetch_materials(sess, section_id)
 
                     if not books:
@@ -463,7 +406,6 @@ def scrape(fresh: bool = False) -> None:
             append_csv([], CSV_PATH)
             print(f"    (Header-only CSV written to {CSV_PATH})")
 
-
 def _build_row(
     term: str, dept_code: str, course_code: str, course_title: str,
     section: str, instructor: str, isbn: str, title: str, author: str,
@@ -485,11 +427,6 @@ def _build_row(
         "crawled_on":             crawled_on,
         "updated_on":             crawled_on,
     }
-
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     scrape(fresh="--fresh" in sys.argv)

@@ -221,6 +221,10 @@ def _split_dept(text: str) -> tuple[str, str]:
         return code.strip(), name.strip()
     return text.strip(), text.strip()
 
+def _clean_course_title(title: str) -> str:
+    """Strip placeholder blanks like ': ______' from course titles."""
+    return re.sub(r":\s*_+\s*$", "", title).strip()
+
 def _parse_course_text(text: str) -> tuple[str, str, str]:
     """
     Parse course item text into (dept_code, course_code, course_title).
@@ -232,17 +236,17 @@ def _parse_course_text(text: str) -> tuple[str, str, str]:
 
     m = re.match(r"^([A-Za-z]{2,10})(\d[\w\-]*)\s*[-–]\s*(.*)", t)
     if m:
-        return m.group(1).upper(), fmt(m.group(2)), m.group(3).strip()
+        return m.group(1).upper(), fmt(m.group(2)), _clean_course_title(m.group(3))
 
     m = re.match(r"^([A-Za-z]{2,10})\s+(\d[\w\-]*)\s*(?:[-–]\s*)?(.*)", t)
     if m:
-        return m.group(1).upper(), fmt(m.group(2)), m.group(3).strip()
+        return m.group(1).upper(), fmt(m.group(2)), _clean_course_title(m.group(3))
 
     m = re.match(r"^(\d[\w\-]*)\s*[-–]\s*(.*)", t)
     if m:
-        return "", fmt(m.group(1)), m.group(2).strip()
+        return "", fmt(m.group(1)), _clean_course_title(m.group(2))
 
-    return "", "", t
+    return "", "", _clean_course_title(t)
 
 def _parse_section_text(text: str) -> tuple[str, str]:
     """

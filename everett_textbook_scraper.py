@@ -21,6 +21,7 @@ import re
 import sys
 import time
 from datetime import datetime, timezone
+from urllib.parse import quote
 
 import requests
 from curl_cffi import requests as curl_requests
@@ -286,6 +287,7 @@ def parse_results(raw, source_url, dept, course, section, term_name):
       [ { "courseSectionDTO": [ { "courseMaterialResultsList": [...] } ] } ]
     """
     rows = []
+    seen_materials = set()
     base = {"department_code": dept, "course_code": fmt(course),
             "section": fmt(section), "term": normalize_term(term_name),
             "source_url": source_url}
@@ -304,10 +306,11 @@ def parse_results(raw, source_url, dept, course, section, term_name):
             materials    = sec.get("courseMaterialResultsList", [])
 
             if not materials:
-                rows.append({**base, "course_title": course_title,
-                             "section_instructor": instructor,
-                             "isbn": "", "title": "", "author": "",
-                             "material_adoption_code": "This course does not require any course materials"})
+                if not rows:
+                    rows.append({**base, "course_title": course_title,
+                                 "section_instructor": instructor,
+                                 "isbn": "", "title": "", "author": "",
+                                 "material_adoption_code": "This course does not require any course materials"})
                 continue
 
             for mat in materials:
@@ -322,6 +325,10 @@ def parse_results(raw, source_url, dept, course, section, term_name):
                     adoption = "Required"
 
                 if isbn or title:
+                    dedup_key = (isbn, title.lower())
+                    if dedup_key in seen_materials:
+                        continue
+                    seen_materials.add(dedup_key)
                     rows.append({**base, "course_title": course_title,
                                  "section_instructor": instructor,
                                  "isbn": isbn, "title": title, "author": author,
@@ -404,7 +411,7 @@ def scrape(fresh=False):
 
                 source_url = (f"{SVC_URL}/courseMaterial/results"
                               f"?storeId={store_id}&termId={term_id}"
-                              f"&dept={dept_code}&course={course_code}&section={section_code}")
+                              f"&dept={quote(dept_code, safe='')}&course={quote(course_code, safe='')}&section={quote(section_code, safe='')}")
                 try:
                     raw = svc_post_results(sess, store_id, catalog_id, term_id, program_id,
                                            dept_code, course_code, section_code)

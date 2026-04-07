@@ -8,3 +8,6 @@ __pycache__/
 
 # Editor
 .vscode/
+
+# PyVis generated assets (from graphify_mini)
+/lib/

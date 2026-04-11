@@ -1,0 +1,336 @@
+{
+  "5186080": {
+    "books": [
+      {
+        "isbn": "9781685845728",
+        "title": "Welding Print Reading",
+        "author": "John R. Walker and W. Richard Polanin",
+        "cover": "/images/medium/28/9781685845728.jpg",
+        "publisher": "Goodheart-Willcox",
+        "edition": "8th",
+        "list_price": "140.00",
+        "book_type": "req",
+        "supplements_required": "false",
+        "backorder": "false",
+        "has_ia": false,
+        "hide_other_options": false,
+        "book_id": "5602500",
+        "hide_ia": true,
+        "exchangeBookIndex": 0,
+        "exchange": [
+          {
+            "list_price": "140.00",
+            "product_id": "18859158358",
+            "product_price": "117.57",
+            "condition": "3",
+            "conditiontext": "Good",
+            "username": "BooksRun",
+            "comments": "It's a well-cared-for item that has seen limited use. The item may show minor signs of wear. All the text is legible, with all pages included. It may have slight markings and/or highlighting. Workbook.",
+            "city": "Philadelphia",
+            "state": "PA",
+            "partner": "a",
+            "rating": "4",
+            "premium_shipping": true,
+            "tracking_enabled": "false",
+            "is_own_book": false,
+            "disclaimer": "Returnable at the third party seller's discretion and may come without consumable supplements like access codes, CD's, or workbooks.",
+            "save": 16
+          },
+          {
+            "list_price": "140.00",
+            "product_id": "18861557504",
+            "product_price": "139.29",
+            "condition": "4",
+            "conditiontext": "Very Good",
+            "username": "FirstClassBooks",
+            "comments": "",
+            "city": "Little Rock",
+            "state": "AR",
+            "partner": "a",
+            "rating": "5",
+            "premium_shipping": false,
+            "tracking_enabled": "false",
+            "is_own_book": false,
+            "disclaimer": "Returnable at the third party seller's discretion and may come without consumable supplements like access codes, CD's, or workbooks.",
+            "save": 1
+          }
+        ],
+        "newBook": {
+          "isInCart": false,
+          "price": "152.86",
+          "product_id": "2194697311",
+          "shipping_text": "Ready to ship!",
+          "product_hint": "",
+          "returnable": "true",
+          "disclaimer": "",
+          "notice_label": "Product Notice",
+          "save": null,
+          "vendorId": "4"
+        },
+        "usedBook": {
+          "isInCart": false,
+          "price": "135.62",
+          "product_id": "2366998905",
+          "shipping_text": "Ready to ship!",
+          "product_hint": "",
+          "returnable": "true",
+          "disclaimer": "Not returnable and may come without consumable supplements like access codes, CD's, or workbooks.",
+          "notice_label": "Product Notice",
+          "save": 3,
+          "vendorId": "3760"
+        },
+        "ebookBook": {
+          "isInCart": false,
+          "price": "76.09",
+          "product_id": "2214984257",
+          "shipping_text": "Instant Access!",
+          "product_hint": "",
+          "returnable": "true",
+          "disclaimer": "You are licensing a digital product for a set duration.\n\t\t Durations are set forth in the product description, with \"Lifetime\" typically meaning five (5) years of online access and permanent download to a supported device.\n\t\t  All licenses are non-transferrable.\n\t\t  <a href=\"https://textbookx.zendesk.com/hc/en-us/articles/28012667853079-CA-Disclosure-Support-Page\" target=\"_blank\">More details can be found here</a>. May come without consumable supplements like access codes, CD's, or workbooks.",
+          "notice_label": "License Details",
+          "save": null,
+          "vendorId": "2231",
+          "license": "License: 180 days",
+          "vendor": "VitalSource",
+          "license_term": "180",
+          "vendor_display_name": "VitalSource",
+          "vendor_website": "http://www.vitalsource.com",
+          "terms": [
+            {
+              "isInCart": false,
+              "price": "76.09",
+              "product_id": "2214984257",
+              "shipping_text": "Instant Access!",
+              "product_hint": "",
+              "returnable": "true",
+              "disclaimer": "You are licensing a digital product for a set duration.\n\t\t Durations are set forth in the product description, with \"Lifetime\" typically meaning five (5) years of online access and permanent download to a supported device.\n\t\t  All licenses are non-transferrable.\n\t\t  <a href=\"https://textbookx.zendesk.com/hc/en-us/articles/28012667853079-CA-Disclosure-Support-Page\" target=\"_blank\">More details can be found here</a>. May come without consumable supplements like access codes, CD's, or workbooks.",
+              "notice_label": "License Details",
+              "save": null,
+              "vendorId": "2231",
+              "license": "License: 180 days",
+              "vendor": "VitalSource",
+              "license_term": "180",
+              "vendor_display_name": "VitalSource",
+              "vendor_website": "http://www.vitalsource.com"
+            },
+            {
+              "isInCart": false,
+              "price": "114.13",
+              "product_id": "2214984258",
+              "shipping_text": "",
+              "product_hint": "",
+              "returnable": "true",
+              "disclaimer": "You are licensing a digital product for a set duration.\n\t\t Durations are set forth in the product description, with \"Lifetime\" typically meaning five (5) years of online access and permanent download to a supported device.\n\t\t  All licenses are non-transferrable.\n\t\t  <a href=\"https://textbookx.zendesk.com/hc/en-us/articles/28012667853079-CA-Disclosure-Support-Page\" target=\"_blank\">More details can be found here</a>. May come without consumable supplements like access codes, CD's, or workbooks.",
+              "notice_label": "License Details",
+              "save": null,
+              "vendorId": "2231",
+              "license": "License: 365 days",
+              "vendor": "VitalSource",
+              "license_term": "365",
+              "vendor_display_name": "VitalSource",
+              "vendor_website": "http://www.vitalsource.com"
+            },
+            {
+              "isInCart": false,
+              "price": "152.18",
+              "product_id": "2214984256",
+              "shipping_text": "",
+              "product_hint": "",
+              "returnable": "true",
+              "disclaimer": "You are licensing a digital product for a set duration.\n\t\t Durations are set forth in the product description, with \"Lifetime\" typically meaning five (5) years of online access and permanent download to a supported device.\n\t\t  All licenses are non-transferrable.\n\t\t  <a href=\"https://textbookx.zendesk.com/hc/en-us/articles/28012667853079-CA-Disclosure-Support-Page\" target=\"_blank\">More details can be found here</a>. May come without consumable supplements like access codes, CD's, or workbooks.",
+              "notice_label": "License Details",
+              "save": null,
+              "vendorId": "2231",
+              "license": "License: lifetime",
+              "vendor": "VitalSource",
+              "license_term": "-1",
+              "vendor_display_name": "VitalSource",
+              "vendor_website": "http://www.vitalsource.com"
+            }
+          ]
+        },
+        "cheapest": [
+          {
+            "type": "ebook",
+            "priority": 9,
+            "index": 0,
+            "product_id": "2214984257",
+            "rating": null,
+            "save": 46
+          },
+          {
+            "type": "exchange",
+            "priority": 40,
+            "index": 0,
+            "product_id": "18859158358",
+            "rating": "4",
+            "save": 16
+          },
+          {
+            "type": "used",
+            "priority": 70,
+            "index": 0,
+            "product_id": "2366998905",
+            "rating": null,
+            "save": 3
+          },
+          {
+            "type": "exchange",
+            "priority": 100,
+            "index": 1,
+            "product_id": "18861557504",
+            "rating": "5",
+            "save": 1
+          },
+          {
+            "type": "new",
+            "priority": 70,
+            "index": 0,
+            "product_id": "2194697311",
+            "rating": null,
+            "save": 0
+          }
+        ],
+        "recommended": [
+          {
+            "type": "ebook",
+            "priority": 9,
+            "index": 0,
+            "product_id": "2214984257",
+            "rating": null,
+            "save": 46
+          },
+          {
+            "type": "exchange",
+            "priority": 40,
+            "index": 0,
+            "product_id": "18859158358",
+            "rating": "4",
+            "save": 16
+          },
+          {
+            "type": "used",
+            "priority": 70,
+            "index": 0,
+            "product_id": "2366998905",
+            "rating": null,
+            "save": 3
+          },
+          {
+            "type": "new",
+            "priority": 70,
+            "index": 0,
+            "product_id": "2194697311",
+            "rating": null,
+            "save": 0
+          },
+          {
+            "type": "exchange",
+            "priority": 100,
+            "index": 1,
+            "product_id": "18861557504",
+            "rating": "5",
+            "save": 1
+          }
+        ],
+        "shipping": [
+          {
+            "type": "used",
+            "priority": 70,
+            "index": 0,
+            "product_id": "2366998905",
+            "rating": null,
+            "save": 3
+          },
+          {
+            "type": "new",
+            "priority": 70,
+            "index": 0,
+            "product_id": "2194697311",
+            "rating": null,
+            "save": 0
+          },
+          {
+            "type": "ebook",
+            "priority": 9,
+            "index": 0,
+            "product_id": "2214984257",
+            "rating": null,
+            "save": 46
+          },
+          {
+            "type": "exchange",
+            "priority": 40,
+            "index": 0,
+            "product_id": "18859158358",
+            "rating": "4",
+            "save": 16
+          },
+          {
+            "type": "exchange",
+            "priority": 100,
+            "index": 1,
+            "product_id": "18861557504",
+            "rating": "5",
+            "save": 1
+          }
+        ],
+        "isInCart": false,
+        "group": null,
+        "discounted_shipping_lvl1": 79,
+        "free_shipping": true,
+        "exchange_restricted": false,
+        "rental_restricted": false,
+        "restricted_book": false,
+        "disable_detail_page_links": false,
+        "single_item_restriction": false,
+        "course_default_condition": null
+      }
+    ],
+    "course": {
+      "id": "5186080",
+      "name": "Blueprint Reading for Engineering Technicians",
+      "code": "GE 135",
+      "section": "500",
+      "session_code": "",
+      "notes": null,
+      "fullname": "",
+      "merchandise": "false",
+      "default_books": "4",
+      "default_tab": "all",
+      "tbx_only_default": "false",
+      "buy_all": "true",
+      "department_id": "598750",
+      "books_required": true,
+      "no_books_required_reason": null,
+      "course_start_date": "08/24/2026",
+      "is_ea_course": false,
+      "is_ea_course_has_sc": false,
+      "ea_delivery_date": null,
+      "ea_delivery_date_in_future": null,
+      "term_id": "598629",
+      "term_name": "Credit Fall 2026",
+      "term_start_date": "1787544000",
+      "ea_opt_out_date": null,
+      "ea_refusal_type": null,
+      "ea_hide_other_options": false,
+      "sidebar_code": "GE 135",
+      "text": "GE 135 500 - Blueprint Reading for Engineering Technicians",
+      "coursepage_sidebar_text": "GE 135 500",
+      "documents": [],
+      "breadcrumbs": [
+        "St Louis Community College home",
+        "Credit Fall 2026",
+        "Florissant Valley",
+        "GE - General Engineering"
+      ],
+      "logged_in_ea": false,
+      "show_ea_content": false
+    },
+    "departments": [],
+    "saved_courses": [],
+    "groups_info": [],
+    "course_has_syllabus": false,
+    "course_has_no_current_syllabus": false
+  }
+}

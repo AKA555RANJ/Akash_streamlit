@@ -192,6 +192,47 @@ def parse_section_items(html):
     return items
 
 
+def clean_title(title):
+    """Strip fee/access boilerplate from DayOne and similar titles.
+
+    Removes patterns like:
+      "(Access in canvas on 1st day of class (fee of $X ...))"
+      "Access available in Canvas on 1st day..."
+      "(eBook avail. 1st day of class in Canvas...)"
+      "no item ships"
+    Leaves the actual material name intact.
+    """
+    if not title:
+        return title
+    t = title.strip()
+    # Remove from "(Access..." onwards
+    t = re.sub(r'\s*\(Access\b.*', '', t, flags=re.IGNORECASE)
+    # Remove from "(eBook avail..." or "(eBook available..." onwards
+    t = re.sub(r'\s*\(eBook\s+avail\w*\b.*', '', t, flags=re.IGNORECASE)
+    # Remove "Access in / Access available" boilerplate (standalone)
+    t = re.sub(r'\s*Access\s+(in|available)\b.*', '', t, flags=re.IGNORECASE)
+    # Remove "available in canvas" boilerplate (e.g. "Physics available in canvas on 1st day...")
+    t = re.sub(r'\s*available in canvas\b.*', '', t, flags=re.IGNORECASE)
+    # Remove "(fee of $X...)" parenthetical
+    t = re.sub(r'\s*\(fee\b.*', '', t, flags=re.IGNORECASE)
+    # Remove trailing "no item ships" note
+    t = re.sub(r'\s*no item ships.*', '', t, flags=re.IGNORECASE)
+    # Strip trailing stray punctuation/spaces
+    t = re.sub(r'[\s,\-]+$', '', t)
+    # Balance parentheses: strip back to last unmatched open paren
+    while t.count('(') > t.count(')'):
+        idx = t.rfind('(')
+        t = t[:idx].rstrip(' ,\t')
+    return t.strip()
+
+
+def clean_course_title(title):
+    """Return empty string if course_title is only punctuation/whitespace."""
+    if not title:
+        return title
+    return "" if re.match(r'^[,.\s\-]+$', title) else title
+
+
 def parse_materials(html, source_url, dept_code, course_code, course_title,
                     section_code, instructor, term_name):
     """
@@ -211,7 +252,7 @@ def parse_materials(html, source_url, dept_code, course_code, course_title,
     base = {
         "department_code":   dept_code,
         "course_code":       fmt(course_code),
-        "course_title":      course_title,
+        "course_title":      clean_course_title(course_title),
         "section":           fmt(section_code),
         "section_instructor": instructor,
         "term":              normalize_term(term_name),
@@ -234,7 +275,7 @@ def parse_materials(html, source_url, dept_code, course_code, course_title,
             isbn_el   = item_div.find("span", class_="tcc-sku-number")
             author_el = item_div.find("em",   class_="author-data")
 
-            title  = _text(title_el)
+            title  = clean_title(_text(title_el))
             isbn   = _extract_isbn(_text(isbn_el))
             author = _text(author_el)
 

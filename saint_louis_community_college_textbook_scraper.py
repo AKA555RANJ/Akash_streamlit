@@ -271,7 +271,7 @@ def get_scraped_course_ids(filepath):
 
 
 def scrape(fresh=False):
-    crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     if fresh and os.path.exists(CSV_PATH):
         os.remove(CSV_PATH)

@@ -270,6 +270,22 @@ def parse_books(html, section_id, dept_code, course_name, crn, instructor, term_
         if not isbn and not title:
             continue
 
+        # "No Text Required Or Provided By Instructor" is a Chaffey placeholder
+        # entry, not a real book — treat it as a no-materials row.
+        if "No Text Required Or Provided By Instructor" in title:
+            rows.append({
+                **base,
+                "isbn":                  "",
+                "title":                 "",
+                "author":                "",
+                "material_adoption_code": "No Text Required Or Provided By Instructor",
+            })
+            continue
+
+        # Author "." is a Chaffey placeholder for free OER/online material entries.
+        if author == ".":
+            author = ""
+
         rows.append({
             **base,
             "isbn":                  isbn,

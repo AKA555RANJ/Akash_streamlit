@@ -176,6 +176,13 @@ def adoption_label(book_type):
     return ADOPTION_MAP.get((book_type or "").lower(), (book_type or "").capitalize())
 
 
+def clean_text(value):
+    """Strip Unicode replacement characters (U+FFFD) that result from encoding mismatches."""
+    if not value:
+        return value
+    return value.replace("\ufffd", "").strip()
+
+
 def build_rows(course_data_map, crawled_on):
     """Convert course_data API response into CSV rows."""
     rows = []
@@ -187,9 +194,9 @@ def build_rows(course_data_map, crawled_on):
 
         code_str = course.get("code", "")
         dept_code, course_code = parse_course_code(code_str)
-        course_title = course.get("name", "")
+        course_title = clean_text(course.get("name", ""))
         section = fmt_section(course.get("section", ""))
-        instructor = course.get("fullname", "")
+        instructor = clean_text(course.get("fullname", ""))
         term_name = clean_term(course.get("term_name", "")).upper()
         books_required = course.get("books_required", True)
 
@@ -224,8 +231,8 @@ def build_rows(course_data_map, crawled_on):
                     "section_instructor": instructor,
                     "term": term_name,
                     "isbn": isbn,
-                    "title": book.get("title", ""),
-                    "author": book.get("author", ""),
+                    "title": clean_text(book.get("title", "")),
+                    "author": clean_text(book.get("author", "")),
                     "material_adoption_code": adoption_label(book.get("book_type", "")),
                     "crawled_on": crawled_on,
                     "updated_on": crawled_on,
@@ -237,7 +244,7 @@ def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     file_exists = os.path.exists(filepath) and os.path.getsize(filepath) > 0
     with open(filepath, "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
+        writer = csv.DictWriter(f, fieldnames=CSV_FIELDS, lineterminator="\n")
         if not file_exists:
             writer.writeheader()
         writer.writerows(rows)

@@ -383,7 +383,7 @@ def parse_textbook_html(html, section_meta, term_name):
                 title  = raw_title
                 author = raw_author
 
-            if re.search(r"see instructor|not a book", title, re.I):
+            if re.search(r"see instructor|not a book|no text required", title, re.I):
                 continue
 
             if title or isbn:

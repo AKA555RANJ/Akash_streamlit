@@ -1,24 +1,3 @@
-"""
-Parker University Bookstore Textbook Scraper
-Platform: Timber e-Commerce (Drupal 6, Herkimer Media / bookstorewebsoftware.com)
-URL: https://share.parker.edu/college
-
-API flow (all unauthenticated GET requests, HTML fragment responses):
-  1. GET /college
-       → parse .tcc-item-link[url^='/college_term/'] for terms
-  2. GET /timber/college/ajax?l=/college_term/{termId}
-       → parse .tcc-item-link[url^='/college_dept/'] for departments
-  3. GET /timber/college/ajax?l=/college_dept/{deptId}
-       → parse .tcc-item-link[url^='/college_course/'] for courses
-  4. GET /timber/college/ajax?l=/college_course/{courseId}
-       → parse .tcc-item-link for sections/items (url contains nid)
-  5. GET /timber/college/details/{nid}
-       → HTML product page with title, ISBN/SKU, author, adoption code
-
-No FlareSolverr or Cloudflare handling needed; the site serves plain HTML
-to standard HTTP clients.
-"""
-
 import csv
 import os
 import re
@@ -70,11 +49,6 @@ def make_session() -> requests.Session:
     return sess
 
 def parse_tcc_items(html: str) -> list[dict]:
-    """
-    Return a list of {url, text} dicts from all a.tcc-item-link elements
-    in an AJAX HTML fragment or full page.
-    The 'url' attribute (not href) holds the path like /college_term/65576.
-    """
     soup = BeautifulSoup(html, "html.parser")
     items = []
     for a in soup.find_all("a", class_="tcc-item-link"):
@@ -85,16 +59,13 @@ def parse_tcc_items(html: str) -> list[dict]:
     return items
 
 def extract_id(url_path: str) -> str:
-    """Return the trailing numeric ID from a path like /college_term/65576 → '65576'."""
     return url_path.rstrip("/").rsplit("/", 1)[-1]
 
 def extract_url_type(url_path: str) -> str:
-    """Return the resource type prefix, e.g. 'college_term', 'college_dept', etc."""
     parts = url_path.strip("/").split("/")
     return parts[-2] if len(parts) >= 2 else ""
 
 def timber_ajax_get(sess: requests.Session, path: str) -> str:
-    """GET /timber/college/ajax?l={path} and return response text."""
     time.sleep(REQUEST_DELAY)
     url = f"{AJAX_URL}?l={quote(path, safe='')}"
     resp = sess.get(url, timeout=30)
@@ -102,7 +73,6 @@ def timber_ajax_get(sess: requests.Session, path: str) -> str:
     return resp.text
 
 def fetch_terms(sess: requests.Session) -> list[dict]:
-    """Fetch the main /college page and return list of {id, name} terms."""
     time.sleep(REQUEST_DELAY)
     resp = sess.get(COLLEGE_URL, timeout=30)
     resp.raise_for_status()
@@ -114,7 +84,6 @@ def fetch_terms(sess: requests.Session) -> list[dict]:
     return terms
 
 def fetch_departments(sess: requests.Session, term_id: str) -> list[dict]:
-    """Return list of {id, code, name} depts for a term."""
     html = timber_ajax_get(sess, f"/college_term/{term_id}")
     items = parse_tcc_items(html)
     depts = []
@@ -125,7 +94,6 @@ def fetch_departments(sess: requests.Session, term_id: str) -> list[dict]:
     return depts
 
 def fetch_courses(sess: requests.Session, dept_id: str) -> list[dict]:
-    """Return list of {id, text} courses for a department."""
     html = timber_ajax_get(sess, f"/college_dept/{dept_id}")
     items = parse_tcc_items(html)
     courses = []
@@ -135,11 +103,6 @@ def fetch_courses(sess: requests.Session, dept_id: str) -> list[dict]:
     return courses
 
 def fetch_sections(sess: requests.Session, course_id: str) -> list[dict]:
-    """
-    Return list of section/item dicts for a course.
-    Each dict has {id, text, adoption_code} where id is used for the details URL.
-    The adoption_code may appear as a leading label like 'Required' or 'Optional'.
-    """
     html = timber_ajax_get(sess, f"/college_course/{course_id}")
     items = parse_tcc_items(html)
     sections = []
@@ -156,11 +119,6 @@ def fetch_sections(sess: requests.Session, course_id: str) -> list[dict]:
     return sections
 
 def fetch_details(sess: requests.Session, nid: str) -> dict:
-    """
-    GET /timber/college/details/{nid} and parse the HTML product page.
-    Returns {title, isbn, author, adoption_code, instructor, section_num}.
-    Parses defensively — all fields default to "".
-    """
     time.sleep(REQUEST_DELAY)
     url = f"{DETAILS_URL}/{nid}"
     resp = sess.get(url, timeout=30)
@@ -170,40 +128,18 @@ def fetch_details(sess: requests.Session, nid: str) -> dict:
     return _parse_details_html(resp.text)
 
 def _split_dept(text: str) -> tuple[str, str]:
-    """
-    'DC - DOCTOR OF CHIROPRACTIC' → ('DC', 'DOCTOR OF CHIROPRACTIC')
-    'HPER (BS) - STRENGTH & HUMAN PERFORMANCE (B.S.)' → ('HPER (BS)', 'STRENGTH ...')
-    Falls back to (text, text) if no ' - ' separator.
-    """
     if " - " in text:
         code, _, name = text.partition(" - ")
         return code.strip(), name.strip()
     return text.strip(), text.strip()
 
 def _split_adoption_prefix(text: str) -> tuple[str, str]:
-    """
-    Try to peel off a leading adoption label like 'Required', 'Optional', etc.
-    Returns (adoption_code, remainder).
-    """
     m = re.match(r"^(Required|Optional|Recommended|Choice)\s*[:\-]?\s*", text, re.IGNORECASE)
     if m:
         return m.group(1).capitalize(), text[m.end():].strip()
     return "", text
 
 def _parse_details_html(html: str) -> dict:
-    """
-    Parse /timber/college/details/{nid} HTML.
-
-    Confirmed structure (nid 41867):
-      <h2><a href="...">MANUAL FOR THE CHIROPRACTIC ENTREPRENEUR</a></h2>
-      <p><strong>ISBN/SKU:</strong> 9781737802426</p>
-      <p><strong>Author:</strong> GOODMAN</p>
-
-    Additional fields (defensive):
-      <p><strong>Adoption:</strong> Required</p>
-      <p><strong>Instructor:</strong> Dr. Smith</p>
-      <p><strong>Section:</strong> 001</p>
-    """
     soup = BeautifulSoup(html, "html.parser")
     result: dict = {
         "title": "", "isbn": "", "author": "",
@@ -236,15 +172,6 @@ def _parse_details_html(html: str) -> dict:
     return result
 
 def _parse_course_text(text: str) -> tuple[str, str, str]:
-    """
-    Parse course item text into (dept_code, course_code, course_title).
-
-    Handles two formats from Timber:
-      'BASC5101 - BIOLOGY OF CELLS AND TISSUE'  → ('BASC', '|5101', 'BIOLOGY OF CELLS AND TISSUE')
-      'MHCM 510 Healthcare Management'           → ('MHCM', '|510',  'Healthcare Management')
-      'DC 101'                                   → ('DC',   '|101',  '')
-      'Some Course Title'                        → ('',     '',      'Some Course Title')
-    """
     t = text.strip()
 
     m = re.match(r"^([A-Za-z]{2,10})(\d[\w\-]*)\s*[-–]\s*(.*)", t)
@@ -258,14 +185,6 @@ def _parse_course_text(text: str) -> tuple[str, str, str]:
     return "", "", t
 
 def _parse_section_text(text: str) -> tuple[str, str]:
-    """
-    Parse section item text into (section_num, instructor).
-
-    Examples:
-      '01 - Ferguson, Jay'  → ('01', 'Ferguson, Jay')
-      '01 - '              → ('01', '')
-      '01'                  → ('01', '')
-    """
     t = text.strip()
     m = re.match(r"^(\w+)\s*[-–]\s*(.*)", t)
     if m:
@@ -278,12 +197,10 @@ def _clean_isbn(value: str) -> str:
     return re.sub(r"[-\s]", "", value).strip()
 
 def fmt(code: str) -> str:
-    """Prefix code with | to preserve leading zeros."""
     code = (code or "").strip()
     return f"|{code}" if code and not code.startswith("|") else code
 
 def normalize_term(s: str) -> str:
-    """Strip ordering suffixes like '(Order Now)', '(Pre-Order)', etc."""
     return re.sub(r"\s*\(.*?\)\s*", " ", s or "").strip().upper()
 
 def append_csv(rows: list[dict], filepath: str) -> None:

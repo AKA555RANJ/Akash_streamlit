@@ -1,34 +1,3 @@
-"""
-Arkansas Tech University Textbook Scraper
-Platform: Textbook Tech (theatubookstore.com) — Ruby on Rails custom e-commerce
-URL: https://theatubookstore.com/student
-
-Session strategy:
-  Plain requests.Session() — no FlareSolverr needed (no anti-bot protection).
-  GET /student → extract _bazaar_session cookie + CSRF token + pre-loaded form data.
-  Then cascade per school+term:
-    department list (pre-loaded in /student HTML)
-    → courses  via AJAX GET /course_lookup/{school}/courses/{term}/{dept}/0
-    → sections via AJAX GET /course_lookup/{school}/sections/{term}/{dept}/{course}/0
-    → materials via GET /courselisting/index/loadMaterials with courses JSON array
-
-URL encoding: spaces must be percent-encoded (%20) in path segments, NOT tildes.
-
-AJAX response format: JavaScript (text/javascript) with jQuery .html() calls.
-  Pattern: ...html('<option value=\"001\">001</option>...');
-  Parsed with regex: value=\\"([^\\"]+)\\"
-
-loadMaterials parameters (all required):
-  school[id]    = school value (e.g. "ATU-Main Campus")
-  school[{i}]   = school value (hidden per-row input)
-  term[{i}]     = term value
-  department[{i}] = dept code
-  course[{i}]   = course number
-  section[{i}]  = section number
-  courses       = JSON array: [{"school":..,"term":..,"dept":..,"course":..,"section":..}]
-  commit        = "Lookup Courses"
-"""
-
 import csv
 import json
 import os
@@ -70,46 +39,21 @@ BROWSER_UA = (
     "Chrome/120.0.0.0 Safari/537.36"
 )
 
-# Regex to extract option values from the JS .html() response.
-# Response text: ...html('<option value=\"\">...<option value=\"2004\">...');
-# This captures non-empty values only (skips the placeholder "").
 _OPT_VAL_RE = re.compile(r'value=\\"([^\\"]+)\\"')
 
-# ISBN-13 pattern
 _ISBN_RE = re.compile(r"97[89]\d{10}")
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def encode_path(s):
-    """Percent-encode a value for use in a URL path segment (spaces → %20)."""
     return quote(str(s), safe="")
 
-
 def normalize_term(s):
-    """Strip trailing annotations like '(Order Now)' from term strings."""
     return re.sub(r"\s*\(.*?\)\s*", "", s or "").strip()
 
-
 def fmt_code(code):
-    """Prefix course/section codes with | to preserve leading zeros."""
     code = (code or "").strip()
     return f"|{code}" if code and not code.startswith("|") else code
 
-
-# ---------------------------------------------------------------------------
-# Session bootstrap
-# ---------------------------------------------------------------------------
-
 def bootstrap_session():
-    """GET /student → returns (sess, schools, terms, departments).
-
-    schools      = [{"value": "ATU-Main Campus"}, ...]
-    terms        = [{"value": "SPRING 2026", "text": "SPRING 2026"}, ...]
-    departments  = ["ACCT", "AGAS", ...]   (pre-loaded in page HTML)
-    """
     print("[*] Bootstrapping session from /student …")
     sess = requests.Session()
     sess.headers.update({
@@ -130,7 +74,6 @@ def bootstrap_session():
 
     soup = BeautifulSoup(html, "lxml")
 
-    # Schools (select#lookup_school_id, name="school[id]")
     school_sel = soup.find("select", {"id": "lookup_school_id"})
     schools = []
     if school_sel:
@@ -147,7 +90,6 @@ def bootstrap_session():
     else:
         print(f"    Schools: {[s['value'] for s in schools]}")
 
-    # Terms (select#lookup_term_0, name="term[0]")
     term_sel = soup.find("select", {"id": "lookup_term_0"})
     terms = []
     if term_sel:
@@ -162,7 +104,6 @@ def bootstrap_session():
     else:
         print(f"    Terms: {[t['text'] for t in terms]}")
 
-    # Departments (select#lookup_department_0, pre-populated with all depts)
     dept_sel = soup.find("select", {"id": "lookup_department_0"})
     departments = []
     if dept_sel:
@@ -175,9 +116,7 @@ def bootstrap_session():
 
     return sess, schools, terms, departments
 
-
 def refresh_session(old_sess):
-    """Re-bootstrap after cookie expiry."""
     print("[*] Refreshing session …")
     for attempt in range(3):
         try:
@@ -188,13 +127,7 @@ def refresh_session(old_sess):
             if attempt == 2:
                 raise
 
-
-# ---------------------------------------------------------------------------
-# AJAX helpers — cascading dropdowns
-# ---------------------------------------------------------------------------
-
 def _ajax_get(sess, url, retries=3):
-    """GET an AJAX endpoint, return the raw response text or empty string."""
     for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
@@ -221,40 +154,21 @@ def _ajax_get(sess, url, retries=3):
                 return ""
     return ""
 
-
 def parse_js_options(js_text):
-    """Extract non-empty option values from a jQuery .html('...') response."""
     return _OPT_VAL_RE.findall(js_text)
 
-
 def fetch_courses(sess, school_val, term_val, dept):
-    """Return list of course codes for a given school/term/dept."""
     url = (f"{BASE_URL}/course_lookup/{encode_path(school_val)}"
            f"/courses/{encode_path(term_val)}/{dept}/0")
     return parse_js_options(_ajax_get(sess, url))
 
-
 def fetch_sections(sess, school_val, term_val, dept, course):
-    """Return list of section codes for a given school/term/dept/course."""
     url = (f"{BASE_URL}/course_lookup/{encode_path(school_val)}"
            f"/sections/{encode_path(term_val)}/{dept}/{course}/0")
     return parse_js_options(_ajax_get(sess, url))
 
-
-# ---------------------------------------------------------------------------
-# Materials fetch
-# ---------------------------------------------------------------------------
-
 def fetch_materials(sess, school_val, term_val, dept, course, section,
                     debug_saved, retries=3):
-    """GET /courselisting/index/loadMaterials for one section.
-
-    Returns (html_text, updated_debug_saved_flag).
-
-    Required parameters:
-      school[id], school[0], term[0], department[0], course[0], section[0],
-      courses (JSON array), commit
-    """
     url = f"{BASE_URL}/courselisting/index/loadMaterials"
     courses_json = json.dumps([{
         "school":   school_val,
@@ -309,27 +223,6 @@ def fetch_materials(sess, school_val, term_val, dept, course, section,
                 return "", debug_saved
     return "", debug_saved
 
-
-# ---------------------------------------------------------------------------
-# Materials HTML parser
-# ---------------------------------------------------------------------------
-# HTML structure of the course-wrapper:
-#
-#   <section class="course">
-#     <h2 class="course-name">ACCOUNTING PRINCIPLES I</h2>
-#     <div class="course-info">ATU-Main Campus - SPRING 2026 - ACCT - 2004 - 001 Tracy Johnston</div>
-#     <h5 class="course-requriement-text"><b>REQUIRED</b></h5>   ← note typo "requriement"
-#     <div class="row item-row">                                 ← one book per item-row
-#       <h3 id="title-{id}">Book Title</h3>
-#       <div class="standard-attribute hidden"><strong>ISBN:</strong> 9780137966226</div>
-#       <div class="standard-attribute"><strong>Author:</strong> Miller Nobles</div>
-#     </div>
-#     <h5 class="course-requriement-text"><b>OPTIONAL</b></h5>
-#     <div class="row item-row">...</div>
-#   </section>
-#
-# Adoption headers precede their item rows as siblings in the section.
-
 _ADOPTION_NORM = {
     "required":               "Required",
     "optional":               "Optional",
@@ -338,14 +231,11 @@ _ADOPTION_NORM = {
     "instructor recommended": "Recommended",
 }
 
-
 def _normalize_adoption(raw_text):
     key = raw_text.strip().lower()
     return _ADOPTION_NORM.get(key, raw_text.strip().capitalize())
 
-
 def parse_materials(html, source_url, term_val, dept, course, section):
-    """Parse materials HTML → list of row dicts (without school_id/crawled_on/updated_on)."""
     base = {
         "source_url":      source_url,
         "department_code": dept,
@@ -363,7 +253,6 @@ def parse_materials(html, source_url, term_val, dept, course, section):
 
     soup = BeautifulSoup(html, "lxml")
 
-    # Check for flash error (course not found)
     flash = soup.find(class_="flash")
     if flash and "not found" in flash.get_text().lower():
         tqdm.write(f"    [WARN] Flash error for {dept}/{course}/{section}: "
@@ -372,7 +261,6 @@ def parse_materials(html, source_url, term_val, dept, course, section):
     cw = soup.find(class_="course-wrapper")
     section_el = cw.find("section", class_="course") if cw else None
 
-    # Always extract course title + instructor first (needed even for no-material rows)
     course_title = ""
     section_instructor = ""
 
@@ -380,8 +268,6 @@ def parse_materials(html, source_url, term_val, dept, course, section):
         h2 = section_el.find("h2", class_="course-name")
         course_title = h2.get_text(strip=True) if h2 else ""
 
-        # course-info text: "ATU-Main Campus - SPRING 2026 - ACCT - 2004 - 001 Tracy Johnston"
-        # Instructor is the text after the section code in the last " - " segment.
         info_div = section_el.find(class_="course-info")
         if info_div:
             info_text = info_div.get_text(" ", strip=True)
@@ -406,7 +292,6 @@ def parse_materials(html, source_url, term_val, dept, course, section):
     if not section_el:
         return [_no_material()]
 
-    # Iterate through section children to collect items grouped by adoption header
     rows = []
     current_adoption = "Required"
 
@@ -414,31 +299,28 @@ def parse_materials(html, source_url, term_val, dept, course, section):
         if not hasattr(child, "name") or child.name is None:
             continue
 
-        # Adoption header: <h5 class="course-requriement-text">
         if child.name == "h5" and "course-requriement-text" in child.get("class", []):
             b = child.find("b")
             if b:
                 current_adoption = _normalize_adoption(b.get_text(strip=True))
             continue
 
-        # Book row wrapper: <div class="row item-row"> (may be nested differently)
         if child.name == "div":
             classes = child.get("class", [])
-            # Adoption header inside a div wrapper
+
             h5 = child.find("h5", class_="course-requriement-text")
             if h5:
                 b = h5.find("b")
                 if b:
                     current_adoption = _normalize_adoption(b.get_text(strip=True))
 
-            # Item rows at this div level
             if "item-row" in classes:
                 row = _parse_item_row(child, base, course_title,
                                       section_instructor, current_adoption)
                 if row:
                     rows.append(row)
             else:
-                # item rows may be nested one level inside a wrapper div
+
                 for item in child.find_all("div", class_="item-row", recursive=False):
                     row = _parse_item_row(item, base, course_title,
                                           section_instructor, current_adoption)
@@ -446,19 +328,16 @@ def parse_materials(html, source_url, term_val, dept, course, section):
                         rows.append(row)
 
     if not rows:
-        # No ISBN-bearing items found; record as no-material
+
         return [_no_material()]
 
     return rows
 
-
 def _parse_item_row(item, base, course_title, section_instructor, adoption):
-    """Parse one <div class="item-row"> into a row dict, or None if no ISBN."""
-    # Title
+
     h3 = item.find("h3")
     title = h3.get_text(strip=True) if h3 else ""
 
-    # ISBN — inside <div class="standard-attribute hidden">
     isbn = ""
     for attr_div in item.find_all(class_="standard-attribute"):
         strong = attr_div.find("strong")
@@ -472,7 +351,6 @@ def _parse_item_row(item, base, course_title, section_instructor, adoption):
     if not isbn and not title:
         return None
 
-    # Author
     author = ""
     for attr_div in item.find_all(class_="standard-attribute"):
         strong = attr_div.find("strong")
@@ -491,11 +369,6 @@ def _parse_item_row(item, base, course_title, section_instructor, adoption):
         "material_adoption_code": adoption,
     }
 
-
-# ---------------------------------------------------------------------------
-# CSV helpers
-# ---------------------------------------------------------------------------
-
 def append_csv(rows, filepath, crawled_on):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     new_file = not os.path.exists(filepath) or os.path.getsize(filepath) == 0
@@ -509,7 +382,6 @@ def append_csv(rows, filepath, crawled_on):
             row.setdefault("updated_on", crawled_on)
             writer.writerow(row)
 
-
 def get_scraped_keys(filepath):
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
@@ -519,11 +391,6 @@ def get_scraped_keys(filepath):
              r.get("course_code", ""), r.get("section", ""))
             for r in csv.DictReader(fh)
         }
-
-
-# ---------------------------------------------------------------------------
-# Main scrape loop
-# ---------------------------------------------------------------------------
 
 def scrape(fresh=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -563,7 +430,7 @@ def scrape(fresh=False):
                 for course in courses:
                     sections = fetch_sections(sess, school_val, term_val, dept, course)
                     if not sections:
-                        sections = [""]  # try with empty section code if none returned
+                        sections = [""]
 
                     for section in sections:
                         check_key = (term_text, dept,
@@ -625,7 +492,6 @@ def scrape(fresh=False):
     print(f"CSV: {CSV_PATH}")
     if total_rows == 0:
         print("[!] Zero rows. Inspect debug_student.html and debug_materials.html.")
-
 
 if __name__ == "__main__":
     scrape(fresh="--fresh" in sys.argv)

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import argparse
 import csv
 import os
@@ -40,7 +38,6 @@ DEFAULT_BATCH_SIZE = 25
 DEFAULT_DELAY = 0.5
 FLARESOLVERR_DEFAULT_URL = "http://localhost:8191/v1"
 
-
 def make_session(cookies: dict | None = None, user_agent: str | None = None) -> cffi_requests.Session:
     session = cffi_requests.Session(impersonate="chrome")
     if cookies:
@@ -50,14 +47,8 @@ def make_session(cookies: dict | None = None, user_agent: str | None = None) -> 
         session.headers.update({"User-Agent": user_agent})
     return session
 
-
-# ---------------------------------------------------------------------------
-# FlareSolverr helpers
-# ---------------------------------------------------------------------------
-
 def _fs_session_name(fvcusno: str) -> str:
     return f"bnc_{fvcusno}_scraper"
-
 
 def _fs_create(flaresolverr_url: str, session_name: str) -> None:
     try:
@@ -74,7 +65,6 @@ def _fs_create(flaresolverr_url: str, session_name: str) -> None:
         timeout=120,
     ).raise_for_status()
 
-
 def _fs_destroy(flaresolverr_url: str, session_name: str) -> None:
     try:
         std_requests.post(
@@ -84,7 +74,6 @@ def _fs_destroy(flaresolverr_url: str, session_name: str) -> None:
         )
     except Exception:
         pass
-
 
 def _fs_get(flaresolverr_url: str, session_name: str, url: str, max_timeout: int = 120000):
     resp = std_requests.post(
@@ -104,13 +93,7 @@ def _fs_get(flaresolverr_url: str, session_name: str, url: str, max_timeout: int
     sol = data["solution"]
     return sol.get("response", ""), sol.get("cookies", []), sol.get("userAgent", "")
 
-
 def fs_bootstrap(fvcusno: str, flaresolverr_url: str = FLARESOLVERR_DEFAULT_URL) -> tuple[dict, str, str]:
-    """Use FlareSolverr to load the chooseCourses page, capture cf_clearance cookies,
-    then destroy the FlareSolverr session.
-
-    Returns (cookies_dict, user_agent, html).
-    """
     session_name = _fs_session_name(fvcusno)
     url = CHOOSE_COURSES_URL.format(fvcusno=fvcusno)
 
@@ -278,8 +261,6 @@ def parse_adoption_html(html: str, fvcusno: str, school_id: str) -> list[dict]:
 
     course_headers = soup.find_all("div", class_="cmCourseHeader")
 
-    # supsort_d_desc is written once per batch (always index 1), not per-course.
-    # Fall back to index "1" for any course whose index has no entry.
     batch_dept_str = dept_map.get("1", "")
 
     for i, header in enumerate(course_headers):
@@ -339,12 +320,6 @@ def parse_adoption_html(html: str, fvcusno: str, school_id: str) -> list[dict]:
     return rows
 
 def parse_course_desc(course_desc: str, department_name: str) -> tuple[str, str, str, str]:
-    """Parse a course description string into (dept_code, course_code, section, course_title).
-
-    Handles two formats:
-      - Fused:    "LAW501 TORTS"                    → ("LAW", "|501", "", "TORTS")
-      - Spaced:   "ACCT 124 1490 Prin of Acctg I"   → ("ACCT", "|124", "|1490", "Prin of Acctg I")
-    """
     if not course_desc:
         return ("", "", "", "")
 
@@ -355,19 +330,18 @@ def parse_course_desc(course_desc: str, department_name: str) -> tuple[str, str,
     first = tokens[0]
     m = re.match(r"^([A-Za-z]+)(\d[\w.]*)$", first)
     if m:
-        # Fused format: "LAW501"
+
         dept_code = m.group(1).upper()
         course_code = "|" + m.group(2)
         rest = tokens[1:]
-        # Check if next token is a standalone section number
+
         section = ""
         if rest and re.match(r"^\d+$", rest[0]):
             section = "|" + rest[0]
             rest = rest[1:]
         course_title = " ".join(rest)
     elif re.match(r"^[A-Za-z]+$", first):
-        # Spaced format: "ACCT 124 1490 Title" or "COMM C1000 0700 Title"
-        # Course codes: optional short letter prefix + digits (e.g., 124, C1000, CS101)
+
         dept_code = first.upper()
         rest = tokens[1:]
         course_code = ""
@@ -440,7 +414,6 @@ def write_csv(rows: list[dict], filepath: str) -> None:
         writer.writerows(rows)
 
 def _refresh_session(fvcusno: str, flaresolverr_url: str | None, delay: float):
-    """Re-bootstrap the session after a 403. Returns (session, csid)."""
     if flaresolverr_url:
         print(f"\n  [WARN] 403 — re-bootstrapping via FlareSolverr...")
         time.sleep(max(delay * 8, 10))
@@ -455,7 +428,6 @@ def _refresh_session(fvcusno: str, flaresolverr_url: str | None, delay: float):
     csid = info["csid"]
     print(f"  [*] New CSID: {csid}")
     return session, csid
-
 
 def scrape(
     fvcusno: str,

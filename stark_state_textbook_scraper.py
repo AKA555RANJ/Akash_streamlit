@@ -1,9 +1,3 @@
-"""
-Stark State College Bookstore Textbook Scraper
-Platform: Timber (by Herkimer Media) — Drupal-based, integrates with Booklog POS
-URL: https://shop.starkstate.edu/timber/college
-"""
-
 import csv
 import json
 import os
@@ -145,11 +139,9 @@ def is_cloudflare_block(text):
             "<title>attention" in lower)
 
 def clean_term(label):
-    """Strip parenthetical suffixes like '(Order Now)' from term labels."""
     return re.sub(r'\s*\(.*?\)\s*$', '', label).strip()
 
 def format_course_code(code):
-    """Prefix course code with pipe to preserve leading zeros. E.g. '2301' → '|2301'."""
     code = code.strip()
     if not code:
         return ""
@@ -158,7 +150,6 @@ def format_course_code(code):
     return f"|{code}"
 
 def format_section_code(section):
-    """Prefix section code with pipe to preserve leading zeros."""
     section = section.strip()
     if not section:
         return ""
@@ -167,7 +158,6 @@ def format_section_code(section):
     return f"|{section}"
 
 def split_dept_course(raw):
-    """Split 'ACCT 2301' into ('ACCT', '|2301'). Returns (raw, '') if no space."""
     raw = raw.strip()
     parts = raw.split(None, 1)
     if len(parts) == 2:
@@ -214,13 +204,6 @@ def safe_post(sess, url, data=None, json_data=None, retries=3):
     return ""
 
 def parse_drupal_ajax_html(text):
-    """Unwrap Drupal Ajax JSON command array into concatenated HTML.
-
-    Drupal Views AJAX returns:
-        [{"command": "insert", "selector": "#...", "data": "<html fragment>"}, ...]
-
-    If text is not JSON (plain HTML), return it unchanged.
-    """
     text = text.strip()
     if not text.startswith("["):
         return text
@@ -240,11 +223,6 @@ def parse_drupal_ajax_html(text):
     return text
 
 def timber_ajax_get(sess, path, retries=3):
-    """GET /timber/college/ajax?l={encoded_path}.
-
-    The server maintains selection state (term/dept/course) in the Drupal session.
-    Calls must be made sequentially: select term → select dept → select course → select section.
-    """
     url = TIMBER_AJAX_URL + "?l=" + urllib.parse.quote(path, safe="")
     for attempt in range(retries):
         try:
@@ -266,14 +244,6 @@ def timber_ajax_get(sess, path, retries=3):
     return ""
 
 def parse_tcc_links(html):
-    """Parse Timber TCC navigation links from any level.
-
-    Format: <a class='tcc-item-link' href='#' url='/college_dept/131073'>
-              <span class='abbreviation'>ACC</span> - <span class='name'>Accounting</span>
-            </a>
-
-    Returns list of {"value": url_path, "code": short_code, "label": full_text}.
-    """
     soup = BeautifulSoup(html, "html.parser")
     items = []
     for a in soup.find_all("a", class_="tcc-item-link"):
@@ -287,10 +257,6 @@ def parse_tcc_links(html):
     return items
 
 def split_course_label(label):
-    """Split '121 - Introduction to Accounting' into ('121', 'Introduction to Accounting').
-
-    Returns (course_num, course_title). If no separator found, returns (label, '').
-    """
     label = label.strip()
     m = re.match(r"^(\d+[A-Za-z]?)\s*[-\u2013]\s*(.+)$", label)
     if m:
@@ -298,13 +264,6 @@ def split_course_label(label):
     return label, ""
 
 def fetch_book_author(sess, nid, cadoption_id):
-    """Fetch author from the Timber book details endpoint.
-
-    URL: /timber/college/details/{nid}/{cadoption_id}
-    Response contains: "Author: PATTON ISBN: ... Publisher: ... Edition: ..."
-
-    Returns author string, or '' if unavailable.
-    """
     if not nid or not cadoption_id:
         return ""
     try:
@@ -327,16 +286,6 @@ def fetch_book_author(sess, nid, cadoption_id):
 
 def parse_timber_materials(sess, html, term_name, dept_code, course_code,
                            course_title, section_code):
-    """Parse textbook materials from a Timber TCC section AJAX response.
-
-    Response format:
-        <div id='tcc-product' sectionid='...'>
-          <div class='req-group req-group-R ...'>   ← adoption group
-            <div class='timber-item-group ...'>
-              <span class='tcc-product-title'>Book Title</span>
-              <span class='tcc-sku-number'>(9781234567890)</span>
-              <div class='chooser-product' nid='...' cadoption_id='...'>
-    """
     soup = BeautifulSoup(html, "html.parser")
     results = []
 
@@ -405,7 +354,6 @@ def parse_timber_materials(sess, html, term_name, dept_code, course_code,
     return results
 
 def parse_terms_from_page(html):
-    """Extract available terms from the main Timber college page."""
     soup = BeautifulSoup(html, "html.parser")
     terms = []
 
@@ -446,7 +394,6 @@ def parse_terms_from_page(html):
     return terms
 
 def parse_departments_from_html(html):
-    """Extract departments from an HTML response."""
     soup = BeautifulSoup(html, "html.parser")
     depts = []
 
@@ -478,7 +425,6 @@ def parse_departments_from_html(html):
     return depts
 
 def parse_courses_from_html(html):
-    """Extract courses from an HTML response."""
     soup = BeautifulSoup(html, "html.parser")
     courses = []
 
@@ -503,7 +449,6 @@ def parse_courses_from_html(html):
     return courses
 
 def parse_sections_from_html(html):
-    """Extract sections from an HTML response."""
     soup = BeautifulSoup(html, "html.parser")
     sections = []
 
@@ -528,7 +473,6 @@ def parse_sections_from_html(html):
     return sections
 
 def discover_ajax_endpoints(html):
-    """Discover AJAX endpoints from the page's JavaScript."""
     endpoints = {}
 
     ajax_patterns = [
@@ -558,7 +502,6 @@ def discover_ajax_endpoints(html):
     return endpoints
 
 def parse_materials_page(html, term_name, dept_code):
-    """Parse textbook/materials information from a Timber page."""
     soup = BeautifulSoup(html, "html.parser")
     results = []
 
@@ -693,7 +636,6 @@ def parse_materials_page(html, term_name, dept_code):
     return results
 
 def parse_by_name_page(html, term_name, dept_code, course_label, section_label=""):
-    """Parse the /college/by-name response which shows materials for a specific course."""
     soup = BeautifulSoup(html, "html.parser")
     results = []
 
@@ -775,7 +717,6 @@ def parse_by_name_page(html, term_name, dept_code, course_label, section_label="
     return results
 
 def try_timber_ajax_endpoints(sess, term_value, term_label):
-    """Try various known Timber/Drupal AJAX endpoint patterns to load departments."""
     patterns = [
         f"/timber/college?term={term_value}",
         f"/timber/college/departments?term={term_value}",
@@ -821,7 +762,6 @@ def try_timber_ajax_endpoints(sess, term_value, term_label):
     return [], ""
 
 def try_course_endpoints(sess, term_value, dept_value):
-    """Try various endpoint patterns to load courses for a department."""
     patterns = [
         f"/timber/college?term={term_value}&dept={dept_value}",
         f"/timber/college/courses?term={term_value}&dept={dept_value}",
@@ -845,7 +785,6 @@ def try_course_endpoints(sess, term_value, dept_value):
     return [], ""
 
 def try_section_endpoints(sess, term_value, dept_value, course_value):
-    """Try various endpoint patterns to load sections for a course."""
     patterns = [
         f"/timber/college?term={term_value}&dept={dept_value}&course={course_value}",
         f"/timber/college/sections?term={term_value}&dept={dept_value}&course={course_value}",
@@ -870,7 +809,6 @@ def try_section_endpoints(sess, term_value, dept_value, course_value):
 def try_materials_endpoints(sess, term_value, dept_value, course_value,
                             section_value="", term_label="", dept_label="",
                             course_label="", section_label=""):
-    """Try various endpoint patterns to get materials/textbooks."""
     patterns = [
         f"/college/by-name?term={term_value}&dept={dept_value}&course={course_value}&section={section_value}",
         f"/college/by-name?term={term_label}&dept={dept_label}&course={course_label}&section={section_label}",
@@ -915,7 +853,6 @@ def get_scraped_departments(filepath):
     return scraped
 
 def dump_debug(html, label):
-    """Save HTML to debug file for analysis."""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     path = os.path.join(OUTPUT_DIR, f"debug_{label}.html")
     with open(path, "w", encoding="utf-8") as f:
@@ -924,7 +861,6 @@ def dump_debug(html, label):
     return path
 
 def discover_page_structure(html):
-    """Analyze the main page to understand Timber's structure."""
     soup = BeautifulSoup(html, "html.parser")
 
     print("\n[*] === PAGE STRUCTURE ANALYSIS ===")

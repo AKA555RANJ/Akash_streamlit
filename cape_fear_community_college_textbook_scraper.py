@@ -1,19 +1,3 @@
-"""
-Cape Fear Community College Bookstore Textbook Scraper
-Platform: bkstr.com (Follett) — svc.bkstr.com REST API
-URL: https://www.bkstr.com/capefearstore/shop/textbooks-and-course-materials
-
-Session strategy:
-  1. FlareSolverr visits STORE_HOME  → sets _px3, _pxvid, pxcts, x_efollett_uuid, efollett_rt
-  2. FlareSolverr visits svc store/config → triggers svc.bkstr.com PX challenge → sets _pxhd
-  3. Merge all cookies; hand to curl_cffi (Chrome TLS) for all subsequent API calls.
-
-Key fixes (from browser DevTools inspection):
-  - POST URL carries requestType/langId/catalogId as query params
-  - POST body uses *DisplayName field names + secondaryvalues
-  - Response is a list; materials live in [0]['courseSectionDTO'][*]['courseMaterialResultsList']
-"""
-
 import csv
 import json
 import os
@@ -78,12 +62,6 @@ def fs_get(url, max_timeout=120000):
     return sol.get("response", ""), sol.get("cookies", []), sol.get("userAgent", "")
 
 def create_session():
-    """Two-step FlareSolverr bootstrap to capture _pxhd.
-
-    Step 1: Visit STORE_HOME  → bkstr.com PX challenge → _px3, efollett_rt, etc.
-    Step 2: Visit svc store/config → svc.bkstr.com PX challenge → _pxhd
-    Merge all cookies into a curl_cffi session (Chrome TLS impersonation).
-    """
     print("[*] Creating FlareSolverr session...")
     fs_create()
 
@@ -172,8 +150,6 @@ def svc_get(sess, endpoint, params=None, retries=3):
 
 def svc_post_results(sess, store_id, catalog_id, term_id, program_id,
                      dept, course, section, retries=3):
-    """POST to courseMaterial/results with the correct URL + payload format
-    as observed in browser DevTools."""
     url = (f"{SVC_URL}/courseMaterial/results"
            f"?storeId={store_id}&langId=-1&catalogId={catalog_id}&requestType=DDCSBrowse")
     payload = {
@@ -280,11 +256,6 @@ def fmt(code):
     return f"|{code}" if code and not code.startswith("|") else code
 
 def parse_results(raw, source_url, dept, course, section, term_name):
-    """Parse the list response from courseMaterial/results.
-
-    Response shape:
-      [ { "courseSectionDTO": [ { "courseMaterialResultsList": [...] } ] } ]
-    """
     rows = []
     base = {"department_code": dept, "course_code": fmt(course),
             "section": fmt(section), "term": normalize_term(term_name),

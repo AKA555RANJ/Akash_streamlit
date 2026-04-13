@@ -1,23 +1,3 @@
-"""
-Missouri Southern State University Bookstore Textbook Scraper
-Platform: MBS Direct / Timber (Drupal-based)
-URL: https://www.mssubookstore.com/college
-
-API flow (all GET, returns HTML fragments):
-  Step 0  GET /college                                → parse term links (url='/college_term/{id}')
-  Step 1  GET /timber/college/ajax?l=%2Fcollege_term%2F{id}    → div#tcc-college_dept
-  Step 2  GET /timber/college/ajax?l=%2Fcollege_dept%2F{id}    → div#tcc-college_course
-  Step 3  GET /timber/college/ajax?l=%2Fcollege_course%2F{id}  → div#tcc-college_section
-  Step 4  GET /timber/college/ajax?l=%2Fcollege_section%2F{id} → div#tcc-product (materials)
-  Step 5  GET /node/{nid}                             → product page (ISBN lookup, cached)
-
-NOTE: The query parameter is 'l' (lowercase L), NOT 'v'. Slashes must be URL-encoded (%2F).
-
-Session strategy:
-  Plain requests.Session with Chrome headers — no Cloudflare on this host.
-  Server: nginx at 216.27.28.88:443.
-"""
-
 import csv
 import os
 import re
@@ -37,8 +17,8 @@ BASE_URL     = "https://www.mssubookstore.com"
 COLLEGE_URL  = f"{BASE_URL}/college"
 AJAX_URL     = f"{BASE_URL}/timber/college/ajax"
 
-REQUEST_DELAY = 0.6   # seconds between calls
-ISBN_DELAY    = 0.3   # extra delay for product node fetches
+REQUEST_DELAY = 0.6
+ISBN_DELAY    = 0.3
 
 CSV_FIELDS = [
     "source_url", "school_id", "department_code", "course_code", "course_title",
@@ -68,12 +48,7 @@ CHROME_HEADERS = {
     "Sec-Fetch-Site": "same-origin",
 }
 
-# ---------------------------------------------------------------------------
-# Session management
-# ---------------------------------------------------------------------------
-
 def create_session():
-    """Create a requests.Session, visit /college first to get Drupal session cookie."""
     sess = requests.Session()
     sess.headers.update(CHROME_HEADERS)
 
@@ -82,7 +57,6 @@ def create_session():
     resp.raise_for_status()
     print(f"    OK (status={resp.status_code}, cookies={list(sess.cookies.keys())})")
     return sess
-
 
 def refresh_session(sess):
     print("[*] Refreshing session...", flush=True)
@@ -94,11 +68,6 @@ def refresh_session(sess):
             print(f"  [WARN] Refresh attempt {attempt+1} failed: {e}", flush=True)
             if attempt == 3:
                 raise
-
-
-# ---------------------------------------------------------------------------
-# HTTP helpers
-# ---------------------------------------------------------------------------
 
 def _get(sess, url, retries=3, timeout=20):
     for attempt in range(retries):
@@ -120,21 +89,13 @@ def _get(sess, url, retries=3, timeout=20):
                 raise
     return ""
 
-
 def ajax_get(sess, l_path, retries=3):
-    """Call the Timber AJAX endpoint. Parameter is 'l' (lowercase L) with URL-encoded slashes."""
     from urllib.parse import quote
     encoded = quote(l_path, safe="")
     url = f"{AJAX_URL}?l={encoded}"
     return _get(sess, url, retries=retries)
 
-
-# ---------------------------------------------------------------------------
-# Timber API calls
-# ---------------------------------------------------------------------------
-
 def get_terms(sess):
-    """Parse the /college page for term links (url='/college_term/{id}')."""
     print("[*] Fetching terms from /college ...")
     html = _get(sess, COLLEGE_URL)
     if not html:
@@ -151,7 +112,6 @@ def get_terms(sess):
     print(f"    Found {len(terms)} terms: {[t['term_name'] for t in terms]}")
     return terms
 
-
 def get_depts(sess, term_id):
     html = ajax_get(sess, f"/college_term/{term_id}")
     if not html:
@@ -162,7 +122,7 @@ def get_depts(sess, term_id):
         url_attr = item.get("url", "")
         dept_id = url_attr.split("/college_dept/")[-1].strip("/") if "/college_dept/" in url_attr else ""
         abbr = (item.select_one("span.abbreviation") or item).get_text(strip=True).split("-")[0].strip()
-        # If no span.abbreviation, fall back to full text parse
+
         abbr_tag = item.select_one("span.abbreviation")
         name_tag = item.select_one("span.name")
         dept_code = abbr_tag.get_text(strip=True) if abbr_tag else abbr
@@ -170,7 +130,6 @@ def get_depts(sess, term_id):
         if dept_id and dept_code:
             depts.append({"dept_id": dept_id, "dept_code": dept_code, "dept_name": dept_name})
     return depts
-
 
 def get_courses(sess, dept_id):
     html = ajax_get(sess, f"/college_dept/{dept_id}")
@@ -188,7 +147,6 @@ def get_courses(sess, dept_id):
                             "course_title": course_title})
     return courses
 
-
 def get_sections(sess, course_id):
     html = ajax_get(sess, f"/college_course/{course_id}")
     if not html:
@@ -205,19 +163,12 @@ def get_sections(sess, course_id):
                               "instructor": instructor})
     return sections
 
-
 def get_materials_html(sess, section_id):
     return ajax_get(sess, f"/college_section/{section_id}")
-
-
-# ---------------------------------------------------------------------------
-# ISBN lookup (with cache)
-# ---------------------------------------------------------------------------
 
 ISBN_RE = re.compile(r'97[89]\d{10}')
 
 def get_isbn(sess, nid, cache):
-    """Return ISBN for a Drupal node. Checks cache first; fetches /node/{nid} on miss."""
     if nid in cache:
         return cache[nid]
 
@@ -226,7 +177,7 @@ def get_isbn(sess, nid, cache):
         time.sleep(ISBN_DELAY)
         html = _get(sess, f"{BASE_URL}/node/{nid}", timeout=15)
         if html:
-            # Search the page text for any ISBN-13 pattern
+
             match = ISBN_RE.search(html)
             if match:
                 isbn = match.group(0)
@@ -236,11 +187,6 @@ def get_isbn(sess, nid, cache):
     cache[nid] = isbn
     return isbn
 
-
-# ---------------------------------------------------------------------------
-# Materials parsing
-# ---------------------------------------------------------------------------
-
 ADOPTION_MAP = {
     "req-group-R": "Required Material(s)",
     "req-group-O": "Recommended Material(s)",
@@ -248,7 +194,6 @@ ADOPTION_MAP = {
 
 def parse_materials(html, source_url, dept_code, course_num, course_title,
                     section_num, instructor, term_name, sess, isbn_cache):
-    """Parse div#tcc-product HTML into a list of CSV row dicts."""
     base = {
         "source_url":        source_url,
         "school_id":         SCHOOL_ID,
@@ -276,14 +221,13 @@ def parse_materials(html, source_url, dept_code, course_num, course_title,
 
     rows = []
     for group in req_groups:
-        # Determine adoption type from CSS classes
-        adoption = "Required Material(s)"  # default
+
+        adoption = "Required Material(s)"
         for cls, label in ADOPTION_MAP.items():
             if cls in group.get("class", []):
                 adoption = label
                 break
 
-        # Each item group contains one book
         for item_group in group.select(".item.group"):
             title_tag  = item_group.select_one("span.tcc-product-title")
             author_tag = item_group.select_one("em.author-data")
@@ -294,7 +238,6 @@ def parse_materials(html, source_url, dept_code, course_num, course_title,
             author = author_tag.get_text(strip=True) if author_tag else ""
             nid    = product_div2.get("nid", "") if product_div2 else ""
 
-            # ISBN strategy: check tcc-sku-number first, then fetch product page
             isbn = ""
             if sku_tag:
                 raw_sku = re.sub(r"[^0-9]", "", sku_tag.get_text(strip=True))
@@ -313,31 +256,18 @@ def parse_materials(html, source_url, dept_code, course_num, course_title,
                      "material_adoption_code": "This course does not require any course materials"})
     return rows
 
-
-# ---------------------------------------------------------------------------
-# Parsing helpers
-# ---------------------------------------------------------------------------
-
 def _parse_dash_split(text):
-    """Split '0201 - Principles Financial Acct' into ('0201', 'Principles Financial Acct')."""
     parts = text.split(" - ", 1)
     if len(parts) == 2:
         return parts[0].strip(), parts[1].strip()
     return text.strip(), ""
 
-
 def normalize_term(s):
     return re.sub(r"\s*\(.*?\)\s*", " ", s or "").strip().upper()
-
 
 def fmt(code):
     code = (code or "").strip()
     return f"|{code}" if code and not code.startswith("|") else code
-
-
-# ---------------------------------------------------------------------------
-# CSV helpers
-# ---------------------------------------------------------------------------
 
 def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -348,7 +278,6 @@ def append_csv(rows, filepath):
             writer.writeheader()
         writer.writerows(rows)
 
-
 def get_scraped_keys(filepath):
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
@@ -356,11 +285,6 @@ def get_scraped_keys(filepath):
         return {(r.get("term", ""), r.get("department_code", ""),
                  r.get("course_code", ""), r.get("section", ""))
                 for r in csv.DictReader(f)}
-
-
-# ---------------------------------------------------------------------------
-# Main scraper
-# ---------------------------------------------------------------------------
 
 def scrape(fresh=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -467,7 +391,6 @@ def scrape(fresh=False):
     print(f"CSV: {CSV_PATH}")
     if total_rows == 0:
         print("[!] No data written. Check debug_results.html for response sample.")
-
 
 if __name__ == "__main__":
     scrape(fresh="--fresh" in sys.argv)

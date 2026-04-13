@@ -1,4 +1,3 @@
-
 import csv
 import os
 import re
@@ -67,7 +66,6 @@ def create_session():
     return sess
 
 def normalize_term(raw):
-    """Convert "26/SP", "26/SP1", "26/FA", "26/SU" to readable strings."""
     m = re.match(r'(\d{2})/([A-Z]+)(\d*)', raw.strip())
     if not m:
         return raw.strip()
@@ -80,7 +78,6 @@ def normalize_term(raw):
     return result
 
 def fetch_prefixes(sess, retries=3):
-    """GET home page and extract all department prefixes."""
     for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
@@ -99,7 +96,6 @@ def fetch_prefixes(sess, retries=3):
     return []
 
 def fetch_course_numbers(sess, prefix, retries=3):
-    """POST pick_course-number.php → list of course number strings."""
     url = BASE_URL + "/asynch/pick_course-number.php"
     for attempt in range(retries):
         try:
@@ -119,7 +115,6 @@ def fetch_course_numbers(sess, prefix, retries=3):
     return []
 
 def fetch_sections(sess, prefix, cn, retries=3):
-    """POST pick_course-section.php → list of section dicts."""
     url = BASE_URL + "/asynch/pick_course-section.php"
     for attempt in range(retries):
         try:
@@ -137,11 +132,6 @@ def fetch_sections(sess, prefix, cn, retries=3):
     return []
 
 def parse_section_options(html, prefix, cn):
-    """
-    Parse section <option> elements.
-    Option text format: "{COURSE_TITLE} {SECTION_CODE} {TERM_CODE}"
-    Returns list of dicts: {sct_val, course_title, term_raw, term}
-    """
     soup = BeautifulSoup(html, "html.parser")
     opts = soup.find_all("option", class_="pick-sct")
     results = []
@@ -176,7 +166,6 @@ def parse_section_options(html, prefix, cn):
     return results
 
 def fetch_books(sess, prefix, cn, sct, retries=3):
-    """POST show-books.php → raw HTML fragment."""
     url = BASE_URL + "/asynch/show-books.php"
     for attempt in range(retries):
         try:
@@ -194,21 +183,9 @@ def fetch_books(sess, prefix, cn, sct, retries=3):
     return ""
 
 def clean_text(text):
-    """Replace Unicode replacement character (U+FFFD) with registered trademark ® where applicable."""
     return text.replace("\ufffd", "\u00ae")
 
 def parse_books(html, prefix, cn, section_info, crawled_on):
-    """
-    Parse show-books.php HTML fragment.
-
-    Li structure:
-        Title, <em>edition</em><br>
-        <em>Publisher</em><br>
-        <em>Author</em><br>
-        ISBN: 9780000000000<br>
-        MATERIAL TYPE<br>
-        <a ...>Library Material</a>
-    """
     html = clean_text(html)
     soup = BeautifulSoup(html, "html.parser")
     ul = soup.find("ul")
@@ -306,7 +283,6 @@ def append_csv(rows, filepath):
         writer.writerows(rows)
 
 def get_scraped_keys(filepath):
-    """Return set of (dept, course_code, section) tuples already in the CSV."""
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
     scraped = set()

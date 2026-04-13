@@ -1,5 +1,3 @@
-"""Textbook scraper for Mt San Jacinto Community College District (bncvirtual.com)."""
-
 import os
 import sys
 

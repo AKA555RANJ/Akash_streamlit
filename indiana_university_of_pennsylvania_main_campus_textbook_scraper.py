@@ -1,27 +1,3 @@
-"""
-Indiana University of Pennsylvania - Main Campus Bookstore Textbook Scraper
-Platform: Timber e-Commerce (Drupal 6, Herkimer Media / bookstorewebsoftware.com)
-URL: https://www.iupstore.com/timber/college
-
-API flow (all unauthenticated GET requests, HTML fragment responses):
-  1. GET /timber/college
-       → parse .tcc-item-link[url^='/college_term/'] for terms
-  2. GET /timber/college/ajax?l=/college_term/{termId}
-       → parse .tcc-item-link[url^='/college_dept/'] for departments
-  3. GET /timber/college/ajax?l=/college_dept/{deptId}
-       → parse .tcc-item-link[url^='/college_course/'] for courses
-         (text format: "201 - Accounting Principles I")
-  4. GET /timber/college/ajax?l=/college_course/{courseId}
-       → parse .tcc-item-link[url^='/college_section/'] for sections
-         (text format: "001 - DZIELSKI, SAMANTHA")
-  5. GET /timber/college/ajax?l=/college_section/{sectionId}
-       → parse div.tcc-product for materials (title, author, ISBN, adoption code)
-         Books are embedded directly in this HTML — no separate /details/ call needed.
-
-No FlareSolverr or Cloudflare handling needed; the site serves plain HTML
-to standard HTTP clients (session cookie required).
-"""
-
 import csv
 import os
 import re
@@ -79,11 +55,6 @@ def make_session() -> requests.Session:
     return sess
 
 def parse_tcc_items(html: str) -> list[dict]:
-    """
-    Return a list of {url, text} dicts from all a.tcc-item-link elements.
-    The 'url' attribute (not href) holds the path like /college_term/65576.
-    Uses separator=" " so <span>CODE</span>-<span>Name</span> becomes "CODE - Name".
-    """
     soup = BeautifulSoup(html, "html.parser")
     items = []
     for a in soup.find_all("a", class_="tcc-item-link"):
@@ -94,11 +65,9 @@ def parse_tcc_items(html: str) -> list[dict]:
     return items
 
 def extract_id(url_path: str) -> str:
-    """Return the trailing numeric ID from a path like /college_term/65576 → '65576'."""
     return url_path.rstrip("/").rsplit("/", 1)[-1]
 
 def timber_ajax_get(sess: requests.Session, path: str) -> str:
-    """GET /timber/college/ajax?l={path} and return response text."""
     time.sleep(REQUEST_DELAY)
     url = f"{AJAX_URL}?l={quote(path, safe='')}"
     resp = sess.get(url, timeout=30)
@@ -106,7 +75,6 @@ def timber_ajax_get(sess: requests.Session, path: str) -> str:
     return resp.text
 
 def fetch_terms(sess: requests.Session) -> list[dict]:
-    """Fetch the main /timber/college page and return list of {id, name} terms."""
     time.sleep(REQUEST_DELAY)
     resp = sess.get(COLLEGE_URL, timeout=30)
     resp.raise_for_status()
@@ -117,7 +85,6 @@ def fetch_terms(sess: requests.Session) -> list[dict]:
     ]
 
 def fetch_departments(sess: requests.Session, term_id: str) -> list[dict]:
-    """Return list of {id, code, name} depts for a term."""
     html = timber_ajax_get(sess, f"/college_term/{term_id}")
     items = parse_tcc_items(html)
     depts = []
@@ -128,7 +95,6 @@ def fetch_departments(sess: requests.Session, term_id: str) -> list[dict]:
     return depts
 
 def fetch_courses(sess: requests.Session, dept_id: str) -> list[dict]:
-    """Return list of {id, text} courses for a department."""
     html = timber_ajax_get(sess, f"/college_dept/{dept_id}")
     items = parse_tcc_items(html)
     return [
@@ -137,10 +103,6 @@ def fetch_courses(sess: requests.Session, dept_id: str) -> list[dict]:
     ]
 
 def fetch_sections(sess: requests.Session, course_id: str) -> list[dict]:
-    """
-    Return list of {id, section_num, instructor} for a course.
-    IUP section text format: "001 - DZIELSKI, SAMANTHA"
-    """
     html = timber_ajax_get(sess, f"/college_course/{course_id}")
     items = parse_tcc_items(html)
     sections = []
@@ -156,27 +118,10 @@ def fetch_sections(sess: requests.Session, course_id: str) -> list[dict]:
     return sections
 
 def fetch_materials(sess: requests.Session, section_id: str) -> list[dict]:
-    """
-    GET /timber/college/ajax?l=/college_section/{sectionId}
-    Parse the tcc-product div for all books in this section.
-
-    Returns list of {title, isbn, author, adoption_code}.
-    Empty list means no required materials.
-
-    HTML structure:
-      <div class='req-group req-group-R ...'>
-        <div class='item group timber-item-group'>
-          <span class='tcc-product-title'>BOOK TITLE</span>
-          [<em class="author-data">AUTHOR</em>]
-          <span class='tcc-sku-number'>(9781265745349)</span>
-        </div>
-      </div>
-    """
     html = timber_ajax_get(sess, f"/college_section/{section_id}")
     return _parse_materials_html(html)
 
 def _parse_materials_html(html: str) -> list[dict]:
-    """Parse tcc-product div for all book items with adoption codes."""
     soup = BeautifulSoup(html, "html.parser")
     books = []
 
@@ -210,28 +155,15 @@ def _parse_materials_html(html: str) -> list[dict]:
     return books
 
 def _split_dept(text: str) -> tuple[str, str]:
-    """
-    'ACCT - Accounting' → ('ACCT', 'Accounting')
-    get_text(separator=" ") turns <span>ACCT</span>-<span>Accounting</span>
-    into 'ACCT - Accounting' (spaces added around the bare hyphen by the separator).
-    Falls back to (text, text) if no ' - ' separator.
-    """
     if " - " in text:
         code, _, name = text.partition(" - ")
         return code.strip(), name.strip()
     return text.strip(), text.strip()
 
 def _clean_course_title(title: str) -> str:
-    """Strip placeholder blanks like ': ______' from course titles."""
     return re.sub(r":\s*_+\s*$", "", title).strip()
 
 def _parse_course_text(text: str) -> tuple[str, str, str]:
-    """
-    Parse course item text into (dept_code, course_code, course_title).
-
-    IUP format: "201 - Accounting Principles I" (number first, no dept prefix)
-    Also handles Parker-style: "ACCT2301 - TITLE" or "ACCT 2301 TITLE"
-    """
     t = text.strip()
 
     m = re.match(r"^([A-Za-z]{2,10})(\d[\w\-]*)\s*[-–]\s*(.*)", t)
@@ -249,10 +181,6 @@ def _parse_course_text(text: str) -> tuple[str, str, str]:
     return "", "", _clean_course_title(t)
 
 def _parse_section_text(text: str) -> tuple[str, str]:
-    """
-    Parse section item text into (section_num, instructor).
-    IUP format: "001 - DZIELSKI, SAMANTHA"
-    """
     t = text.strip()
     m = re.match(r"^(\w+)\s*[-–]\s*(.*)", t)
     if m:
@@ -263,12 +191,10 @@ def _clean_isbn(value: str) -> str:
     return re.sub(r"[-\s]", "", value).strip()
 
 def fmt(code: str) -> str:
-    """Prefix code with | to preserve leading zeros."""
     code = (code or "").strip()
     return f"|{code}" if code and not code.startswith("|") else code
 
 def normalize_term(s: str) -> str:
-    """Strip ordering suffixes like '(Order Now)', '(Pre-Order)', etc."""
     return re.sub(r"\s*\(.*?\)\s*", " ", s or "").strip().upper()
 
 def append_csv(rows: list[dict], filepath: str) -> None:

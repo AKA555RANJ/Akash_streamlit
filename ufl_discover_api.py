@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import json
 import time
 from playwright.sync_api import sync_playwright

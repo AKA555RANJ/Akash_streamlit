@@ -1,18 +1,3 @@
-#!/usr/bin/env python3
-"""
-Colgate University Bookstore Textbook Scraper
-Platform: CampusHub (Follett Classic ASP) — textbooks_xml.asp XML API
-Actual scrape URL: https://www.colgatebookstore.com/buy_textbooks.asp
-
-Session strategy:
-  Plain requests.Session() — no bot detection on this site (no Perimeterx, no Cloudflare).
-  1. GET /buy_textbooks.asp → extract CSRF token + term options (campus_id, term_id)
-  2. GET /textbooks_xml.asp?control=campus → departments (XML)
-  3. GET /textbooks_xml.asp?control=department → courses (XML)
-  4. GET /textbooks_xml.asp?control=course → sections (XML)
-  5. POST /textbook_express.asp?mode=2&step=2 → book HTML (batched by section IDs)
-"""
-
 import csv
 import os
 import re
@@ -55,28 +40,14 @@ _UA = (
     "Chrome/131.0.0.0 Safari/537.36"
 )
 
-
-# ---------------------------------------------------------------------------
-# Term normalization
-# ---------------------------------------------------------------------------
-
 def normalize_term(s):
-    """Turn 'COLGATE UNIVERSITY - Spring of 2026' → 'SPRING 2026'."""
     s = (s or "").strip()
     s = re.sub(r"(?i)^colgate\s+university\s*[-\u2013]\s*", "", s).strip()
     s = re.sub(r"\s*\(.*?\)\s*", " ", s).strip()
     s = re.sub(r"(?i)\s+of\s+", " ", s).strip()
     return s.upper()
 
-
-# ---------------------------------------------------------------------------
-# Session bootstrap
-# ---------------------------------------------------------------------------
-
 def bootstrap():
-    """Create a plain requests.Session, visit buy_textbooks.asp, extract CSRF
-    token and term options.  Returns (sess, csrf_token, campus_id, term_id, term_name).
-    """
     print("[*] Bootstrapping session...")
     sess = requests.Session()
     sess.headers.update({
@@ -91,7 +62,6 @@ def bootstrap():
     resp.raise_for_status()
     html = resp.text
 
-    # Extract CSRF token
     csrf_token = ""
     m = re.search(r'name="__CSRFToken"\s+id="__CSRFToken"\s+value="([^"]+)"', html)
     if m:
@@ -100,7 +70,6 @@ def bootstrap():
     else:
         print("[WARN] __CSRFToken not found — POST may fail")
 
-    # Extract term options from <select name="selTerm" id="fTerm">
     soup = BeautifulSoup(html, "html.parser")
     term_select = soup.find("select", {"id": "fTerm"})
     if not term_select:
@@ -118,7 +87,7 @@ def bootstrap():
         term_id   = parts[1]
         term_name = normalize_term(opt.get_text(strip=True))
         print(f"[*] Term: '{term_name}' (campus={campus_id}, term={term_id})")
-        break  # use the first active term; extend here for multi-term support
+        break
 
     if not term_id:
         raise RuntimeError("No active term found in buy_textbooks.asp")
@@ -130,9 +99,7 @@ def bootstrap():
     print("[*] Session ready.")
     return sess, csrf_token, campus_id, term_id, term_name
 
-
 def re_bootstrap(old_sess):
-    """Re-bootstrap on CSRF expiry or error — returns (sess, csrf_token, campus_id, term_id, term_name)."""
     print("[*] Re-bootstrapping to refresh CSRF token...", flush=True)
     for attempt in range(3):
         try:
@@ -143,13 +110,7 @@ def re_bootstrap(old_sess):
             if attempt == 2:
                 raise
 
-
-# ---------------------------------------------------------------------------
-# Bot-block / error detection
-# ---------------------------------------------------------------------------
-
 def is_xml_error(text):
-    """Detect a bad response from the textbooks_xml.asp XML endpoints."""
     if not text:
         return True
     lower = text[:500].lower()
@@ -163,10 +124,7 @@ def is_xml_error(text):
             "<sections"    not in text[:500])
     )
 
-
 def is_post_error(text):
-    """Detect a bad response from the textbook_express.asp POST endpoint.
-    Valid responses are full HTML pages with course-material content."""
     if not text or len(text) < 200:
         return True
     lower = text[:1000].lower()
@@ -177,11 +135,6 @@ def is_post_error(text):
         or ("<title>error" in lower)
         or ("error.asp" in lower and "course-bookdisplay" not in lower)
     )
-
-
-# ---------------------------------------------------------------------------
-# XML API helpers
-# ---------------------------------------------------------------------------
 
 def xml_get(sess, params, retries=3):
     url = BASE_URL + "/textbooks_xml.asp"
@@ -204,7 +157,6 @@ def xml_get(sess, params, retries=3):
                 raise
     return BeautifulSoup("", "html.parser")
 
-
 def fetch_departments(sess, campus_id, term_id):
     params = {"control": "campus", "campus": campus_id, "term": term_id}
     soup = xml_get(sess, params)
@@ -217,7 +169,6 @@ def fetch_departments(sess, campus_id, term_id):
         for dept in soup.find_all("department")
     ]
 
-
 def fetch_courses(sess, dept_id, term_id):
     params = {"control": "department", "dept": dept_id, "term": term_id}
     soup = xml_get(sess, params)
@@ -228,7 +179,6 @@ def fetch_courses(sess, dept_id, term_id):
         }
         for course in soup.find_all("course")
     ]
-
 
 def fetch_sections(sess, course_id, term_id):
     params = {"control": "course", "course": course_id, "term": term_id}
@@ -241,11 +191,6 @@ def fetch_sections(sess, course_id, term_id):
         }
         for sec in soup.find_all("section")
     ]
-
-
-# ---------------------------------------------------------------------------
-# Book fetch (POST)
-# ---------------------------------------------------------------------------
 
 def fetch_textbooks(sess, section_ids, csrf_token, campus_id, term_id):
     url = BASE_URL + "/textbook_express.asp?mode=2&step=2"
@@ -263,32 +208,17 @@ def fetch_textbooks(sess, section_ids, csrf_token, campus_id, term_id):
         raise RuntimeError(f"Error/redirect response from textbook_express.asp: {text[:300]}")
     return text
 
-
-# ---------------------------------------------------------------------------
-# HTML parsing
-# ---------------------------------------------------------------------------
-
 def _is_ebook_note(title_text):
-    """Return True when span.book-title contains a store note (ebook pricing)
-    rather than an actual book title.  In that case, span.book-author holds
-    the combined 'Author Title' string."""
     return bool(re.search(
         r"\bebook\b|\bwill be charged\b|\bcharged to\b|\bdigital\b",
         title_text, re.I,
     ))
 
-
 def fmt_code(code):
     code = (code or "").strip()
     return f"|{code}" if code and not code.startswith("|") else code
 
-
 def parse_textbook_html(html, section_meta, term_name):
-    """Parse the HTML returned by textbook_express.asp for a batch of sections.
-
-    section_meta: {section_id: {dept_code, course_code, section, instructor}}
-    Returns a list of CSV row dicts (without source_url / school_id / crawled_on).
-    """
     soup = BeautifulSoup(html, "html.parser")
     results = []
     seen_keys = set()
@@ -314,7 +244,6 @@ def parse_textbook_html(html, section_meta, term_name):
                 section_name = fmt_code(m.group(3).strip())
                 instructor   = m.group(4).strip() if m.group(4) else ""
 
-        # Fallback: read hidden inputs that precede this h3 in the form
         if not dept_code:
             di = h3.find_previous("input", {"name": "dept_name"})
             ci = h3.find_previous("input", {"name": "course_name"})
@@ -331,7 +260,6 @@ def parse_textbook_html(html, section_meta, term_name):
             continue
         seen_keys.add(dedup_key)
 
-        # Recover instructor from section_meta if regex missed it
         if not instructor:
             for sm in section_meta.values():
                 if sm["dept_code"] == dept_code and sm["section"] == section_name:
@@ -373,9 +301,6 @@ def parse_textbook_html(html, section_meta, term_name):
             isbn       = isbn_el.get_text(strip=True).replace("-", "") if isbn_el else ""
             adoption   = req_el.get_text(strip=True).capitalize()      if req_el  else ""
 
-            # Ebook detection: span.book-title may contain a store pricing note
-            # In that case we can't recover the real title from this span,
-            # so we blank the title and keep the author surname we do have.
             if _is_ebook_note(raw_title):
                 title  = ""
                 author = raw_author
@@ -402,7 +327,6 @@ def parse_textbook_html(html, section_meta, term_name):
                 "material_adoption_code": "This course does not require any course materials",
             })
 
-    # Fallback: page returned no parseable section headers
     if not results:
         page_text = soup.get_text(" ", strip=True).lower()
         no_mat = ("no course materials" in page_text or
@@ -426,11 +350,6 @@ def parse_textbook_html(html, section_meta, term_name):
 
     return results
 
-
-# ---------------------------------------------------------------------------
-# CSV helpers
-# ---------------------------------------------------------------------------
-
 def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     file_exists = os.path.exists(filepath) and os.path.getsize(filepath) > 0
@@ -440,9 +359,7 @@ def append_csv(rows, filepath):
             writer.writeheader()
         writer.writerows(rows)
 
-
 def get_scraped_keys(filepath):
-    """Return a set of (term, dept_code, course_code, section) 4-tuples."""
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
     with open(filepath, "r", encoding="utf-8") as f:
@@ -451,11 +368,6 @@ def get_scraped_keys(filepath):
              r.get("course_code", ""), r.get("section", ""))
             for r in csv.DictReader(f)
         }
-
-
-# ---------------------------------------------------------------------------
-# Main scrape loop
-# ---------------------------------------------------------------------------
 
 def scrape(fresh=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -486,7 +398,6 @@ def scrape(fresh=False):
         dept_id   = dept["dept_id"]
         dept_code = dept["dept_code"]
 
-        # Fetch courses
         try:
             courses = fetch_courses(sess, dept_id, term_id)
         except Exception as e:
@@ -510,7 +421,6 @@ def scrape(fresh=False):
             total_rows += 1
             continue
 
-        # Collect sections not already scraped
         all_section_ids = []
         section_meta    = {}
 
@@ -539,7 +449,7 @@ def scrape(fresh=False):
                 }
 
         if not all_section_ids:
-            continue  # all sections already scraped
+            continue
 
         batches = [
             all_section_ids[i:i + BATCH_SIZE]
@@ -576,7 +486,7 @@ def scrape(fresh=False):
                         dept_rows  += len(rows)
                         total_rows += len(rows)
 
-                    break  # success
+                    break
 
                 except Exception as e:
                     tqdm.write(f"\n  [!] Batch {batch_idx} attempt {attempt + 1} failed: {e}")
@@ -607,7 +517,6 @@ def scrape(fresh=False):
     else:
         print(f"\n[OK] All {len(all_dept_codes)} departments scraped successfully!")
 
-
 if __name__ == "__main__":
-    # No type-checker configured — plain Python scripts project.
+
     scrape(fresh="--fresh" in sys.argv)

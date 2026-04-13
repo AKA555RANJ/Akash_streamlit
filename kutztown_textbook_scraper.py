@@ -1,21 +1,3 @@
-"""
-Kutztown University of Pennsylvania Bookstore Textbook Scraper
-Platform: Timber (by Herkimer Media) — Drupal-based, custom kubstore instance
-URL: https://www.kubstore.com/find-courses
-
-Flow:
-  1. GET /find-courses → extract term options (tid values: 39=Spring, 40=Summer, 41=Fall)
-  2. GET /find-courses/autocomplete?tid={tid}&q={char} (a-z, 0-9) → enumerate all sections
-     Response: [{"value": 50018, "label": "<span ...>ACCT 121 | FINANCIAL ACCOUNTING | Section 010</span>"}]
-  3. GET /my-courses/{section_id} → book data for that section
-     HTML: div.adoption-list-content-group.adoption-type.{type}
-             div.adoption-row
-               h4 (title, may have "Billed To MyKU - " prefix)
-               table.adoption-data tbody
-                 tr.isbn → SKU: I{isbn13}
-                 tr.author → Author: {author}
-"""
-
 import csv
 import json
 import os
@@ -88,7 +70,6 @@ def create_session():
     return sess
 
 def clean_term(label):
-    """Strip '(Order Now)' / '(Pre-Order)' suffixes."""
     return re.sub(r"\s*\(.*?\)\s*$", "", label).strip()
 
 def format_course_code(code):
@@ -104,7 +85,6 @@ def format_section_code(section):
     return f"|{section}"
 
 def split_dept_course(raw):
-    """'ACCT 121' → ('ACCT', '|121')."""
     raw = raw.strip()
     parts = raw.split(None, 1)
     if len(parts) == 2:
@@ -128,10 +108,6 @@ def safe_get(sess, url, retries=3):
     return ""
 
 def parse_find_courses_page(html):
-    """Extract term options from /find-courses.
-
-    Returns list of {value, label} dicts.
-    """
     soup = BeautifulSoup(html, "html.parser")
     terms = []
     sel = (
@@ -147,16 +123,6 @@ def parse_find_courses_page(html):
     return terms
 
 def parse_autocomplete_label(label_html):
-    """Parse kubstore autocomplete label HTML into section metadata.
-
-    Example:
-        <span class='cdept-name'>Accounting</span> -
-        <span class='cdept-code'>ACCT 121</span> |
-        <span class='ccourse-desc'>FINANCIAL ACCOUNTING</span> |
-        <span class='csection-name'>Section 010</span>
-
-    Returns (dept_code, course_code, course_title, section_code).
-    """
     soup = BeautifulSoup(label_html, "html.parser")
 
     dept_code = ""
@@ -180,10 +146,6 @@ def parse_autocomplete_label(label_html):
     return dept_code, course_code, course_title, section
 
 def fetch_autocomplete(sess, tid, query):
-    """GET /find-courses/autocomplete?tid={tid}&q={query}.
-
-    Returns list of section dicts: {value, dept_code, course_code, course_title, section}.
-    """
     url = f"{FIND_URL}/autocomplete?tid={tid}&q={query}"
     try:
         time.sleep(REQUEST_DELAY)
@@ -215,7 +177,6 @@ def fetch_autocomplete(sess, tid, query):
     return results
 
 def enumerate_sections(sess, tid, term_label):
-    """Query autocomplete with a–z + 0–9, deduplicate, return all sections."""
     seen = {}
     queries = [chr(c) for c in range(ord("a"), ord("z") + 1)] + list("0123456789")
     print(f"    Enumerating sections ({len(queries)} queries)...")
@@ -228,23 +189,17 @@ def enumerate_sections(sess, tid, term_label):
     return list(seen.values())
 
 def _clean_title(raw_title):
-    """Strip 'Billed To MyKU - ', 'Billed to Account - ', etc. prefixes from titles."""
     raw_title = raw_title.strip()
     raw_title = re.sub(r"^Billed\s+[Tt]o\s+\S+\s+-\s+", "", raw_title).strip()
     return raw_title
 
 def _clean_isbn(raw_sku):
-    """'I9780137858644' → '9780137858644'. Strip leading alpha prefix."""
     raw = raw_sku.strip()
     raw = re.sub(r"^[A-Za-z]+", "", raw)
     raw = raw.replace("-", "").strip()
     return raw if re.match(r"^\d{10}$|^\d{13}$", raw) else ""
 
 def fetch_section_books(sess, section_id, sec_meta, term_label, crawled_on):
-    """GET /my-courses/{section_id} and parse book adoptions.
-
-    Returns list of CSV row dicts (at least one row even if no materials).
-    """
     url = f"{MY_COURSES_URL}/{section_id}"
     dept_code = sec_meta.get("dept_code", "")
     course_code = sec_meta.get("course_code", "")
@@ -344,7 +299,6 @@ def append_csv(rows, filepath):
         writer.writerows(rows)
 
 def get_scraped_section_ids(filepath):
-    """Return set of (term, dept_code, course_code, section) tuples already in CSV."""
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
     seen = set()

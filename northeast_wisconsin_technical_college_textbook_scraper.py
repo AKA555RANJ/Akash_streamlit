@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import csv
 import json
 import os
@@ -55,10 +53,8 @@ _TERM_SUFFIX_RE = re.compile(
     flags=re.IGNORECASE,
 )
 
-
 def clean_term(term_name):
     return _TERM_SUFFIX_RE.sub("", term_name).strip()
-
 
 def flaresolverr_create_session():
     try:
@@ -74,7 +70,6 @@ def flaresolverr_create_session():
     }, timeout=30)
     resp.raise_for_status()
 
-
 def flaresolverr_destroy_session():
     try:
         requests.post(FLARESOLVERR_URL, json={
@@ -83,7 +78,6 @@ def flaresolverr_destroy_session():
         }, timeout=10)
     except Exception:
         pass
-
 
 def flaresolverr_get(url, max_timeout=60000):
     resp = requests.post(FLARESOLVERR_URL, json={
@@ -107,16 +101,15 @@ def flaresolverr_get(url, max_timeout=60000):
             cookies[c["name"]] = c["value"]
 
     form_token = ""
-    # Try HTML form input first
+
     m = re.search(r'name="__RequestVerificationToken".*?value="([^"]+)"', html)
     if m:
         form_token = m.group(1)
-    # Fall back to cookie (NWTC sets __RequestVerificationToken as a cookie too)
+
     if not form_token:
         form_token = cookies.get("__RequestVerificationToken", "")
 
     return html, cookies, ua, form_token
-
 
 def create_session():
     print("[*] Bootstrapping session via FlareSolverr...")
@@ -145,7 +138,6 @@ def create_session():
     print(f"    Cookies: {list(cookies.keys())}")
     return sess, form_token
 
-
 def refresh_session(sess):
     print("[*] Refreshing session via FlareSolverr...", flush=True)
     for attempt in range(5):
@@ -158,12 +150,10 @@ def refresh_session(sess):
             if attempt == 4:
                 raise
 
-
 AJAX_HEADERS = {
     "X-Requested-With": "XMLHttpRequest",
     "Content-Type": "application/x-www-form-urlencoded",
 }
-
 
 def api_post(sess, url, data, retries=3):
     for attempt in range(retries):
@@ -187,7 +177,6 @@ def api_post(sess, url, data, retries=3):
                 raise
     return ""
 
-
 def fetch_terms(sess, token):
     html = api_post(sess, BASE_URL + "/SelectTermDept/Terms", {
         "__RequestVerificationToken": token,
@@ -201,7 +190,6 @@ def fetch_terms(sess, token):
             term_name = clean_term(li.get_text(strip=True))
             terms.append((term_id, term_name))
     return terms
-
 
 def fetch_departments(sess, token, term_id):
     html = api_post(sess, BASE_URL + "/SelectTermDept/Department", {
@@ -217,7 +205,6 @@ def fetch_departments(sess, token, term_id):
             dept_code = li.get_text(strip=True)
             depts.append((dept_id, dept_code))
     return depts
-
 
 def fetch_courses(sess, token, term_id, dept_id):
     html = api_post(sess, BASE_URL + "/SelectTermDept/Courses", {
@@ -252,7 +239,6 @@ def fetch_courses(sess, token, term_id, dept_id):
         })
     return courses
 
-
 def add_course_to_cart(sess, token, term_id, dept_id, course_id,
                        term_name, dept_code, course_text, debug=False):
     payload = {
@@ -277,14 +263,12 @@ def add_course_to_cart(sess, token, term_id, dept_id, course_id,
     except Exception:
         return False
 
-
 def clear_cart(sess, token, added_course_ids):
     for cid in added_course_ids:
         api_post(sess, BASE_URL + "/SelectTermDept/Remove", {
             "__RequestVerificationToken": token,
             "id": cid,
         })
-
 
 def fetch_materials_page(sess):
     time.sleep(REQUEST_DELAY)
@@ -293,7 +277,6 @@ def fetch_materials_page(sess):
     if "just a moment" in resp.text.lower()[:500]:
         raise RuntimeError("Cloudflare challenge on CourseMaterials page — need session refresh")
     return resp.text
-
 
 def parse_materials_html(html, term_name):
     soup = BeautifulSoup(html, "html.parser")
@@ -337,13 +320,10 @@ def parse_materials_html(html, term_name):
         if instructor == "|":
             instructor = ""
 
-        # Clean section: strip trailing " - SECTIONS" label, then prefix with |
-        # Guard: MBS sometimes sets sectionNumber to bare "|" (no real value) — treat as empty
         raw_section = re.sub(r"\s*-?\s*SECTIONS\s*$", "", raw_section, flags=re.IGNORECASE).strip()
         raw_section = raw_section.strip("|").strip()
         section = ("|" + raw_section) if raw_section else ""
 
-        # course_code: just the number prefixed with |; department_code stays separate
         course_code = ("|" + course_num) if course_num else ""
 
         book_details = card.find_all("div", class_="courseBookDetail")
@@ -411,11 +391,9 @@ def parse_materials_html(html, term_name):
 
     return results
 
-
 def _input_val(parent, class_name):
     el = parent.find("input", class_=class_name)
     return el.get("value", "").strip() if el else ""
-
 
 def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -425,7 +403,6 @@ def append_csv(rows, filepath):
         if not file_exists:
             writer.writeheader()
         writer.writerows(rows)
-
 
 def get_scraped_departments(filepath):
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
@@ -438,7 +415,6 @@ def get_scraped_departments(filepath):
             if dept:
                 scraped.add(dept)
     return scraped
-
 
 def scrape(fresh=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -594,7 +570,6 @@ def scrape(fresh=False):
         print("  Re-run without --fresh to scrape only these.")
     else:
         print(f"\n✓ All {len(all_expected_depts)} departments scraped successfully!")
-
 
 if __name__ == "__main__":
     fresh = "--fresh" in sys.argv

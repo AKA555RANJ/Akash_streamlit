@@ -1,19 +1,3 @@
-"""
-Howard Community College Bookstore Textbook Scraper
-Platform: Slingshot Education — portalapi.slingshotedu.com REST API
-URL: https://howardcc.slingshotedu.com/buy-books
-
-API discovered via Playwright network interception (slingshot_discover.py).
-No authentication or anti-bot bypass required — CORS-open public REST API.
-
-API flow:
-  GET /catalog/term                                          → active terms
-  GET /catalog/department?termId={id}                        → departments per term
-  GET /catalog/course?termId={id}&departmentId={id}          → courses per dept
-  GET /catalog/section?termId={id}&courseId={id}             → sections per course
-  GET /catalog/listing?sectionId={id}                        → textbook listings per section
-"""
-
 import csv
 import json
 import os
@@ -29,11 +13,11 @@ sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, 'reconfigure'
 
 SCHOOL_NAME = "howard_community_college"
 SCHOOL_ID   = "3039673"
-PORTAL_ID   = 68          # Slingshot internal school ID for Howard CC
+PORTAL_ID   = 68
 STORE_HOME  = "https://howardcc.slingshotedu.com/buy-books"
 API_BASE    = f"https://portalapi.slingshotedu.com/app-rest/portal/v1/{PORTAL_ID}"
 
-REQUEST_DELAY = 0.5       # seconds between requests
+REQUEST_DELAY = 0.5
 
 ADOPTION_MAP = {
     "REQ": "Required",
@@ -56,11 +40,6 @@ OUTPUT_DIR = os.path.join(
 )
 CSV_PATH = os.path.join(OUTPUT_DIR, f"{SCHOOL_NAME}__{SCHOOL_ID}__bks.csv")
 
-
-# ---------------------------------------------------------------------------
-# HTTP session
-# ---------------------------------------------------------------------------
-
 def make_session():
     sess = requests.Session()
     sess.headers.update({
@@ -76,20 +55,14 @@ def make_session():
     })
     return sess
 
-
 def api_get(sess, endpoint, params=None, retries=3):
-    """GET from API, return the 'results' list from the standard response envelope.
-
-    404 → return [] immediately (no retry; the resource genuinely doesn't exist).
-    5xx / connection errors → retry up to `retries` times.
-    """
     url = f"{API_BASE}/{endpoint}"
     for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
             resp = sess.get(url, params=params, timeout=30)
             if resp.status_code == 404:
-                return []           # resource doesn't exist — not a transient error
+                return []
             resp.raise_for_status()
             data = resp.json()
             return data.get("results", []) if isinstance(data, dict) else data
@@ -101,11 +74,6 @@ def api_get(sess, endpoint, params=None, retries=3):
                 raise
     return []
 
-
-# ---------------------------------------------------------------------------
-# Data fetching
-# ---------------------------------------------------------------------------
-
 def fetch_terms(sess):
     print("[*] Fetching terms...")
     results = api_get(sess, "catalog/term")
@@ -115,60 +83,43 @@ def fetch_terms(sess):
         print(f"      {t['id']}: {t['displayName']}")
     return terms
 
-
 def fetch_departments(sess, term_id):
     return api_get(sess, "catalog/department", {"termId": term_id})
 
-
 def fetch_courses(sess, term_id, dept_id):
-    """Fetch courses. Non-credit terms omit termId from the request."""
     results = api_get(sess, "catalog/course",
                       {"termId": term_id, "departmentId": dept_id})
     if not results:
-        # Non-credit pattern: no termId
+
         results = api_get(sess, "catalog/course", {"departmentId": dept_id})
     return [c for c in results if c.get("active", True)]
 
-
 def fetch_sections(sess, term_id, course_id):
-    """Fetch sections. Non-credit terms omit termId from the request."""
     results = api_get(sess, "catalog/section",
                       {"termId": term_id, "courseId": course_id})
     if not results:
-        # Non-credit pattern: no termId
+
         results = api_get(sess, "catalog/section", {"courseId": course_id})
     return [s for s in results
             if s.get("active", True) and s.get("showOnPortal", True)]
 
-
 def fetch_listings(sess, section_id):
     return api_get(sess, "catalog/listing", {"sectionId": section_id})
 
-
-# ---------------------------------------------------------------------------
-# Data cleaning
-# ---------------------------------------------------------------------------
-
 def normalize_term(s):
-    """Strip '- Howard ...' qualifier and parenthetical suffixes; uppercase."""
     s = (s or "").strip()
     s = re.sub(r'\s*-\s*Howard\b.*$', '', s, flags=re.IGNORECASE).strip()
     s = re.sub(r'\s*\(.*?\)\s*', ' ', s).strip()
     return s.upper()
 
-
 def fmt(code):
-    """Prefix with | to preserve leading zeros; no-op if already prefixed."""
     code = (code or "").strip()
     return f"|{code}" if code and not code.startswith("|") else code
 
-
 def parse_course_num(course_code_str):
-    """'ACCT-111' → '111'. No hyphen: return as-is."""
     if "-" in course_code_str:
         return course_code_str.split("-", 1)[-1]
     return course_code_str
-
 
 def parse_listings(listings, source_url, dept_code, course_code_str, course_title,
                    section_code, term_name, section_data):
@@ -204,11 +155,6 @@ def parse_listings(listings, source_url, dept_code, course_code_str, course_titl
                      "material_adoption_code": "This course does not require any course materials"})
     return rows
 
-
-# ---------------------------------------------------------------------------
-# CSV helpers
-# ---------------------------------------------------------------------------
-
 def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     new_file = not os.path.exists(filepath) or os.path.getsize(filepath) == 0
@@ -218,7 +164,6 @@ def append_csv(rows, filepath):
             writer.writeheader()
         writer.writerows(rows)
 
-
 def get_scraped_keys(filepath):
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
@@ -226,11 +171,6 @@ def get_scraped_keys(filepath):
         return {(r.get("term", ""), r.get("department_code", ""),
                  r.get("course_code", ""), r.get("section", ""))
                 for r in csv.DictReader(f)}
-
-
-# ---------------------------------------------------------------------------
-# Main scrape loop
-# ---------------------------------------------------------------------------
 
 def scrape(fresh=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -336,7 +276,6 @@ def scrape(fresh=False):
     print(f"CSV: {CSV_PATH}")
     if total_rows == 0:
         print("[!] No data written. Check debug_listings.json and API responses.")
-
 
 if __name__ == "__main__":
     scrape(fresh="--fresh" in sys.argv)

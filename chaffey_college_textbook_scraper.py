@@ -1,20 +1,3 @@
-"""
-Chaffey College Bookstore Textbook Scraper
-Platform: Barnes & Noble College CampusHub v4.0 (ASP, custom domain)
-URL: https://books.chaffey.edu/buy_textbooks.asp
-
-No FlareSolverr required — plain requests.Session() with CSRF token.
-
-API flow:
-  GET  /buy_textbooks.asp                                          → session cookies + CSRF + term list
-  GET  /textbooks_xml.asp?control=campus&campus={c}&term={t}      → XML departments
-  GET  /textbooks_xml.asp?control=department&dept={d}&term={t}    → XML courses
-  GET  /textbooks_xml.asp?control=course&course={c}&term={t}      → XML sections (CRNs + instructors)
-  POST /textbook_express.asp?mode=2&step=2  (sectionIds={id})     → HTML with book rows
-
-No type-checker configured — plain Python scripts only.
-"""
-
 import csv
 import os
 import re
@@ -36,7 +19,7 @@ STORE_HOME  = f"{BASE_URL}/buy_textbooks.asp"
 BOOKS_POST  = f"{BASE_URL}/textbook_express.asp?mode=2&step=2"
 XML_URL     = f"{BASE_URL}/textbooks_xml.asp"
 
-REQUEST_DELAY = 1.0   # seconds between requests
+REQUEST_DELAY = 1.0
 
 SEASON_MAP = {"SP": "SPRING", "FA": "FALL", "SU": "SUMMER", "WI": "WINTER"}
 
@@ -59,36 +42,21 @@ USER_AGENT = (
     "Chrome/124.0.0.0 Safari/537.36"
 )
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def fmt(code):
-    """Pipe-prefix a code string to preserve leading zeros."""
     code = (code or "").strip()
     return f"|{code}" if code and not code.startswith("|") else code
 
-
 def normalize_term(raw_label):
-    """'Chaffey Coll Campus - 2026/SP' → 'SPRING 2026'."""
-    part = raw_label.split(" - ")[-1].strip()   # '2026/SP'
+    part = raw_label.split(" - ")[-1].strip()
     if "/" in part:
         year, code = part.split("/", 1)
         return f"{SEASON_MAP.get(code.upper(), code.upper())} {year}"
     return part.upper()
 
-
 def extract_csrf(html):
-    """Extract CSRF token from HTML."""
     soup = BeautifulSoup(html, "html.parser")
     tag = soup.find("input", {"name": "__CSRFToken"})
     return tag["value"] if tag else ""
-
-
-# ---------------------------------------------------------------------------
-# Session
-# ---------------------------------------------------------------------------
 
 def make_session():
     sess = requests.Session()
@@ -100,12 +68,7 @@ def make_session():
     })
     return sess
 
-
 def bootstrap(sess):
-    """GET /buy_textbooks.asp → return (csrf, terms_list).
-
-    Each term dict: {campus_id, term_id, term_label, term_normalized}
-    """
     print(f"[*] Bootstrapping session from {STORE_HOME}")
     resp = sess.get(STORE_HOME, timeout=30)
     resp.raise_for_status()
@@ -134,13 +97,7 @@ def bootstrap(sess):
     print(f"    Found {len(terms)} term(s): {[t['term_normalized'] for t in terms]}")
     return csrf, terms
 
-
-# ---------------------------------------------------------------------------
-# XML fetches
-# ---------------------------------------------------------------------------
-
 def xml_get(sess, params, retries=3):
-    """GET /textbooks_xml.asp with params; parse and return XML root."""
     for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
@@ -162,7 +119,6 @@ def xml_get(sess, params, retries=3):
                 return None
     return None
 
-
 def fetch_departments(sess, campus_id, term_id):
     root = xml_get(sess, {"control": "campus", "campus": campus_id, "term": term_id})
     if root is None:
@@ -171,7 +127,6 @@ def fetch_departments(sess, campus_id, term_id):
         {"dept_id": el.get("id"), "abrev": el.get("abrev"), "name": el.get("name")}
         for el in root.findall("department")
     ]
-
 
 def fetch_courses(sess, dept_id, term_id):
     root = xml_get(sess, {"control": "department", "dept": dept_id, "term": term_id})
@@ -182,7 +137,6 @@ def fetch_courses(sess, dept_id, term_id):
         for el in root.findall("course")
     ]
 
-
 def fetch_sections(sess, course_id, term_id):
     root = xml_get(sess, {"control": "course", "course": course_id, "term": term_id})
     if root is None:
@@ -190,19 +144,13 @@ def fetch_sections(sess, course_id, term_id):
     return [
         {
             "section_id":   el.get("id"),
-            "name":         el.get("name"),        # CRN
+            "name":         el.get("name"),
             "instructor":   el.get("instructor", ""),
         }
         for el in root.findall("section")
     ]
 
-
-# ---------------------------------------------------------------------------
-# Books HTML POST
-# ---------------------------------------------------------------------------
-
 def post_books(sess, csrf, section_id, retries=3):
-    """POST to textbook_express.asp; return (html_text, new_csrf)."""
     url = BOOKS_POST
     payload = {"__CSRFToken": csrf, "sectionIds": str(section_id)}
     for attempt in range(retries):
@@ -221,12 +169,7 @@ def post_books(sess, csrf, section_id, retries=3):
                 return "", csrf
     return "", csrf
 
-
 def parse_books(html, section_id, dept_code, course_name, crn, instructor, term_normalized):
-    """Parse HTML response from textbook_express.asp.
-
-    Returns list of row dicts (one per book, or one 'no materials' row).
-    """
     source_url = (
         f"{BOOKS_POST}&dept={dept_code}&course={course_name}"
         f"&section={crn}&sectionId={section_id}"
@@ -243,7 +186,7 @@ def parse_books(html, section_id, dept_code, course_name, crn, instructor, term_
     }
 
     soup = BeautifulSoup(html, "html.parser")
-    # Each book row: <tr class="book book-container"> or with extra class like "course-choice"
+
     book_rows = soup.find_all("tr", class_=lambda c: c and "book-container" in c)
 
     if not book_rows:
@@ -270,8 +213,6 @@ def parse_books(html, section_id, dept_code, course_name, crn, instructor, term_
         if not isbn and not title:
             continue
 
-        # "No Text Required Or Provided By Instructor" is a Chaffey placeholder
-        # entry, not a real book — treat it as a no-materials row.
         if "No Text Required Or Provided By Instructor" in title:
             rows.append({
                 **base,
@@ -282,7 +223,6 @@ def parse_books(html, section_id, dept_code, course_name, crn, instructor, term_
             })
             continue
 
-        # Author "." is a Chaffey placeholder for free OER/online material entries.
         if author == ".":
             author = ""
 
@@ -304,11 +244,6 @@ def parse_books(html, section_id, dept_code, course_name, crn, instructor, term_
         })
     return rows
 
-
-# ---------------------------------------------------------------------------
-# CSV I/O
-# ---------------------------------------------------------------------------
-
 def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     new_file = not os.path.exists(filepath) or os.path.getsize(filepath) == 0
@@ -317,7 +252,6 @@ def append_csv(rows, filepath):
         if new_file:
             writer.writeheader()
         writer.writerows(rows)
-
 
 def get_scraped_keys(filepath):
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
@@ -328,11 +262,6 @@ def get_scraped_keys(filepath):
              r.get("course_code", ""), r.get("section", ""))
             for r in csv.DictReader(f)
         }
-
-
-# ---------------------------------------------------------------------------
-# Main scrape
-# ---------------------------------------------------------------------------
 
 def scrape(fresh=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -398,7 +327,7 @@ def scrape(fresh=False):
                     html, csrf = post_books(sess, csrf, section_id)
 
                     if not html:
-                        # Session likely dropped — re-bootstrap
+
                         tqdm.write(f"  [WARN] Empty response for {dept_code}/{course_name}/{crn} — re-bootstrapping")
                         try:
                             csrf, _ = bootstrap(sess)
@@ -430,7 +359,6 @@ def scrape(fresh=False):
     print(f"CSV: {CSV_PATH}")
     if total_rows == 0:
         print("[!] No data written. Check debug_books.html for response inspection.")
-
 
 if __name__ == "__main__":
     scrape(fresh="--fresh" in sys.argv)

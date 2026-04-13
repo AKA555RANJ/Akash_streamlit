@@ -1,17 +1,3 @@
-#!/usr/bin/env python3
-"""
-Textbook scraper for Saint Louis Community College (OPEID: 3050288).
-Platform: Akademos / VitalSource (stlcc.textbookx.com)
-API: No auth required — plain GET/POST JSON endpoints.
-
-Flow:
-  GET  /institutional/index.php?action=browse  → parse 2026 term options
-  POST /tools/ajax/misc_ajax.php/getDepartmentsAndCourses/{term_id}    level=1 → campuses
-  POST /tools/ajax/misc_ajax.php/getDepartmentsAndCourses/{campus_id}  level=2 → departments
-  POST /tools/ajax/misc_ajax.php/getDepartmentsAndCourses/{dept_id}    level=3 → courses
-  GET  /institutional/tool.php?action=books&cid={course_id}&jsonRequest=true → books JSON
-"""
-
 import csv
 import os
 import re
@@ -68,7 +54,6 @@ OUTPUT_DIR = os.path.join(
 )
 CSV_PATH = os.path.join(OUTPUT_DIR, f"{SCHOOL_NAME}__{SCHOOL_ID}__bks.csv")
 
-
 def make_session():
     sess = requests.Session()
     sess.headers.update({
@@ -82,9 +67,7 @@ def make_session():
     })
     return sess
 
-
 def discover_terms(sess):
-    """Fetch browse page and return all 2026 term options."""
     resp = sess.get(BROWSE_URL, timeout=30)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -109,9 +92,7 @@ def discover_terms(sess):
     print(f"[*] Found {len(terms)} 2026 term(s): {[t['term_name'] for t in terms]}")
     return terms
 
-
 def get_children(sess, node_id, level, retries=3):
-    """POST getDepartmentsAndCourses. Returns (departments, courses)."""
     url = DEPTS_URL.format(id=node_id)
     for attempt in range(retries):
         try:
@@ -127,16 +108,14 @@ def get_children(sess, node_id, level, retries=3):
             else:
                 raise
 
-
 def get_books(sess, course_id, retries=4):
-    """GET tool.php?action=books. Returns course_data dict, or None if not published (403)."""
     url = BOOKS_URL.format(cid=course_id)
     for attempt in range(retries):
         try:
             time.sleep(REQUEST_DELAY)
             r = sess.get(url, timeout=20)
             if r.status_code == 403:
-                return None  # booklist not published yet — skip silently
+                return None
             if r.status_code == 429:
                 wait = 60 * (attempt + 1)
                 print(f"  [WARN] 429 rate-limited — sleeping {wait}s (attempt {attempt+1})", flush=True)
@@ -154,37 +133,28 @@ def get_books(sess, course_id, retries=4):
                 return {}
     return {}
 
-
 def parse_course_code(code_str):
-    """'ACC 100' → dept_code='ACC', course_code='|100'"""
     parts = code_str.strip().split(None, 1)
     if len(parts) == 2:
         return parts[0], "|" + parts[1]
     return code_str, ""
 
-
 def clean_term(term_str):
     return re.sub(r'\s*\([^)]*\)', '', term_str or "").strip()
-
 
 def fmt_section(section_str):
     s = (section_str or "").strip()
     return "|" + s if s else ""
 
-
 def adoption_label(book_type):
     return ADOPTION_MAP.get((book_type or "").lower(), (book_type or "").capitalize())
 
-
 def clean_text(value):
-    """Strip Unicode replacement characters (U+FFFD) that result from encoding mismatches."""
     if not value:
         return value
     return value.replace("\ufffd", "").strip()
 
-
 def build_rows(course_data_map, crawled_on):
-    """Convert course_data API response into CSV rows."""
     rows = []
     for cid, entry in course_data_map.items():
         if not cid:
@@ -239,7 +209,6 @@ def build_rows(course_data_map, crawled_on):
                 })
     return rows
 
-
 def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     file_exists = os.path.exists(filepath) and os.path.getsize(filepath) > 0
@@ -249,12 +218,10 @@ def append_csv(rows, filepath):
             writer.writeheader()
         writer.writerows(rows)
 
-
 def get_scraped_course_ids(filepath):
-    """Return set of course IDs already in the CSV (via source_url hash won't work, use dept+section)."""
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
-    # Track (term, dept_code, course_code, section) tuples
+
     scraped = set()
     with open(filepath, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -268,7 +235,6 @@ def get_scraped_course_ids(filepath):
             if any(key):
                 scraped.add(key)
     return scraped
-
 
 def scrape(fresh=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -313,7 +279,7 @@ def scrape(fresh=False):
 
             for dept in tqdm(depts, desc=f"  Depts [{campus_name}]", leave=False):
                 dept_id = dept["id"]
-                dept_display = dept["name"]  # e.g. "ACC - Accounting"
+                dept_display = dept["name"]
 
                 try:
                     _, courses = get_children(sess, dept_id, level=3)
@@ -330,7 +296,6 @@ def scrape(fresh=False):
                     if not course_id:
                         continue
 
-                    # Pre-check done_keys using level-3 data — skip API call entirely if already scraped
                     code_str_pre = course.get("code", "")
                     dept_code_pre, course_code_pre = parse_course_code(code_str_pre)
                     section_pre = fmt_section(course.get("section", ""))
@@ -344,8 +309,7 @@ def scrape(fresh=False):
                         continue
 
                     if course_data is None:
-                        # 403 — re-navigate to this dept to refresh session context, then retry once
-                        # Only re-POST if we haven't already just navigated this dept
+
                         try:
                             if last_navigated_dept_id != dept_id:
                                 get_children(sess, dept_id, level=3)
@@ -384,7 +348,6 @@ def scrape(fresh=False):
     print(f"{'='*60}")
     print(f"Total rows written: {grand_total}")
     print(f"CSV: {CSV_PATH}")
-
 
 if __name__ == "__main__":
     fresh = "--fresh" in sys.argv

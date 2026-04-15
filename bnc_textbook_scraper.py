@@ -2,18 +2,21 @@ import argparse
 import csv
 import os
 import re
+import sys
 import time
 from datetime import datetime, timezone
-from urllib.parse import urljoin, urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs
 
 import requests as std_requests
 from bs4 import BeautifulSoup
 from curl_cffi import requests as cffi_requests
 from tqdm import tqdm
 
+sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, "reconfigure") else None
+
 BASE_URL = "https://bncvirtual.com"
 CHOOSE_COURSES_URL = BASE_URL + "/vb_buy2.php?FVCUSNO={fvcusno}&ACTION=chooseCourses"
-COURSE_SEARCH_URL = BASE_URL + "/vb_crs_srch.php?CSID={csid}&FVCUSNO={fvcusno}"
+COURSE_SEARCH_URL  = BASE_URL + "/vb_crs_srch.php?CSID={csid}&FVCUSNO={fvcusno}"
 CHOOSE_ADOPTIONS_URL = (
     BASE_URL + "/vb_buy2.php?ACTION=chooseAdoptions&CSID={csid}&FVCUSNO={fvcusno}&VCHI=1"
 )
@@ -32,13 +35,24 @@ CSV_FIELDS = [
     "author",
     "material_adoption_code",
     "crawled_on",
+    "updated_on",
 ]
 
-DEFAULT_BATCH_SIZE = 25
-DEFAULT_DELAY = 0.5
-FLARESOLVERR_DEFAULT_URL = "http://localhost:8191/v1"
+DEFAULT_BATCH_SIZE    = 25
+DEFAULT_DELAY         = 0.5
+FLARESOLVERR_DEFAULT  = "http://localhost:8191/v1"
 
-def make_session(cookies: dict | None = None, user_agent: str | None = None) -> cffi_requests.Session:
+_TERM_SUFFIX_RE = re.compile(
+    r"\s*\((?:Order Now|Pre-?Order|Preorder|Coming Soon)[^)]*\)\s*$",
+    re.IGNORECASE,
+)
+
+
+def clean_term(term):
+    return _TERM_SUFFIX_RE.sub("", (term or "").strip())
+
+
+def make_session(cookies=None, user_agent=None):
     session = cffi_requests.Session(impersonate="chrome")
     if cookies:
         for name, value in cookies.items():
@@ -47,10 +61,12 @@ def make_session(cookies: dict | None = None, user_agent: str | None = None) -> 
         session.headers.update({"User-Agent": user_agent})
     return session
 
-def _fs_session_name(fvcusno: str) -> str:
+
+def _fs_session_name(fvcusno):
     return f"bnc_{fvcusno}_scraper"
 
-def _fs_create(flaresolverr_url: str, session_name: str) -> None:
+
+def _fs_create(flaresolverr_url, session_name):
     try:
         std_requests.post(
             flaresolverr_url,
@@ -65,7 +81,8 @@ def _fs_create(flaresolverr_url: str, session_name: str) -> None:
         timeout=120,
     ).raise_for_status()
 
-def _fs_destroy(flaresolverr_url: str, session_name: str) -> None:
+
+def _fs_destroy(flaresolverr_url, session_name):
     try:
         std_requests.post(
             flaresolverr_url,
@@ -75,7 +92,8 @@ def _fs_destroy(flaresolverr_url: str, session_name: str) -> None:
     except Exception:
         pass
 
-def _fs_get(flaresolverr_url: str, session_name: str, url: str, max_timeout: int = 120000):
+
+def _fs_get(flaresolverr_url, session_name, url, max_timeout=120000):
     resp = std_requests.post(
         flaresolverr_url,
         json={
@@ -93,33 +111,33 @@ def _fs_get(flaresolverr_url: str, session_name: str, url: str, max_timeout: int
     sol = data["solution"]
     return sol.get("response", ""), sol.get("cookies", []), sol.get("userAgent", "")
 
-def fs_bootstrap(fvcusno: str, flaresolverr_url: str = FLARESOLVERR_DEFAULT_URL) -> tuple[dict, str, str]:
+
+def fs_bootstrap(fvcusno, flaresolverr_url=FLARESOLVERR_DEFAULT):
     session_name = _fs_session_name(fvcusno)
     url = CHOOSE_COURSES_URL.format(fvcusno=fvcusno)
-
     print(f"[*] FlareSolverr bootstrap: {url}")
     _fs_create(flaresolverr_url, session_name)
     try:
         html, raw_cookies, user_agent = _fs_get(flaresolverr_url, session_name, url)
     finally:
         _fs_destroy(flaresolverr_url, session_name)
-
     cookies = {c["name"]: c["value"] for c in raw_cookies if c.get("name")}
     print(f"    Captured cookies: {list(cookies.keys())}")
     return cookies, user_agent, html
 
-def resolve_fvcusno(url: str | None, fvcusno: str | None) -> str:
+
+def resolve_fvcusno(url, fvcusno):
     if fvcusno:
         return fvcusno
     if url:
-        parsed = urlparse(url)
-        qs = parse_qs(parsed.query)
+        qs = parse_qs(urlparse(url).query)
         if "FVCUSNO" in qs:
             return qs["FVCUSNO"][0]
         return url
     raise ValueError("Either --url or --fvcusno must be provided")
 
-def discover_fvcusno(session: cffi_requests.Session, url: str) -> str:
+
+def discover_fvcusno(session, url):
     if url.isdigit():
         return url
     if not url.startswith("http"):
@@ -134,12 +152,12 @@ def discover_fvcusno(session: cffi_requests.Session, url: str) -> str:
         return m.group(1)
     raise ValueError(f"Could not discover FVCUSNO from {url}")
 
-def init_session(session: cffi_requests.Session, fvcusno: str, preloaded_html: str | None = None) -> dict:
+
+def init_session(session, fvcusno, preloaded_html=None):
     if preloaded_html:
         html = preloaded_html
     else:
-        url = CHOOSE_COURSES_URL.format(fvcusno=fvcusno)
-        resp = session.get(url)
+        resp = session.get(CHOOSE_COURSES_URL.format(fvcusno=fvcusno))
         resp.raise_for_status()
         html = resp.text
 
@@ -148,308 +166,274 @@ def init_session(session: cffi_requests.Session, fvcusno: str, preloaded_html: s
         raise RuntimeError("Could not extract CSID from chooseCourses page")
     csid = m.group(1)
 
-    term_matches = re.findall(
-        r"selectTerm\([^,]*,\s*'(\d+)',\s*'([^']+)'", html
-    )
-    seen = set()
+    seen_terms = set()
     terms = []
-    for tid, tname in term_matches:
-        if tid not in seen:
-            seen.add(tid)
+    for tid, tname in re.findall(r"selectTerm\([^,]*,\s*'(\d+)',\s*'([^']+)'", html):
+        if tid not in seen_terms:
+            seen_terms.add(tid)
             terms.append((tid, tname))
 
-    dept_matches = re.findall(
-        r"selectDept\([^,]*,\s*'([^']+)',\s*'([^']+)',\s*[^,]*,\s*'([^']*)'",
-        html,
-    )
     seen_depts = set()
     depts = []
-    for did, dname, denc in dept_matches:
+    for did, dname, denc in re.findall(
+        r"selectDept\([^,]*,\s*'([^']+)',\s*'([^']+)',\s*[^,]*,\s*'([^']*)'", html
+    ):
         if did not in seen_depts:
             seen_depts.add(did)
             depts.append((did, dname, denc))
 
-    return {
-        "csid": csid,
-        "fvcusno": fvcusno,
-        "terms": terms,
-        "depts": depts,
-    }
+    return {"csid": csid, "fvcusno": fvcusno, "terms": terms, "depts": depts}
 
-def fetch_courses(
-    session: cffi_requests.Session,
-    csid: str,
-    fvcusno: str,
-    term_id: str,
-    dept_id: str,
-    dept_enckey: str,
-    delay: float,
-) -> list[dict]:
-    url = COURSE_SEARCH_URL.format(csid=csid, fvcusno=fvcusno)
-    data = {
-        "FvTerm": term_id,
-        "FvDept": dept_enckey,
-        "R": "1",
-    }
+
+def fetch_courses(session, csid, fvcusno, term_id, dept_id, dept_enckey, delay):
     time.sleep(delay)
-    resp = session.post(url, data=data)
+    resp = session.post(
+        COURSE_SEARCH_URL.format(csid=csid, fvcusno=fvcusno),
+        data={"FvTerm": term_id, "FvDept": dept_enckey, "R": "1"},
+    )
     resp.raise_for_status()
-
     try:
         result = resp.json()
     except Exception:
         print(f"  [WARN] Non-JSON response for term={term_id}, dept={dept_id}")
         return []
-
     courses = []
     if "success" in result:
-        for dept_key, dept_courses in result["success"].items():
+        for dept_courses in result["success"].values():
             if isinstance(dept_courses, list):
                 courses.extend(dept_courses)
             elif isinstance(dept_courses, dict):
-                for course in dept_courses.values():
-                    if isinstance(course, dict):
-                        courses.append(course)
+                for item in dept_courses.values():
+                    if isinstance(item, dict):
+                        courses.append(item)
     return courses
 
-def fetch_adoptions(
-    session: cffi_requests.Session,
-    csid: str,
-    fvcusno: str,
-    course_keys: list[str],
-    delay: float,
-) -> str:
-    url = CHOOSE_ADOPTIONS_URL.format(csid=csid, fvcusno=fvcusno)
-    data = {"fvCourseKeyList": ",".join(course_keys)}
+
+def fetch_adoptions(session, csid, fvcusno, course_keys, delay):
     time.sleep(delay)
-    resp = session.post(url, data=data)
+    resp = session.post(
+        CHOOSE_ADOPTIONS_URL.format(csid=csid, fvcusno=fvcusno),
+        data={"fvCourseKeyList": ",".join(course_keys)},
+    )
     resp.raise_for_status()
     return resp.text
 
-def clean_isbn(cell_html: str) -> str:
+
+def clean_isbn(cell_html):
     soup = BeautifulSoup(cell_html, "html.parser")
     for span in soup.find_all("span", style=re.compile(r"display:\s*none")):
         span.decompose()
-    text = soup.get_text(strip=True)
-    return text.replace("-", "").strip()
+    return soup.get_text(strip=True).replace("-", "").strip()
 
-def parse_adoption_html(html: str, fvcusno: str, school_id: str) -> list[dict]:
-    soup = BeautifulSoup(html, "html.parser")
-    rows = []
-    crawled_on = datetime.now(timezone.utc).isoformat()
 
-    course_inputs = soup.find_all(
-        "input", attrs={"name": re.compile(r"^supsort_c_desc_\d+$")}
-    )
-    dept_inputs = soup.find_all(
-        "input", attrs={"name": re.compile(r"^supsort_d_desc_\d+$")}
-    )
+def parse_course_desc(course_desc, department_name=""):
+    if not course_desc:
+        return "", "", "", ""
+    tokens = course_desc.split()
+    if not tokens:
+        return "", "", "", ""
+    first = tokens[0]
+    m = re.match(r"^([A-Za-z]+)(\d[\w.]*)$", first)
+    if m:
+        dept_code   = m.group(1).upper()
+        course_code = "|" + m.group(2)
+        rest        = tokens[1:]
+        section = ""
+        if rest and re.match(r"^\d+$", rest[0]):
+            section = "|" + rest[0]
+            rest    = rest[1:]
+        return dept_code, course_code, section, " ".join(rest)
+    if re.match(r"^[A-Za-z]+$", first):
+        dept_code   = first.upper()
+        rest        = tokens[1:]
+        course_code = ""
+        section     = ""
+        if rest and re.match(r"^[A-Za-z]{0,3}\d+[A-Za-z]?$", rest[0]):
+            course_code = "|" + rest[0]
+            rest        = rest[1:]
+            if rest and re.match(r"^\d+$", rest[0]):
+                section = "|" + rest[0]
+                rest    = rest[1:]
+        return dept_code, course_code, section, " ".join(rest)
+    dept_code   = ""
+    course_code = "|" + first if re.match(r"^\d", first) else first
+    return dept_code, course_code, "", " ".join(tokens[1:])
+
+
+def find_textbook_blocks(course_header):
+    scope = course_header.find_next_sibling("div", class_=re.compile(r"crs_adpts_collapse"))
+    if scope is None:
+        return []
+    adoption_codes = scope.find_all("p",  class_=re.compile(r"text-uppercase"))
+    titles         = scope.find_all("h2", class_=re.compile(r"p0m0"))
+    info_tables    = scope.find_all("table", class_="cmTableBkInfo")
+    books = []
+    for j in range(max(len(adoption_codes), len(titles), len(info_tables))):
+        book = {}
+        if j < len(adoption_codes):
+            book["adoption_code"] = adoption_codes[j].get_text(strip=True)
+        if j < len(titles):
+            h2 = titles[j]
+            span = h2.find("span", class_=re.compile(r"nobold|small"))
+            if span:
+                span.extract()
+            book["title"] = h2.get_text(strip=True)
+        if j < len(info_tables):
+            for row in info_tables[j].find_all("tr"):
+                cells = row.find_all("td")
+                if len(cells) < 2:
+                    continue
+                label = cells[0].get_text(strip=True).rstrip(":")
+                if label == "Author":
+                    book["author"] = cells[1].get_text(strip=True)
+                elif label == "ISBN-13":
+                    book["isbn"] = clean_isbn(str(cells[1]))
+                elif label == "ISBN-10" and not book.get("isbn"):
+                    book["isbn"] = clean_isbn(str(cells[1]))
+        if book:
+            books.append(book)
+    return books
+
+
+def parse_adoption_html(html, fvcusno, school_id):
+    soup       = BeautifulSoup(html, "html.parser")
+    crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    source_url = CHOOSE_COURSES_URL.format(fvcusno=fvcusno)
 
     dept_map = {}
-    for inp in dept_inputs:
-        name = inp.get("name", "")
-        m = re.search(r"_(\d+)$", name)
+    for inp in soup.find_all("input", attrs={"name": re.compile(r"^supsort_d_desc_\d+$")}):
+        m = re.search(r"_(\d+)$", inp.get("name", ""))
         if m:
             dept_map[m.group(1)] = inp.get("value", "")
 
     course_map = {}
-    for inp in course_inputs:
-        name = inp.get("name", "")
-        m = re.search(r"_(\d+)$", name)
+    for inp in soup.find_all("input", attrs={"name": re.compile(r"^supsort_c_desc_\d+$")}):
+        m = re.search(r"_(\d+)$", inp.get("name", ""))
         if m:
             course_map[m.group(1)] = inp.get("value", "")
 
-    course_headers = soup.find_all("div", class_="cmCourseHeader")
-
     batch_dept_str = dept_map.get("1", "")
+    rows = []
 
-    for i, header in enumerate(course_headers):
-        idx = str(i + 1)
+    for i, header in enumerate(soup.find_all("div", class_="cmCourseHeader")):
+        idx         = str(i + 1)
+        dept_str    = dept_map.get(idx) or batch_dept_str
+        parts       = [p.strip() for p in dept_str.split("|div|")]
+        term_name   = clean_term(parts[0]) if parts else ""
+        dept_name   = parts[1] if len(parts) > 1 else ""
+        course_str  = course_map.get(idx, "")
+        cparts      = [p.strip() for p in course_str.split("|div|")]
+        course_desc = cparts[0] if cparts else ""
 
-        dept_str = dept_map.get(idx) or batch_dept_str
-        parts = [p.strip() for p in dept_str.split("|div|")]
-        term_name = parts[0] if len(parts) > 0 else ""
-        department_name = parts[1] if len(parts) > 1 else ""
+        dept_code, course_code, section, course_title = parse_course_desc(course_desc, dept_name)
 
-        course_str = course_map.get(idx, "")
-        cparts = [p.strip() for p in course_str.split("|div|")]
-        course_desc = cparts[0] if len(cparts) > 0 else ""
+        base = {
+            "source_url":         source_url,
+            "school_id":          school_id,
+            "department_code":    dept_code,
+            "course_code":        course_code,
+            "course_title":       course_title,
+            "section":            section,
+            "section_instructor": "",
+            "term":               term_name,
+            "crawled_on":         crawled_on,
+            "updated_on":         crawled_on,
+        }
 
-        dept_code, course_code, section, course_title = parse_course_desc(
-            course_desc, department_name
-        )
-
-        source_url = CHOOSE_COURSES_URL.format(fvcusno=fvcusno)
-
-        book_blocks = find_textbook_blocks(header)
-
-        if not book_blocks:
-            rows.append({
-                "source_url": source_url,
-                "school_id": school_id,
-                "department_code": dept_code,
-                "course_code": course_code,
-                "course_title": course_title,
-                "section": section,
-                "section_instructor": "",
-                "term": term_name,
-                "isbn": "",
-                "title": "",
-                "author": "",
-                "material_adoption_code": "",
-                "crawled_on": crawled_on,
-            })
+        books = find_textbook_blocks(header)
+        if not books:
+            rows.append({**base, "isbn": "", "title": "", "author": "", "material_adoption_code": ""})
         else:
-            for book in book_blocks:
+            for book in books:
                 rows.append({
-                    "source_url": source_url,
-                    "school_id": school_id,
-                    "department_code": dept_code,
-                    "course_code": course_code,
-                    "course_title": course_title,
-                    "section": section,
-                    "section_instructor": "",
-                    "term": term_name,
-                    "isbn": book.get("isbn", ""),
-                    "title": book.get("title", ""),
-                    "author": book.get("author", ""),
+                    **base,
+                    "isbn":                  book.get("isbn", ""),
+                    "title":                 book.get("title", ""),
+                    "author":                book.get("author", ""),
                     "material_adoption_code": book.get("adoption_code", ""),
-                    "crawled_on": crawled_on,
                 })
-
     return rows
 
-def parse_course_desc(course_desc: str, department_name: str) -> tuple[str, str, str, str]:
-    if not course_desc:
-        return ("", "", "", "")
 
-    tokens = course_desc.split()
-    if not tokens:
-        return ("", "", "", "")
+def append_csv(rows, filepath):
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    new_file = not os.path.exists(filepath) or os.path.getsize(filepath) == 0
+    with open(filepath, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
+        if new_file:
+            writer.writeheader()
+        writer.writerows(rows)
 
-    first = tokens[0]
-    m = re.match(r"^([A-Za-z]+)(\d[\w.]*)$", first)
-    if m:
 
-        dept_code = m.group(1).upper()
-        course_code = "|" + m.group(2)
-        rest = tokens[1:]
-
-        section = ""
-        if rest and re.match(r"^\d+$", rest[0]):
-            section = "|" + rest[0]
-            rest = rest[1:]
-        course_title = " ".join(rest)
-    elif re.match(r"^[A-Za-z]+$", first):
-
-        dept_code = first.upper()
-        rest = tokens[1:]
-        course_code = ""
-        section = ""
-        if rest and re.match(r"^[A-Za-z]{0,3}\d+[A-Za-z]?$", rest[0]):
-            course_code = "|" + rest[0]
-            rest = rest[1:]
-            if rest and re.match(r"^\d+$", rest[0]):
-                section = "|" + rest[0]
-                rest = rest[1:]
-        course_title = " ".join(rest)
-    else:
-        dept_code = ""
-        course_code = "|" + first if re.match(r"^\d", first) else first
-        course_title = " ".join(tokens[1:])
-        section = ""
-
-    return (dept_code, course_code, section, course_title)
-
-def find_textbook_blocks(course_header) -> list[dict]:
-    books = []
-
-    scope = course_header.find_next_sibling(
-        "div", class_=re.compile(r"crs_adpts_collapse")
-    )
-    if scope is None:
-        return books
-
-    adoption_codes = scope.find_all("p", class_=re.compile(r"text-uppercase"))
-    titles = scope.find_all("h2", class_=re.compile(r"p0m0"))
-    info_tables = scope.find_all("table", class_="cmTableBkInfo")
-
-    count = max(len(adoption_codes), len(titles), len(info_tables))
-    for j in range(count):
-        book = {}
-
-        if j < len(adoption_codes):
-            book["adoption_code"] = adoption_codes[j].get_text(strip=True)
-
-        if j < len(titles):
-            h2 = titles[j]
-            edition_span = h2.find("span", class_=re.compile(r"nobold|small"))
-            if edition_span:
-                edition_span.extract()
-            book["title"] = h2.get_text(strip=True)
-
-        if j < len(info_tables):
-            table = info_tables[j]
-            for row in table.find_all("tr"):
-                cells = row.find_all("td")
-                if len(cells) >= 2:
-                    label = cells[0].get_text(strip=True).rstrip(":").strip()
-                    if label == "Author":
-                        book["author"] = cells[1].get_text(strip=True)
-                    elif label == "ISBN-13":
-                        book["isbn"] = clean_isbn(str(cells[1]))
-                    elif label == "ISBN-10" and not book.get("isbn"):
-                        book["isbn"] = clean_isbn(str(cells[1]))
-
-        if book:
-            books.append(book)
-
-    return books
-
-def write_csv(rows: list[dict], filepath: str) -> None:
+def write_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     with open(filepath, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
         writer.writeheader()
         writer.writerows(rows)
 
-def _refresh_session(fvcusno: str, flaresolverr_url: str | None, delay: float):
+
+def get_scraped_keys(filepath):
+    if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
+        return set()
+    with open(filepath, "r", encoding="utf-8") as f:
+        return {
+            (r.get("term", ""), r.get("department_code", ""), r.get("course_code", ""))
+            for r in csv.DictReader(f)
+        }
+
+
+def _refresh_session(fvcusno, flaresolverr_url, delay):
     if flaresolverr_url:
-        print(f"\n  [WARN] 403 — re-bootstrapping via FlareSolverr...")
+        print("\n  [WARN] 403 — re-bootstrapping via FlareSolverr...")
         time.sleep(max(delay * 8, 10))
         cookies, ua, html = fs_bootstrap(fvcusno, flaresolverr_url)
         session = make_session(cookies=cookies, user_agent=ua)
-        info = init_session(session, fvcusno, preloaded_html=html)
+        info    = init_session(session, fvcusno, preloaded_html=html)
     else:
-        print(f"\n  [WARN] 403 — refreshing session (plain curl_cffi)...")
+        print("\n  [WARN] 403 — refreshing session...")
         time.sleep(delay * 4)
         session = make_session()
-        info = init_session(session, fvcusno)
-    csid = info["csid"]
-    print(f"  [*] New CSID: {csid}")
-    return session, csid
+        info    = init_session(session, fvcusno)
+    print(f"  [*] New CSID: {info['csid']}")
+    return session, info["csid"]
+
 
 def scrape(
-    fvcusno: str,
-    school_id: str | None = None,
-    batch_size: int = DEFAULT_BATCH_SIZE,
-    output_dir: str | None = None,
-    delay: float = DEFAULT_DELAY,
-    flaresolverr_url: str | None = None,
-) -> list[dict]:
+    fvcusno,
+    school_id=None,
+    batch_size=DEFAULT_BATCH_SIZE,
+    delay=DEFAULT_DELAY,
+    flaresolverr_url=None,
+    session=None,
+    csv_path=None,
+    fresh=False,
+    max_batches=None,
+):
     if school_id is None:
         school_id = fvcusno
 
+    if csv_path and fresh and os.path.exists(csv_path):
+        os.remove(csv_path)
+        print("[*] Fresh run — deleted existing CSV.")
+
+    done_keys = set()
+    if csv_path:
+        done_keys = get_scraped_keys(csv_path)
+        if done_keys:
+            print(f"[*] {len(done_keys)} course/term combos already scraped — resuming.")
+
     print(f"[*] Initializing session for FVCUSNO={fvcusno}...")
     if flaresolverr_url:
-        cookies, ua, preloaded_html = fs_bootstrap(fvcusno, flaresolverr_url)
+        cookies, ua, preloaded = fs_bootstrap(fvcusno, flaresolverr_url)
         session = make_session(cookies=cookies, user_agent=ua)
-        info = init_session(session, fvcusno, preloaded_html=preloaded_html)
+        info    = init_session(session, fvcusno, preloaded_html=preloaded)
     else:
-        session = make_session()
+        if session is None:
+            session = make_session()
         info = init_session(session, fvcusno)
 
-    csid = info["csid"]
+    csid  = info["csid"]
     terms = info["terms"]
     depts = info["depts"]
 
@@ -458,10 +442,10 @@ def scrape(
     print(f"    Departments: {[d[1] for d in depts]}")
 
     if not terms:
-        print("[!] No terms found. Exiting.")
+        print("[!] No terms found.")
         return []
     if not depts:
-        print("[!] No departments found. Exiting.")
+        print("[!] No departments found.")
         return []
 
     all_courses = []
@@ -469,42 +453,50 @@ def scrape(
         for dept_id, dept_name, dept_enckey in depts:
             print(f"[*] Fetching courses: {term_name} / {dept_name}...")
             try:
-                courses = fetch_courses(
-                    session, csid, fvcusno, term_id, dept_id, dept_enckey, delay
-                )
+                courses = fetch_courses(session, csid, fvcusno, term_id, dept_id, dept_enckey, delay)
             except Exception as exc:
-                status = getattr(getattr(exc, "response", None), "status_code", None)
-                if status == 403:
-                    print(f"  [WARN] 403 on course fetch — refreshing session and retrying...")
+                if getattr(getattr(exc, "response", None), "status_code", None) == 403:
+                    print("  [WARN] 403 on course fetch — refreshing session and retrying...")
                     session, csid = _refresh_session(fvcusno, flaresolverr_url, delay)
-                    courses = fetch_courses(
-                        session, csid, fvcusno, term_id, dept_id, dept_enckey, delay
-                    )
+                    courses = fetch_courses(session, csid, fvcusno, term_id, dept_id, dept_enckey, delay)
                 else:
                     raise
+
+            if done_keys:
+                done_set = {(k[0], k[1], k[2]) for k in done_keys}
+                before   = len(courses)
+                courses  = [
+                    c for c in courses
+                    if (clean_term(term_name),) + parse_course_desc(c.get("COURSE_DESC", ""), dept_name)[:2]
+                    not in done_set
+                ]
+                skipped = before - len(courses)
+                if skipped:
+                    print(f"    Skipped {skipped} already-scraped courses")
+
             print(f"    Found {len(courses)} courses")
             for c in courses:
                 all_courses.append((term_name, dept_name, c))
 
     if not all_courses:
-        print("[!] No courses found. Exiting.")
+        print("[!] No new courses to scrape.")
         return []
 
-    print(f"\n[*] Fetching textbook adoptions for {len(all_courses)} courses...")
-    all_rows = []
     course_keys = [c[2].get("COURSE_ENC", "") for c in all_courses if c[2].get("COURSE_ENC")]
+    batches     = [course_keys[i:i + batch_size] for i in range(0, len(course_keys), batch_size)]
 
-    batches = [
-        course_keys[i : i + batch_size]
-        for i in range(0, len(course_keys), batch_size)
-    ]
+    if max_batches:
+        batches = batches[:max_batches]
+        print(f"\n[*] Fetching adoptions for {len(all_courses)} courses (sample: {max_batches} batch(es))...")
+    else:
+        print(f"\n[*] Fetching textbook adoptions for {len(all_courses)} courses ({len(batches)} batches)...")
 
+    all_rows = []
     for batch in tqdm(batches, desc="Fetching adoptions"):
         try:
             html = fetch_adoptions(session, csid, fvcusno, batch, delay)
         except Exception as exc:
-            status = getattr(getattr(exc, "response", None), "status_code", None)
-            if status == 403:
+            if getattr(getattr(exc, "response", None), "status_code", None) == 403:
                 try:
                     session, csid = _refresh_session(fvcusno, flaresolverr_url, delay)
                     html = fetch_adoptions(session, csid, fvcusno, batch, delay)
@@ -512,46 +504,33 @@ def scrape(
                     print(f"  [ERROR] Retry failed: {retry_exc} — skipping batch")
                     continue
             else:
-                print(f"\n  [ERROR] Unexpected error: {exc} — skipping batch")
+                print(f"\n  [ERROR] {exc} — skipping batch")
                 continue
+
         rows = parse_adoption_html(html, fvcusno, school_id)
+        if csv_path and rows:
+            append_csv(rows, csv_path)
         all_rows.extend(rows)
 
     return all_rows
 
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Scrape textbook information from BNC Virtual (bncvirtual.com)"
+        description="Scrape textbook adoption data from BNC Virtual bookstores."
     )
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
-        "--url",
-        help="Full BNC Virtual URL (e.g. https://bncvirtual.com/bsol)",
-    )
-    group.add_argument(
-        "--fvcusno",
-        help="FVCUSNO ID for the institution",
-    )
-    parser.add_argument(
-        "--school-id",
-        help="Override school_id in CSV output (defaults to FVCUSNO)",
-    )
-    parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=DEFAULT_BATCH_SIZE,
-        help=f"Courses per adoption request (default {DEFAULT_BATCH_SIZE})",
-    )
-    parser.add_argument(
-        "--output-dir",
-        help="Custom output directory (default: data/bnc_{fvcusno}_textbooks/)",
-    )
-    parser.add_argument(
-        "--delay",
-        type=float,
-        default=DEFAULT_DELAY,
-        help=f"Seconds between requests (default {DEFAULT_DELAY})",
-    )
+    group.add_argument("--url",     help="Bookstore URL (e.g. https://bncvirtual.com/pacenyc.htm)")
+    group.add_argument("--fvcusno", help="FVCUSNO institution ID")
+
+    parser.add_argument("--school-id",   default=None, help="School ID written into CSV (defaults to FVCUSNO)")
+    parser.add_argument("--school-name", default=None, help="School slug for output path (e.g. pace_university_new_york_city)")
+    parser.add_argument("--output-dir",  default=None, help="Override output directory")
+    parser.add_argument("--batch-size",  type=int,   default=DEFAULT_BATCH_SIZE)
+    parser.add_argument("--delay",       type=float, default=DEFAULT_DELAY)
+    parser.add_argument("--max-batches", type=int,   default=None, help="Limit batches (for sampling)")
+    parser.add_argument("--flaresolverr-url", default=None, help="FlareSolverr endpoint for Cloudflare bypass")
+    parser.add_argument("--fresh", action="store_true", help="Delete existing CSV and rescrape from scratch")
 
     args = parser.parse_args()
 
@@ -559,44 +538,56 @@ def main():
 
     raw = resolve_fvcusno(args.url, args.fvcusno)
     if not raw.isdigit():
-        print(f"[*] Resolving FVCUSNO from URL: {raw}")
-        fvcusno = discover_fvcusno(session, raw)
-        print(f"    Discovered FVCUSNO: {fvcusno}")
+        print(f"[*] Resolving FVCUSNO from: {raw}")
+        try:
+            fvcusno = discover_fvcusno(session, raw)
+        except Exception as exc:
+            print(f"[!] Could not discover FVCUSNO: {exc}")
+            print("    Verify the URL points to a BNC Virtual bookstore.")
+            raise SystemExit(1)
+        print(f"    FVCUSNO: {fvcusno}")
     else:
         fvcusno = raw
 
+    school_id = args.school_id or fvcusno
+
     if args.output_dir:
         output_dir = args.output_dir
+        csv_name   = os.path.basename(output_dir.rstrip("/\\")) + ".csv"
+    elif args.school_name and school_id != fvcusno:
+        slug       = f"{args.school_name}__{school_id}__bks"
+        output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", slug)
+        csv_name   = slug + ".csv"
     else:
-        output_dir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "data",
-            f"bnc_{fvcusno}_textbooks",
-        )
+        slug       = f"bnc_{fvcusno}_textbooks"
+        output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", slug)
+        csv_name   = slug + ".csv"
 
-    school_id = args.school_id or fvcusno
+    csv_path = os.path.join(output_dir, csv_name)
+    print(f"[*] Output: {csv_path}")
 
     rows = scrape(
         fvcusno=fvcusno,
         school_id=school_id,
         batch_size=args.batch_size,
-        output_dir=output_dir,
         delay=args.delay,
+        flaresolverr_url=args.flaresolverr_url,
+        session=session,
+        csv_path=csv_path,
+        fresh=args.fresh,
+        max_batches=args.max_batches,
     )
 
-    if rows:
-        csv_path = os.path.join(output_dir, f"bnc_{fvcusno}_textbooks.csv")
-        write_csv(rows, csv_path)
-        print(f"\n[+] Done! {len(rows)} rows written to {csv_path}")
-
-        courses_with_isbn = sum(1 for r in rows if r.get("isbn"))
-        courses_without = sum(1 for r in rows if not r.get("isbn"))
-        unique_isbns = len(set(r["isbn"] for r in rows if r.get("isbn")))
-        print(f"    Rows with ISBN: {courses_with_isbn}")
-        print(f"    Rows without ISBN: {courses_without}")
-        print(f"    Unique ISBNs: {unique_isbns}")
+    if rows or os.path.exists(csv_path):
+        total = (sum(1 for _ in open(csv_path, encoding="utf-8")) - 1) if os.path.exists(csv_path) else len(rows)
+        print(f"\n[+] Done — {total} total rows written to {csv_path}")
+        print(f"    New rows this run : {len(rows)}")
+        print(f"    Rows with ISBN    : {sum(1 for r in rows if r.get('isbn'))}")
+        print(f"    Rows without ISBN : {sum(1 for r in rows if not r.get('isbn'))}")
+        print(f"    Unique ISBNs      : {len({r['isbn'] for r in rows if r.get('isbn')})}")
     else:
-        print("\n[!] No data collected.")
+        print("[!] No data collected.")
+
 
 if __name__ == "__main__":
     main()

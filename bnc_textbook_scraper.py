@@ -365,6 +365,28 @@ def append_csv(rows, filepath):
         writer.writerows(rows)
 
 
+def log_missing_enc(log_path, fvcusno, term_name, dept_name, course_desc):
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    new_file  = not os.path.exists(log_path) or os.path.getsize(log_path) == 0
+    with open(log_path, "a", encoding="utf-8") as f:
+        if new_file:
+            f.write("timestamp\tfvcusno\treason\tterm\tdepartment\tcourse_desc\trequest_body\n")
+        f.write(f"{timestamp}\t{fvcusno}\tMISSING_COURSE_ENC\t{term_name}\t{dept_name}\t{course_desc}\t\n")
+
+
+def log_failed_batch(log_path, fvcusno, batch_keys, status_code, error_msg):
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    body      = "fvCourseKeyList=" + ",".join(batch_keys)
+    new_file  = not os.path.exists(log_path) or os.path.getsize(log_path) == 0
+    with open(log_path, "a", encoding="utf-8") as f:
+        if new_file:
+            f.write("timestamp\tfvcusno\treason\tterm\tdepartment\tcourse_desc\trequest_body\n")
+        f.write(f"{timestamp}\t{fvcusno}\tHTTP_{status_code}\t\t\t\t{body}\n")
+    tqdm.write(f"  [FAILED] Logged to {os.path.basename(log_path)}: status={status_code} keys={len(batch_keys)}")
+
+
 def write_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     with open(filepath, "w", newline="", encoding="utf-8") as f:
@@ -407,6 +429,7 @@ def scrape(
     flaresolverr_url=None,
     session=None,
     csv_path=None,
+    log_path=None,
     fresh=False,
     max_batches=None,
 ):
@@ -482,6 +505,12 @@ def scrape(
         print("[!] No new courses to scrape.")
         return []
 
+    missing_enc = [c for c in all_courses if not c[2].get("COURSE_ENC")]
+    if missing_enc and log_path:
+        for term_name, dept_name, c in missing_enc:
+            log_missing_enc(log_path, fvcusno, term_name, dept_name, c.get("COURSE_DESC", ""))
+        print(f"[!] {len(missing_enc)} course(s) had no COURSE_ENC — logged to {os.path.basename(log_path)}")
+
     course_keys = [c[2].get("COURSE_ENC", "") for c in all_courses if c[2].get("COURSE_ENC")]
     batches     = [course_keys[i:i + batch_size] for i in range(0, len(course_keys), batch_size)]
 
@@ -491,26 +520,55 @@ def scrape(
     else:
         print(f"\n[*] Fetching textbook adoptions for {len(all_courses)} courses ({len(batches)} batches)...")
 
-    all_rows = []
+    all_rows     = []
+    failed_count = 0
+
     for batch in tqdm(batches, desc="Fetching adoptions"):
+        html       = None
+        status     = None
+        error_msg  = None
+
         try:
             html = fetch_adoptions(session, csid, fvcusno, batch, delay)
         except Exception as exc:
-            if getattr(getattr(exc, "response", None), "status_code", None) == 403:
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            error_msg = str(exc)
+
+            if status == 403:
                 try:
                     session, csid = _refresh_session(fvcusno, flaresolverr_url, delay)
                     html = fetch_adoptions(session, csid, fvcusno, batch, delay)
+                    status    = None
+                    error_msg = None
                 except Exception as retry_exc:
-                    print(f"  [ERROR] Retry failed: {retry_exc} — skipping batch")
-                    continue
+                    status    = getattr(getattr(retry_exc, "response", None), "status_code", None) or 403
+                    error_msg = str(retry_exc)
+
+            elif status is not None and 400 <= status < 500:
+                try:
+                    time.sleep(delay * 4)
+                    html = fetch_adoptions(session, csid, fvcusno, batch, delay)
+                    status    = None
+                    error_msg = None
+                except Exception as retry_exc:
+                    status    = getattr(getattr(retry_exc, "response", None), "status_code", None) or status
+                    error_msg = str(retry_exc)
+
+        if error_msg is not None:
+            failed_count += 1
+            if log_path:
+                log_failed_batch(log_path, fvcusno, batch, status or "ERR", error_msg)
             else:
-                print(f"\n  [ERROR] {exc} — skipping batch")
-                continue
+                tqdm.write(f"  [SKIP] batch of {len(batch)} courses: status={status} — {error_msg}")
+            continue
 
         rows = parse_adoption_html(html, fvcusno, school_id)
         if csv_path and rows:
             append_csv(rows, csv_path)
         all_rows.extend(rows)
+
+    if failed_count:
+        print(f"\n[!] {failed_count} batch(es) failed and were logged to {log_path or 'stderr'}")
 
     return all_rows
 
@@ -564,7 +622,9 @@ def main():
         csv_name   = slug + ".csv"
 
     csv_path = os.path.join(output_dir, csv_name)
-    print(f"[*] Output: {csv_path}")
+    log_path = os.path.join(output_dir, csv_name.replace(".csv", "__failed_batches.log"))
+    print(f"[*] Output : {csv_path}")
+    print(f"[*] Fail log: {log_path}")
 
     rows = scrape(
         fvcusno=fvcusno,
@@ -574,6 +634,7 @@ def main():
         flaresolverr_url=args.flaresolverr_url,
         session=session,
         csv_path=csv_path,
+        log_path=log_path,
         fresh=args.fresh,
         max_batches=args.max_batches,
     )

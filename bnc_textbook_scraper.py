@@ -198,7 +198,7 @@ def fetch_courses(session, csid, fvcusno, term_id, dept_id, dept_enckey, delay):
         print(f"  [WARN] Non-JSON response for term={term_id}, dept={dept_id}")
         return []
     courses = []
-    if "success" in result:
+    if "success" in result and isinstance(result["success"], dict):
         for dept_courses in result["success"].values():
             if isinstance(dept_courses, list):
                 courses.extend(dept_courses)

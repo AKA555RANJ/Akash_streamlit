@@ -249,7 +249,7 @@ def parse_course_desc(course_desc, department_name=""):
             section = "|" + rest[0]
             rest    = rest[1:]
         return dept_code, course_code, section, " ".join(rest)
-    if re.match(r"^[A-Za-z]+$", first):
+    if re.match(r"^[A-Za-z][A-Za-z&]*$", first):
         dept_code   = first.upper()
         rest        = tokens[1:]
         course_code = ""

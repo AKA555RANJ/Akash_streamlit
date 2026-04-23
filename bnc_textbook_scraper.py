@@ -262,7 +262,7 @@ def parse_course_desc(course_desc, department_name=""):
         course_code = "|" + m.group(2)
         rest        = tokens[1:]
         section = ""
-        if rest and re.match(r"^\d+$", rest[0]):
+        if rest and re.match(r"^[A-Za-z]{0,3}\d+[A-Za-z]{0,3}$", rest[0]):
             section = "|" + rest[0]
             rest    = rest[1:]
         return dept_code, course_code, section, " ".join(rest)
@@ -271,10 +271,10 @@ def parse_course_desc(course_desc, department_name=""):
         rest        = tokens[1:]
         course_code = ""
         section     = ""
-        if rest and re.match(r"^[A-Za-z]{0,3}\d+[A-Za-z]?$", rest[0]):
+        if rest and re.match(r"^[A-Za-z]{0,3}\d+[\.\d]*[A-Za-z]?$", rest[0]):
             course_code = "|" + rest[0]
             rest        = rest[1:]
-            if rest and re.match(r"^\d+$", rest[0]):
+            if rest and re.match(r"^[A-Za-z]{0,3}\d+[A-Za-z]{0,3}$", rest[0]):
                 section = "|" + rest[0]
                 rest    = rest[1:]
         return dept_code, course_code, section, " ".join(rest)

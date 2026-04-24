@@ -287,9 +287,19 @@ def parse_course_desc(course_desc, department_name=""):
         elif rest and re.match(r"^[A-Za-z]{0,3}\d[\w.\-]*$", rest[0]):
             course_code = "|" + rest[0]
             rest        = rest[1:]
+            # Split COURSE_SECTION underscore (e.g. 107_B 0001 → course 107, section B_0001)
+            m_us = re.match(r"^(\d+[A-Za-z]*)_(\w+)$", course_code.lstrip("|"))
+            if m_us:
+                course_code = "|" + m_us.group(1)
+                sec_part    = m_us.group(2)
+                if rest and re.match(r"^(\d{4}|[A-Z]{1,3}\d{2,3})$", rest[0]):
+                    section = "|" + sec_part + "_" + rest[0]
+                    rest    = rest[1:]
+                else:
+                    section = "|" + sec_part
             # Split COURSE-SECTION hyphen (e.g. 321-01 → course 321, section 01)
             m2 = re.match(r"^(\d+[A-Za-z]*)--?(\d{2,}[A-Za-z]*)$", course_code.lstrip("|"))
-            if m2:
+            if m2 and not section:
                 course_code = "|" + m2.group(1)
                 section     = "|" + m2.group(2)
             if not section and rest and re.match(r"^[A-Za-z]{0,3}\d+[A-Za-z]{0,3}$", rest[0]):

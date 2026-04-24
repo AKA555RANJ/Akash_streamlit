@@ -271,10 +271,13 @@ def parse_course_desc(course_desc, department_name=""):
         rest        = tokens[1:]
         course_code = ""
         section     = ""
-        if rest and re.match(r"^[A-Za-z]{0,3}\d[\w.]*$", rest[0]):
+        if rest and re.match(r"^[A-Za-z]{0,3}\d[\w.\-]*$", rest[0]):
             course_code = "|" + rest[0]
             rest        = rest[1:]
             if rest and re.match(r"^[A-Za-z]{0,3}\d+[A-Za-z]{0,3}$", rest[0]):
+                section = "|" + rest[0]
+                rest    = rest[1:]
+            if not section and rest and re.match(r"^[A-Z]{1,4}$", rest[0]) and len(rest) >= 2:
                 section = "|" + rest[0]
                 rest    = rest[1:]
         return dept_code, course_code, section, " ".join(rest)

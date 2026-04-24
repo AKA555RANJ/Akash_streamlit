@@ -168,7 +168,12 @@ def init_session(session, fvcusno, preloaded_html=None):
 
     seen_terms = set()
     terms = []
-    for tid, tname in re.findall(r"selectTerm\([^,]*,\s*'(\d+)',\s*'([^']+)'", html):
+    # Format 1: selectTerm(this, '12345', 'Spring 2026') — term ID is 2nd arg
+    # Format 2: selectTerm('12345', 'Spring 2026', ...) — term ID is 1st arg
+    term_hits = re.findall(r"selectTerm\([^,]*,\s*'(\d+)',\s*'([^']+)'", html)
+    if not term_hits:
+        term_hits = re.findall(r"selectTerm\(\s*'(\d+)',\s*'([^']+)'", html)
+    for tid, tname in term_hits:
         if tid not in seen_terms:
             seen_terms.add(tid)
             terms.append((tid, tname))
@@ -181,6 +186,27 @@ def init_session(session, fvcusno, preloaded_html=None):
         if did not in seen_depts:
             seen_depts.add(did)
             depts.append((did, dname, denc))
+
+    # Fallback: single pre-selected dept via hidden input (e.g. schools with only one dept)
+    if not depts:
+        m = re.search(
+            r"id=['\"]sole_selected_dept['\"][^>]*value=['\"](\d+)['\"][^>]*data-enckey=['\"]([^'\"]+)['\"]",
+            html
+        )
+        if not m:
+            m = re.search(
+                r"id=['\"]sole_selected_dept['\"][^>]*data-enckey=['\"]([^'\"]+)['\"][^>]*value=['\"](\d+)['\"]",
+                html
+            )
+            if m:
+                m = type('m', (), {'group': lambda self, i: [None, m.group(2), m.group(1)][i]})()
+        if m:
+            dept_id  = m.group(1)
+            dept_enc = m.group(2)
+            # Extract dept name from nearby span
+            name_m = re.search(r"class=['\"][^'\"]*ddIconTxt[^'\"]*['\"][^>]*>([^<]+)<", html)
+            dept_name = name_m.group(1).strip() if name_m else "DEFAULT"
+            depts.append((dept_id, dept_name, dept_enc))
 
     return {"csid": csid, "fvcusno": fvcusno, "terms": terms, "depts": depts}
 
@@ -284,6 +310,13 @@ def parse_course_desc(course_desc, department_name=""):
             section     = "|" + rest[0] + rest[2]
             course_code = "|" + rest[1]
             rest        = rest[3:]
+        elif rest and re.match(r"^\d+[A-Za-z]*/\d+[A-Za-z]*$", rest[0]):
+            # Slash-joined dual course code (e.g. 331/332 01 LANG DEV)
+            course_code = "|" + rest[0]
+            rest        = rest[1:]
+            if rest and re.match(r"^[A-Za-z]{0,3}\d+[A-Za-z]{0,3}$", rest[0]):
+                section = "|" + rest[0]
+                rest    = rest[1:]
         elif rest and re.match(r"^[A-Za-z]{0,3}\d[\w.\-]*$", rest[0]):
             course_code = "|" + rest[0]
             rest        = rest[1:]

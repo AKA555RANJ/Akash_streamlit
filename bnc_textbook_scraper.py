@@ -265,16 +265,37 @@ def parse_course_desc(course_desc, department_name=""):
         if rest and re.match(r"^[A-Za-z]{0,3}\d+[A-Za-z]{0,3}$", rest[0]):
             section = "|" + rest[0]
             rest    = rest[1:]
+        if not section and rest and re.match(r"^\d+\.\d+$", rest[0]):
+            section = "|" + rest[0]
+            rest    = rest[1:]
+        if not section and rest and re.match(r"^[A-Z]{1,4}$", rest[0]) and len(rest) >= 2:
+            section = "|" + rest[0]
+            rest    = rest[1:]
         return dept_code, course_code, section, " ".join(rest)
     if re.match(r"^[A-Za-z][A-Za-z&.]*$", first):
         dept_code   = first.upper()
         rest        = tokens[1:]
         course_code = ""
         section     = ""
-        if rest and re.match(r"^[A-Za-z]{0,3}\d[\w.\-]*$", rest[0]):
+        # Single-letter type prefix before course number (e.g. "BIO L 111 01 Title", "PTA L 122 HY01 Title")
+        if rest and re.match(r"^[A-Z]$", rest[0]) and len(rest) >= 3 and \
+                re.match(r"^\d[\w.]*$", rest[1]) and \
+                re.match(r"^(\d+|[A-Za-z]{0,3}\d+[A-Za-z]{0,3})$", rest[2]):
+            section     = "|" + rest[0] + rest[2]
+            course_code = "|" + rest[1]
+            rest        = rest[3:]
+        elif rest and re.match(r"^[A-Za-z]{0,3}\d[\w.\-]*$", rest[0]):
             course_code = "|" + rest[0]
             rest        = rest[1:]
-            if rest and re.match(r"^[A-Za-z]{0,3}\d+[A-Za-z]{0,3}$", rest[0]):
+            # Split COURSE-SECTION hyphen (e.g. 321-01 → course 321, section 01)
+            m2 = re.match(r"^(\d+[A-Za-z]*)--?(\d{2,}[A-Za-z]*)$", course_code.lstrip("|"))
+            if m2:
+                course_code = "|" + m2.group(1)
+                section     = "|" + m2.group(2)
+            if not section and rest and re.match(r"^[A-Za-z]{0,3}\d+[A-Za-z]{0,3}$", rest[0]):
+                section = "|" + rest[0]
+                rest    = rest[1:]
+            if not section and rest and re.match(r"^\d+\.\d+$", rest[0]):
                 section = "|" + rest[0]
                 rest    = rest[1:]
             if not section and rest and re.match(r"^[A-Z]{1,4}$", rest[0]) and len(rest) >= 2:

@@ -417,7 +417,7 @@ def parse_adoption_html(html, fvcusno, school_id, batch_courses=None):
         term_name   = clean_term(parts[0]) if parts else ""
         dept_name   = parts[1] if len(parts) > 1 else ""
 
-        if not term_name and batch_courses and i < len(batch_courses):
+        if batch_courses and i < len(batch_courses):
             term_name = clean_term(batch_courses[i][0])
         course_str  = course_map.get(idx, "")
         cparts      = [p.strip() for p in course_str.split("|div|")]

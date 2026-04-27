@@ -154,63 +154,82 @@ No code changes needed. The scraper auto-discovers terms, departments, and cours
 
 ## Post-Scrape QC Checklist
 
+**Automated tool:** `python3 qc_bnc.py <path_to_csv> [--live]`
+- Runs all checks below automatically and reports issues/warnings
+- `--live` flag fetches live site and compares course counts (run this for thorough QC)
+- File: `qc_bnc.py` in repo root
+
 Run these checks on every BNC Virtual CSV before committing. Fix any failures before pushing.
 
 ### 1. Encoding Issues
 - [ ] **`\x1a` control char** — garbled apostrophe from source HTML. Replace with `'`
 - [ ] **`\xa0` non-breaking space** — replace with regular space
+- [ ] **`\u200b` zero-width space** — invisible char in `course_title` or `title`. Strip
+- [ ] **Curly/smart quotes** — `\u2019` (`'`), `\u201c`/`\u201d` (`""`). Replace with plain ASCII
 - [ ] **Mojibake** — UTF-8 bytes misread as latin-1 (e.g. `AnzaldÃºa` → `Anzaldúa`). Fix: `.encode('latin-1').decode('utf-8')`
-- [ ] **Accented/special chars** — `é`, `á`, `ö`, `®` etc. cause `??` downstream. Normalize: `unicodedata.normalize('NFKD').encode('ascii','ignore')`
-- [ ] **Curly/smart quotes** — `\u2019` (`'`), `\u201c`/`\u201d` (`""`). Replace with plain ASCII equivalents
-- [ ] **Zero-width space** — `\u200b` invisible char in `course_title` or `title`. Strip
+- [ ] **Accented/special chars** — `é`, `á`, `ö`, `®` etc. Normalize: `unicodedata.normalize('NFKD').encode('ascii','ignore')`
 
 > Apply encoding fixes **only to BNC Virtual files** — not ecampus, kubstore, or other platforms.
 
 ### 2. Stale / Bad Data Rows
-- [ ] **Stale terms** — keep only current year (2026+) terms; strip Fall 2019, Spring 2020, Summer 2025 etc.
+- [ ] **Stale terms** — flag terms containing old years (2015–2025). Non-year-based terms (e.g. `Pinellas Clearwater`, `Online Spring Block AB`) are fine
 - [ ] **Supply rows** — `course_code='*'` with `title='SCHOOL SUPPLIES'`. Strip entirely
-- [ ] **Empty department rows** — rows where `department_code` is blank (parser fallback failure). Investigate
-- [ ] **Dot-only authors** — author field contains only `.` or similar placeholder. Clear
-- [ ] **No-text placeholder titles** — e.g. `title='405 No Text Required'`. Clear the row
+- [ ] **Empty department rows** — rows where `department_code` is blank. Investigate
+- [ ] **Dot-only authors** — author field contains only `.` / `..` / `...`. Clear
+- [ ] **No-text placeholder titles** — e.g. `No Text Required`, `No Textbook`. Clear the row
 
 ### 3. Parser — `course_title` Field Contamination
-These are cases where section codes or course codes appear in `course_title` instead of their proper fields:
+Section codes or course codes appearing in `course_title` instead of their proper fields:
 
-- [ ] **Alphanumeric section in title** — e.g. `01L`, `2CA`, `HY01` at start of `course_title`. Should be in `section`
-- [ ] **Pure-uppercase section in title** — e.g. `CHS`, `HJ`, `OQ`, `SQS`, `VHS` (CCC/community college style). Should be in `section`
-- [ ] **Single-letter section in title** — e.g. `A`, `B`, `O` (Northwestern style). Should be in `section`
-- [ ] **Decimal section in title** — e.g. `01.7`, `30.9` at start of `course_title`. Should be in `section`
-- [ ] **Hyphenated course-section in title** — e.g. `321-01 PRINCIPLES OF MANAGEMENT`. Split into `course_code=321`, `section=01`
-- [ ] **L-prefix lab courses in title** — e.g. `L 111 01 Fundamentals of Biology`. Parse as `course_code=111`, `section=L01`
-- [ ] **Digit-leading dept codes in title** — e.g. `432IBEW`. Fallback must use `department_name` for dept
+- [ ] **Single-letter section** — e.g. `A`, `B`, `T` at start. Extract to `section` (e.g. `T CAPSTONE` → section=`T`, title=`CAPSTONE`)
+- [ ] **Alphanumeric section** — e.g. `01L`, `SH1`, `OL1`, `FT1`, `L1`, `PS2`, `1T2`, `5W1` at start. Extract to `section`
+- [ ] **Term-track codes** — e.g. `1T2`, `2T2`, `3T2` (Trinity Washington style). Extract to `section`
+- [ ] **Pure-uppercase 2–4 char** — e.g. `CHS`, `HJ`, `CNL`, `FNP` at start. May be section code — review context
+- [ ] **Decimal section** — e.g. `01.7`, `30.9` at start. Extract to `section`
+- [ ] **Hyphenated course-section** — e.g. `321-01 MANAGEMENT` (requires 2+ digit course number). Split into `course_code`/`section`
+- [ ] **Course code with colon** — e.g. `495: FILM & CJ SPECIAL TOP` where `course_code` is empty. Extract digits before `:` as `course_code`
+- [ ] **Multi-course-code prefix** — e.g. `420,440,450 CLINICAL PATHOLOGY` where `course_code` is empty. Extract comma-list as `course_code`
+- [ ] **Grade-range prefix** — e.g. `5-12 RDG/WRTG ASSESSMENT`. These are legitimate K-12 titles — do NOT extract as section
+- [ ] **Mixed course/section in empty cc row** — e.g. `MSN/DNP PROG PROGRAM REQUIRED TEXTS`. Parse by known school pattern
 
 ### 4. Parser — `course_code` Field Issues
-- [ ] **Hyphenated course codes** — `101-1`, `125-1` (CCC style). Keep as-is; do NOT split single-digit suffix
-- [ ] **Double-hyphen** — `542--91`. Treat same as single hyphen; split into `course_code=542`, `section=91`
-- [ ] **Decimal course codes** — `548.40`, `542.N3`. Parser must allow `.` in course code token
+- [ ] **Hyphenated course codes** — `101-1`, `125-1`. Keep as-is; do NOT split single-digit suffix
+- [ ] **Double-hyphen** — `542--91`. Treat same as single hyphen
+- [ ] **Decimal course codes** — `548.40`, `420.S1`, `542.N3`. Parser allows `.` in course code token
 - [ ] **Asterisk-delimited format** — `BUSN*504*OLS` style. Parser handles `*` as delimiter
 
 ### 5. `course_title` Content Issues
-- [ ] **Trailing `*`** — e.g. `ASDC 1012 *`. Strip with `rstrip('*')`
-- [ ] **Underscore placeholders** — `Elementary _______ I`. Strip underscores from `course_title` and `title` only (not URLs)
+- [ ] **Trailing `*`** — e.g. `FIELD BIOLOGY*`. Strip with `rstrip('*')`
+- [ ] **Underscore placeholders** — `Elementary _______ I`. Strip from `course_title` and `title`
 
 ### 6. `author` Field Issues
-- [ ] **Accented author names** — `José`, `Klára Móricz`. Normalize to ASCII (`Jose`, `Klara Moricz`)
+- [ ] **Accented author names** — `José`, `Klára`, `Renée`, `Barí`. Normalize to ASCII
 - [ ] **Mojibake in author** — fix before ASCII normalization
 - [ ] **Empty author on rows with ISBN** — acceptable individually; flag if >50% of ISBN rows have blank author
 
-### 7. Multi-Campus / Shared FVCUSNO
-- [ ] **Shared store** — check if multiple campuses share one FVCUSNO (e.g. CCC 7 campuses share FVCUSNO=4486; WCU campuses share one store). Scrape once, copy CSV with updated `school_id` per campus
+### 7. Duplicate Rows
+- [ ] **Timestamp-only duplicates** — rows identical except `crawled_on`/`updated_on`. Remove (happens when same course appears in multiple batches). Dedup key: all fields except timestamps
+- [ ] **Legitimate near-duplicates** — same course/book with different `material_adoption_code` or slightly different `course_title` abbreviation. Keep both
+
+### 8. Live Site Comparison (`--live` flag)
+- [ ] **Run `qc_bnc.py --live`** for every school — compares unique `(term, dept, course_code)` tuples against live site
+- [ ] **Missing courses** — if live has courses not in CSV, fetch them individually using `fetch_adoptions` and append
+- [ ] **Cross-term batch dedup bug** — BNC server deduplicates enc keys across terms in a single batch, causing some courses to be silently skipped. Fix: fetch missing courses one-at-a-time using their individual `COURSE_ENC`
+- [ ] **CSV has more than live** — acceptable (courses may have been dropped from live after scraping)
+- [ ] **Non-standard term names** — schools like Pinellas TCC use program names instead of semester names. Live comparison still works; STALE check ignores these
+
+### 9. Multi-Campus / Shared FVCUSNO
+- [ ] **Shared store** — check if multiple campuses share one FVCUSNO (e.g. CCC 7 campuses share FVCUSNO=4486). Scrape once, copy CSV with updated `school_id` per campus
 - [ ] **`school_id` column** — must match the OPEID of the specific campus, not the scrape FVCUSNO
 
-### 8. Final Spot-Checks Before Commit
+### 10. Final Spot-Checks Before Commit
 - [ ] Row count is non-trivial (large university → thousands of rows expected)
-- [ ] `source_url` contains the correct FVCUSNO
-- [ ] `school_id` column matches the school's OPEID
-- [ ] Only current-year terms present (no pre-2026 terms)
+- [ ] `source_url` contains the correct FVCUSNO for all rows
+- [ ] `school_id` column is consistent and matches OPEID
+- [ ] No stale year (2015–2025) in any term value
 - [ ] No `course_code='*'` supply rows remain
 - [ ] No `\x1a`, `\u200b`, `\xa0` chars anywhere in the file
 - [ ] `department_code` is non-empty for all rows with a valid course
-- [ ] `section` field is populated where applicable — not stuck in `course_title`
-- [ ] `course_title` does not start with a digit, single uppercase letter, or decimal number
-- [ ] `__failed_batches.log` reviewed — check for HTTP errors or missing `COURSE_ENC` entries
+- [ ] `section` field populated where applicable — not stuck in `course_title`
+- [ ] `course_title` does not start with an extractable section code or embedded course code
+- [ ] `__failed_batches.log` reviewed — zero HTTP errors, zero missing `COURSE_ENC` entries ideally

@@ -54,7 +54,7 @@ def qc(path, live=False):
     # ── 2. STALE / BAD DATA ──────────────────────────────────────────────────
     for i, r in enumerate(rows):
         t = r.get('term','')
-        if t and '2026' not in t and not any(s in t for s in ('Spring','Summer','Fall','Winter')):
+        if t and re.search(r'20(1[5-9]|2[0-5])', t):
             issues.append(f"[STALE] ROW {i} term={t!r}")
 
     for i, r in enumerate(rows):
@@ -105,7 +105,8 @@ def qc(path, live=False):
                 issues.append(f"[SEC-PFX] ROW {i} SEC prefix: {ct[:50]}")
 
         # Digit-start only flagged when section is empty (rows with section already are fine)
-        if ct and ct[0].isdigit() and not sec and not re.match(r'^\d+-\d+', ct):
+        # Skip grade-ranges (5-12) and formatted titles like "3-D MODELING"
+        if ct and ct[0].isdigit() and not sec and not re.match(r'^\d+[-–]', ct):
             issues.append(f"[DIGT] ROW {i} digit-start title dept={r['department_code']} cc={r['course_code']} title={ct[:50]}")
 
     # Hyphenated course-section in title: "321-01 MANAGEMENT" with empty/pipe course_code

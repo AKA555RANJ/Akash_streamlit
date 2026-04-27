@@ -105,7 +105,7 @@ def qc(path, live=False):
                 issues.append(f"[SEC-PFX] ROW {i} SEC prefix: {ct[:50]}")
 
         # Digit-start only flagged when section is empty (rows with section already are fine)
-        if ct and ct[0].isdigit() and not sec:
+        if ct and ct[0].isdigit() and not sec and not re.match(r'^\d+-\d+', ct):
             issues.append(f"[DIGT] ROW {i} digit-start title dept={r['department_code']} cc={r['course_code']} title={ct[:50]}")
 
     # Hyphenated course-section in title: "321-01 MANAGEMENT" with empty/pipe course_code
@@ -113,7 +113,7 @@ def qc(path, live=False):
         ct = r.get('course_title','').strip()
         cc = r.get('course_code','').lstrip('|')
         if ct and not r.get('section','').strip():
-            m = re.match(r'^(\d+)--?(\d{2,})\s+(.+)$', ct)
+            m = re.match(r'^(\d{2,})--?(\d{2,})\s+(.+)$', ct)
             if m:
                 issues.append(f"[CC-HYP] ROW {i} hyphen course-section in title dept={r['department_code']} cc={r['course_code']} title={ct[:50]}")
 

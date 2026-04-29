@@ -330,6 +330,16 @@ def parse_course_desc(course_desc, department_name=""):
                     rest    = rest[1:]
                 else:
                     section = "|" + sec_part
+            # Split dot-separated section (e.g. 240.S1 → course=|240, section=|S1)
+            m_dot = re.match(r"^(\d+[A-Za-z]*)\.(S\d+)$", course_code.lstrip("|"))
+            if m_dot and not section:
+                course_code = "|" + m_dot.group(1)
+                section     = "|" + m_dot.group(2)
+            # Split trailing multi-letter section suffix (e.g. 245DS → course=|245, section=|DS)
+            m_sfx = re.match(r"^(\d+)([A-Z]{2,})$", course_code.lstrip("|"))
+            if m_sfx and not section:
+                course_code = "|" + m_sfx.group(1)
+                section     = "|" + m_sfx.group(2)
             # Split COURSE-SECTION hyphen (e.g. 321-01, 210L-AB, 290-BLENDED)
             m2 = re.match(r"^(\d+[A-Za-z]*)--?([A-Za-z]\w*|\d{2,}[A-Za-z]*)$", course_code.lstrip("|"))
             if m2 and not section:

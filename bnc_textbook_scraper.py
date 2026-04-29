@@ -47,10 +47,8 @@ _TERM_SUFFIX_RE = re.compile(
     re.IGNORECASE,
 )
 
-
 def clean_term(term):
     return _TERM_SUFFIX_RE.sub("", (term or "").strip())
-
 
 def make_session(cookies=None, user_agent=None):
     session = cffi_requests.Session(impersonate="chrome")
@@ -61,10 +59,8 @@ def make_session(cookies=None, user_agent=None):
         session.headers.update({"User-Agent": user_agent})
     return session
 
-
 def _fs_session_name(fvcusno):
     return f"bnc_{fvcusno}_scraper"
-
 
 def _fs_create(flaresolverr_url, session_name):
     try:
@@ -81,7 +77,6 @@ def _fs_create(flaresolverr_url, session_name):
         timeout=120,
     ).raise_for_status()
 
-
 def _fs_destroy(flaresolverr_url, session_name):
     try:
         std_requests.post(
@@ -91,7 +86,6 @@ def _fs_destroy(flaresolverr_url, session_name):
         )
     except Exception:
         pass
-
 
 def _fs_get(flaresolverr_url, session_name, url, max_timeout=120000):
     resp = std_requests.post(
@@ -111,7 +105,6 @@ def _fs_get(flaresolverr_url, session_name, url, max_timeout=120000):
     sol = data["solution"]
     return sol.get("response", ""), sol.get("cookies", []), sol.get("userAgent", "")
 
-
 def fs_bootstrap(fvcusno, flaresolverr_url=FLARESOLVERR_DEFAULT):
     session_name = _fs_session_name(fvcusno)
     url = CHOOSE_COURSES_URL.format(fvcusno=fvcusno)
@@ -125,7 +118,6 @@ def fs_bootstrap(fvcusno, flaresolverr_url=FLARESOLVERR_DEFAULT):
     print(f"    Captured cookies: {list(cookies.keys())}")
     return cookies, user_agent, html
 
-
 def resolve_fvcusno(url, fvcusno):
     if fvcusno:
         return fvcusno
@@ -135,7 +127,6 @@ def resolve_fvcusno(url, fvcusno):
             return qs["FVCUSNO"][0]
         return url
     raise ValueError("Either --url or --fvcusno must be provided")
-
 
 def discover_fvcusno(session, url):
     if url.isdigit():
@@ -152,7 +143,6 @@ def discover_fvcusno(session, url):
         return m.group(1)
     raise ValueError(f"Could not discover FVCUSNO from {url}")
 
-
 def init_session(session, fvcusno, preloaded_html=None):
     if preloaded_html:
         html = preloaded_html
@@ -168,8 +158,6 @@ def init_session(session, fvcusno, preloaded_html=None):
 
     seen_terms = set()
     terms = []
-    # Format 1: selectTerm(this, '12345', 'Spring 2026') — term ID is 2nd arg
-    # Format 2: selectTerm('12345', 'Spring 2026', ...) — term ID is 1st arg
     term_hits = re.findall(r"selectTerm\([^,]*,\s*'(\d+)',\s*'([^']+)'", html)
     if not term_hits:
         term_hits = re.findall(r"selectTerm\(\s*'(\d+)',\s*'([^']+)'", html)
@@ -187,7 +175,6 @@ def init_session(session, fvcusno, preloaded_html=None):
             seen_depts.add(did)
             depts.append((did, dname, denc))
 
-    # Fallback: single pre-selected dept via hidden input (e.g. schools with only one dept)
     if not depts:
         m = re.search(
             r"id=['\"]sole_selected_dept['\"][^>]*value=['\"](\d+)['\"][^>]*data-enckey=['\"]([^'\"]+)['\"]",
@@ -203,13 +190,11 @@ def init_session(session, fvcusno, preloaded_html=None):
         if m:
             dept_id  = m.group(1)
             dept_enc = m.group(2)
-            # Extract dept name from nearby span
             name_m = re.search(r"class=['\"][^'\"]*ddIconTxt[^'\"]*['\"][^>]*>([^<]+)<", html)
             dept_name = name_m.group(1).strip() if name_m else "DEFAULT"
             depts.append((dept_id, dept_name, dept_enc))
 
     return {"csid": csid, "fvcusno": fvcusno, "terms": terms, "depts": depts}
-
 
 def fetch_courses(session, csid, fvcusno, term_id, dept_id, dept_enckey, delay):
     time.sleep(delay)
@@ -234,7 +219,6 @@ def fetch_courses(session, csid, fvcusno, term_id, dept_id, dept_enckey, delay):
                         courses.append(item)
     return courses
 
-
 def fetch_adoptions(session, csid, fvcusno, course_keys, delay):
     time.sleep(delay)
     resp = session.post(
@@ -244,13 +228,11 @@ def fetch_adoptions(session, csid, fvcusno, course_keys, delay):
     resp.raise_for_status()
     return resp.text
 
-
 def clean_isbn(cell_html):
     soup = BeautifulSoup(cell_html, "html.parser")
     for span in soup.find_all("span", style=re.compile(r"display:\s*none")):
         span.decompose()
     return soup.get_text(strip=True).replace("-", "").strip()
-
 
 def parse_course_desc(course_desc, department_name=""):
     if not course_desc:
@@ -303,7 +285,6 @@ def parse_course_desc(course_desc, department_name=""):
         rest        = tokens[1:]
         course_code = ""
         section     = ""
-        # Single-letter type prefix before course number (e.g. "BIO L 111 01 Title", "PTA L 122 HY01 Title")
         if rest and re.match(r"^[A-Z]$", rest[0]) and len(rest) >= 3 and \
                 re.match(r"^\d[\w.]*$", rest[1]) and \
                 re.match(r"^(\d+|[A-Za-z]{0,3}\d+[A-Za-z]{0,3})$", rest[2]):
@@ -311,7 +292,6 @@ def parse_course_desc(course_desc, department_name=""):
             course_code = "|" + rest[1]
             rest        = rest[3:]
         elif rest and re.match(r"^\d+[A-Za-z]*/\d+[A-Za-z]*$", rest[0]):
-            # Slash-joined dual course code (e.g. 331/332 01 LANG DEV)
             course_code = "|" + rest[0]
             rest        = rest[1:]
             if rest and re.match(r"^[A-Za-z]{0,3}\d+[A-Za-z]{0,3}$", rest[0]):
@@ -320,7 +300,6 @@ def parse_course_desc(course_desc, department_name=""):
         elif rest and re.match(r"^[A-Za-z]{0,3}\d[\w.\-]*$", rest[0]):
             course_code = "|" + rest[0]
             rest        = rest[1:]
-            # Split COURSE_SECTION underscore (e.g. 107_B 0001 → course 107, section B_0001)
             m_us = re.match(r"^(\d+[A-Za-z]*)_(\w+)$", course_code.lstrip("|"))
             if m_us:
                 course_code = "|" + m_us.group(1)
@@ -330,17 +309,14 @@ def parse_course_desc(course_desc, department_name=""):
                     rest    = rest[1:]
                 else:
                     section = "|" + sec_part
-            # Split dot-separated section (e.g. 240.S1 → course=|240, section=|S1)
             m_dot = re.match(r"^(\d+[A-Za-z]*)\.(S\d+)$", course_code.lstrip("|"))
             if m_dot and not section:
                 course_code = "|" + m_dot.group(1)
                 section     = "|" + m_dot.group(2)
-            # Split trailing multi-letter section suffix (e.g. 245DS → course=|245, section=|DS)
             m_sfx = re.match(r"^(\d+)([A-Z]{2,})$", course_code.lstrip("|"))
             if m_sfx and not section:
                 course_code = "|" + m_sfx.group(1)
                 section     = "|" + m_sfx.group(2)
-            # Split COURSE-SECTION hyphen (e.g. 321-01, 210L-AB, 290-BLENDED)
             m2 = re.match(r"^(\d+[A-Za-z]*)--?([A-Za-z]\w*|\d{2,}[A-Za-z]*)$", course_code.lstrip("|"))
             if m2 and not section:
                 course_code = "|" + m2.group(1)
@@ -354,7 +330,6 @@ def parse_course_desc(course_desc, department_name=""):
             if not section and rest and re.match(r"^[A-Z]{1,4}:?$", rest[0]) and len(rest) >= 2:
                 section = "|" + rest[0].rstrip(":")
                 rest    = rest[1:]
-            # Standalone hyphen separator (e.g. "290 - BL GENERAL MICRO")
             if not section and rest and rest[0] == "-" and len(rest) >= 2:
                 rest = rest[1:]
                 section = "|" + rest[0]
@@ -363,7 +338,6 @@ def parse_course_desc(course_desc, department_name=""):
     dept_code   = department_name.upper() if department_name else ""
     course_code = "|" + first if re.match(r"^\d", first) else first
     return dept_code, course_code, "", " ".join(tokens[1:])
-
 
 def find_textbook_blocks(course_header):
     scope = course_header.find_next_sibling("div", class_=re.compile(r"crs_adpts_collapse"))
@@ -398,7 +372,6 @@ def find_textbook_blocks(course_header):
         if book:
             books.append(book)
     return books
-
 
 def parse_adoption_html(html, fvcusno, school_id, batch_courses=None):
     soup       = BeautifulSoup(html, "html.parser")
@@ -462,7 +435,6 @@ def parse_adoption_html(html, fvcusno, school_id, batch_courses=None):
                 })
     return rows
 
-
 def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     new_file = not os.path.exists(filepath) or os.path.getsize(filepath) == 0
@@ -472,7 +444,6 @@ def append_csv(rows, filepath):
             writer.writeheader()
         writer.writerows(rows)
 
-
 def log_missing_enc(log_path, fvcusno, term_name, dept_name, course_desc):
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -481,7 +452,6 @@ def log_missing_enc(log_path, fvcusno, term_name, dept_name, course_desc):
         if new_file:
             f.write("timestamp\tfvcusno\treason\tterm\tdepartment\tcourse_desc\trequest_body\n")
         f.write(f"{timestamp}\t{fvcusno}\tMISSING_COURSE_ENC\t{term_name}\t{dept_name}\t{course_desc}\t\n")
-
 
 def log_failed_batch(log_path, fvcusno, batch_keys, status_code, error_msg, batch_courses=None):
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
@@ -499,14 +469,12 @@ def log_failed_batch(log_path, fvcusno, batch_keys, status_code, error_msg, batc
             f.write(f"{timestamp}\t{fvcusno}\tHTTP_{status_code}\t\t\t\t{body}\n")
     tqdm.write(f"  [FAILED] Logged to {os.path.basename(log_path)}: status={status_code} keys={len(batch_keys)}")
 
-
 def write_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     with open(filepath, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
         writer.writeheader()
         writer.writerows(rows)
-
 
 def get_scraped_keys(filepath):
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
@@ -516,7 +484,6 @@ def get_scraped_keys(filepath):
             (r.get("term", ""), r.get("department_code", ""), r.get("course_code", ""))
             for r in csv.DictReader(f)
         }
-
 
 def load_failed_courses(log_path):
     """Return set of (term, department, course_desc) tuples from HTTP_* failure rows."""
@@ -529,7 +496,6 @@ def load_failed_courses(log_path):
             if row.get("reason", "").startswith("HTTP_") and row.get("course_desc"):
                 failed.add((row["term"], row["department"], row["course_desc"]))
     return failed
-
 
 def scrape_retry_log(
     log_path,
@@ -571,7 +537,6 @@ def scrape_retry_log(
     depts = info["depts"]
     print(f"    CSID: {csid}")
 
-    # Index failures by (term, dept) so we only hit term/dept combos that had failures
     by_term_dept = {}
     for term, dept, course_desc in failed_set:
         by_term_dept.setdefault((term, dept), set()).add(course_desc)
@@ -656,7 +621,6 @@ def scrape_retry_log(
 
     return all_rows
 
-
 def _refresh_session(fvcusno, flaresolverr_url, delay):
     if flaresolverr_url:
         print("\n  [WARN] 403 — re-bootstrapping via FlareSolverr...")
@@ -671,7 +635,6 @@ def _refresh_session(fvcusno, flaresolverr_url, delay):
         info    = init_session(session, fvcusno)
     print(f"  [*] New CSID: {info['csid']}")
     return session, info["csid"]
-
 
 def scrape(
     fvcusno,
@@ -834,7 +797,6 @@ def scrape(
 
     return all_rows
 
-
 def main():
     parser = argparse.ArgumentParser(
         description="Scrape textbook adoption data from BNC Virtual bookstores."
@@ -924,7 +886,6 @@ def main():
         print(f"    Unique ISBNs      : {len({r['isbn'] for r in rows if r.get('isbn')})}")
     else:
         print("[!] No data collected.")
-
 
 if __name__ == "__main__":
     main()

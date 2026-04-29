@@ -51,10 +51,8 @@ _TERM_SUFFIX_RE = re.compile(
     re.IGNORECASE,
 )
 
-
 def clean_term(term):
     return _TERM_SUFFIX_RE.sub("", (term or "").strip())
-
 
 def make_session():
     session = requests.Session()
@@ -71,14 +69,12 @@ def make_session():
     })
     return session
 
-
 def ajax_get(session, path, delay=DEFAULT_DELAY):
     time.sleep(delay)
     url = AJAX_URL + "?l=" + quote(path, safe="")
     resp = session.get(url)
     resp.raise_for_status()
     return resp.text
-
 
 def init_session(session):
     resp = session.get(COLLEGE_URL)
@@ -92,7 +88,6 @@ def init_session(session):
         if m and term_name:
             terms.append((term_name, m.group(1)))
     return terms
-
 
 def fetch_depts(session, term_id, delay=DEFAULT_DELAY):
     html = ajax_get(session, f"/college_term/{term_id}", delay)
@@ -112,7 +107,6 @@ def fetch_depts(session, term_id, delay=DEFAULT_DELAY):
             depts.append((dept_code, dept_name, dept_id))
     return depts
 
-
 def fetch_courses(session, dept_id, delay=DEFAULT_DELAY):
     html = ajax_get(session, f"/college_dept/{dept_id}", delay)
     soup = BeautifulSoup(html, "html.parser")
@@ -131,7 +125,6 @@ def fetch_courses(session, dept_id, delay=DEFAULT_DELAY):
             courses.append((course_num, course_title, course_id))
     return courses
 
-
 def fetch_sections(session, course_id, delay=DEFAULT_DELAY):
     html = ajax_get(session, f"/college_course/{course_id}", delay)
     soup = BeautifulSoup(html, "html.parser")
@@ -149,7 +142,6 @@ def fetch_sections(session, course_id, delay=DEFAULT_DELAY):
         if section_code:
             sections.append((section_code, instructor, section_id))
     return sections
-
 
 def parse_books_html(html, section_id):
     soup = BeautifulSoup(html, "html.parser")
@@ -182,11 +174,9 @@ def parse_books_html(html, section_id):
             })
     return books
 
-
 def fetch_books(session, section_id, delay=DEFAULT_DELAY):
     html = ajax_get(session, f"/college_section/{section_id}", delay)
     return parse_books_html(html, section_id)
-
 
 def get_scraped_keys(filepath):
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
@@ -197,7 +187,6 @@ def get_scraped_keys(filepath):
             for r in csv.DictReader(f)
         }
 
-
 def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     new_file = not os.path.exists(filepath) or os.path.getsize(filepath) == 0
@@ -206,7 +195,6 @@ def append_csv(rows, filepath):
         if new_file:
             writer.writeheader()
         writer.writerows(rows)
-
 
 def scrape(delay=DEFAULT_DELAY, csv_path=None, fresh=False, max_depts=None, term_filter=None):
     if csv_path and fresh and os.path.exists(csv_path):
@@ -302,7 +290,6 @@ def scrape(delay=DEFAULT_DELAY, csv_path=None, fresh=False, max_depts=None, term
 
     return all_rows
 
-
 def main():
     parser = argparse.ArgumentParser(
         description="Scrape textbook data from Elgin Community College bookstore (Timber/Drupal)."
@@ -342,7 +329,6 @@ def main():
         print(f"    Unique ISBNs      : {len({r['isbn'] for r in rows if r.get('isbn')})}")
     else:
         print("[!] No data collected.")
-
 
 if __name__ == "__main__":
     main()

@@ -46,7 +46,6 @@ UA = (
     "Chrome/124.0.0.0 Safari/537.36"
 )
 
-
 def make_session():
     sess = requests.Session()
     sess.headers.update({
@@ -57,7 +56,6 @@ def make_session():
         "Referer": COLLEGE_URL,
     })
     return sess
-
 
 def ajax_get(sess, path, retries=3):
     url = AJAX_URL
@@ -76,7 +74,6 @@ def ajax_get(sess, path, retries=3):
                 raise
     return ""
 
-
 def parse_term_items(html):
     soup = BeautifulSoup(html, "html.parser")
     items = []
@@ -88,7 +85,6 @@ def parse_term_items(html):
             if url_path:
                 items.append((url_path, label))
     return items
-
 
 def parse_dept_items(html):
     soup = BeautifulSoup(html, "html.parser")
@@ -104,7 +100,6 @@ def parse_dept_items(html):
             if url_path:
                 items.append((url_path, abbrev, name))
     return items
-
 
 def parse_course_items(html):
     soup = BeautifulSoup(html, "html.parser")
@@ -125,7 +120,6 @@ def parse_course_items(html):
                 items.append((url_path, code, title))
     return items
 
-
 def parse_section_items(html):
     soup = BeautifulSoup(html, "html.parser")
     items = []
@@ -134,32 +128,27 @@ def parse_section_items(html):
         if a:
             url_path = a.get("url", "").strip()
             label    = a.get_text(" ", strip=True)
-            # Split on first " - " separator (section code - instructor name)
             parts = re.split(r"\s+-\s+", label, maxsplit=1)
             if len(parts) == 2:
                 sec        = parts[0].strip()
                 instructor = parts[1].strip()
             else:
-                # Strip any trailing " -" with no instructor after it
                 sec        = re.sub(r"\s*-\s*$", "", label).strip()
                 instructor = ""
             if url_path:
                 items.append((url_path, sec, instructor))
     return items
 
-
 def clean_title(title):
     if not title:
         return title
     t = title.strip()
-    # Strip parenthetical download/access/rental notes
     t = re.sub(r'\s*\(\s*Dwnld\b.*?\)', '', t, flags=re.IGNORECASE)
     t = re.sub(r'\s*\(\s*Online\b.*?\)', '', t, flags=re.IGNORECASE)
     t = re.sub(r'\s*\(Access\b.*?\)', '', t, flags=re.IGNORECASE)
     t = re.sub(r'\s*\(eBook\s+avail\w*\b.*?\)', '', t, flags=re.IGNORECASE)
     t = re.sub(r'\s*\(fee\b.*?\)', '', t, flags=re.IGNORECASE)
     t = re.sub(r'\s*\(.*?rental.*?\)', '', t, flags=re.IGNORECASE)
-    # Strip trailing " - eBook" or " - eBook" variant suffixes
     t = re.sub(r'\s*[-–]\s*eBook\s*$', '', t, flags=re.IGNORECASE)
     t = re.sub(r'\s*Access\s+(in|available)\b.*', '', t, flags=re.IGNORECASE)
     t = re.sub(r'\s*available in canvas\b.*', '', t, flags=re.IGNORECASE)
@@ -169,7 +158,6 @@ def clean_title(title):
         idx = t.rfind('(')
         t = t[:idx].rstrip(' ,\t')
     return t.strip()
-
 
 def parse_materials(html, source_url, dept_code, course_code, course_title,
                     section_code, instructor, term_name):
@@ -223,7 +211,6 @@ def parse_materials(html, source_url, dept_code, course_code, course_title,
         })
     return rows
 
-
 def _extract_isbn(raw):
     if not raw:
         return ""
@@ -237,19 +224,15 @@ def _extract_isbn(raw):
         return m.group(1)
     return digits
 
-
 def _text(el, default=""):
     return el.get_text(strip=True) if el else default
-
 
 def normalize_term(s):
     return re.sub(r"\s*\(.*?\)\s*", " ", s or "").strip().upper()
 
-
 def fmt(code):
     code = (code or "").strip()
     return f"|{code}" if code and not code.startswith("|") else code
-
 
 def append_csv(rows, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -260,7 +243,6 @@ def append_csv(rows, filepath):
             writer.writeheader()
         writer.writerows(rows)
 
-
 def get_scraped_keys(filepath):
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return set()
@@ -270,7 +252,6 @@ def get_scraped_keys(filepath):
              r.get("course_code", ""), r.get("section", ""))
             for r in csv.DictReader(f)
         }
-
 
 def discover_terms(sess):
     print(f"[*] Fetching term list from {COLLEGE_URL}...")
@@ -286,19 +267,16 @@ def discover_terms(sess):
     html = resp.text
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    with open(os.path.join(OUTPUT_DIR, "debug_bootstrap.html"), "w", encoding="utf-8") as f:
-        f.write(html)
 
     terms = parse_term_items(html)
     if not terms:
-        print("[!] No terms found — check debug_bootstrap.html for page structure.")
+        print("[!] No terms found.")
         sys.exit(1)
 
     print(f"    Found {len(terms)} term(s):")
     for path, label in terms:
         print(f"      {label!r:40s} → {path}")
     return terms
-
 
 def scrape_term(sess, term_path, term_label, done_keys, crawled_on):
     print(f"\n[*] Term: {term_label!r}")
@@ -311,7 +289,6 @@ def scrape_term(sess, term_path, term_label, done_keys, crawled_on):
     print(f"  {len(dept_items)} departments")
 
     total_rows = 0
-    debug_materials_saved = False
 
     for dept_path, dept_abbrev, dept_name in tqdm(dept_items, desc=f"  {term_label}"):
         dept_code = dept_abbrev.strip()
@@ -361,13 +338,6 @@ def scrape_term(sess, term_path, term_label, done_keys, crawled_on):
                     tqdm.write(f"\n  [ERROR] {dept_code}/{course_code}/{sec_code}: {e}")
                     mat_html = ""
 
-                if mat_html and not debug_materials_saved:
-                    dbg_path = os.path.join(OUTPUT_DIR, "debug_materials.html")
-                    with open(dbg_path, "w", encoding="utf-8") as f:
-                        f.write(mat_html)
-                    tqdm.write(f"\n    [DEBUG] Saved debug_materials.html")
-                    debug_materials_saved = True
-
                 rows = parse_materials(
                     mat_html or "", source_url,
                     dept_code, course_code, course_title,
@@ -383,7 +353,6 @@ def scrape_term(sess, term_path, term_label, done_keys, crawled_on):
                 total_rows += len(rows)
 
     return total_rows
-
 
 def scrape(fresh=False):
     crawled_on = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -409,7 +378,6 @@ def scrape(fresh=False):
     print(f"\n{'='*60}")
     print(f"SCRAPE COMPLETE — {total_rows} rows written")
     print(f"CSV: {CSV_PATH}")
-
 
 if __name__ == "__main__":
     scrape(fresh="--fresh" in sys.argv)

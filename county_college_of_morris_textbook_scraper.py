@@ -13,12 +13,12 @@ from tqdm import tqdm
 
 sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, "reconfigure") else None
 
-BASE_URL = "https://bookstore.oswego.edu"
+BASE_URL = "https://bookstore.ccm.edu"
 COLLEGE_URL = BASE_URL + "/college"
 AJAX_URL = BASE_URL + "/timber/college/ajax"
 
-SCHOOL_ID = "3067500"
-SCHOOL_NAME = "suny_college_at_oswego"
+SCHOOL_ID = "3061276"
+SCHOOL_NAME = "county_college_of_morris"
 
 CSV_FIELDS = [
     "source_url",
@@ -301,7 +301,7 @@ def scrape(delay=DEFAULT_DELAY, csv_path=None, fresh=False, max_depts=None, term
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Scrape textbook data from SUNY College at Oswego bookstore (Timber)."
+        description="Scrape textbook data from County College of Morris bookstore (Timber)."
     )
     parser.add_argument("--delay",       type=float, default=DEFAULT_DELAY,
                         help="Seconds between requests (default: 0.3)")
@@ -310,7 +310,7 @@ def main():
     parser.add_argument("--max-depts",   type=int, default=None,
                         help="Limit departments per term (for sampling/testing)")
     parser.add_argument("--term-filter", default=None,
-                        help="Only scrape terms containing this string (e.g. 'SPRING')")
+                        help="Only scrape terms containing this string (e.g. 'FALL')")
     args = parser.parse_args()
 
     output_dir = os.path.join(

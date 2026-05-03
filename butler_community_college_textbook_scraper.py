@@ -48,6 +48,9 @@ REQ_MAP = {
     "S":  "Supplementary",
     "CG": "Course Guide",
     "RB": "Required Bundle",
+    "OB": "Optional Bundle",
+    "RC": "Required Course",
+    "OC": "Optional Course",
 }
 
 _TERM_SUFFIX_RE = re.compile(
@@ -142,7 +145,7 @@ def fetch_sections(session, course_id, delay=DEFAULT_DELAY):
         text = item.get_text(strip=True)
         parts = text.split(" - ", 1)
         section_code = parts[0].strip() if parts else ""
-        instructor = parts[1].strip().rstrip(",").strip() if len(parts) > 1 else ""
+        instructor = " ".join(parts[1].strip().rstrip(",").split()) if len(parts) > 1 else ""
         if section_code:
             sections.append((section_code, instructor, section_id))
     return sections

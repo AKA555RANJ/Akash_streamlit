@@ -1,0 +1,682 @@
+[
+  {
+    "parentStoreId": "537406",
+    "storeId": 537406,
+    "storeNumber": "2316",
+    "storeDisplayName": "FIT Campus Store",
+    "langId": "-1",
+    "locale": "en_US",
+    "currency": "USD",
+    "requirementTypeLabelMap": {
+      "RQ": "Required Material(s)",
+      "CH": "Choose - Please select from the following...",
+      "RM": "Recommended Material(s)",
+      "BR": "Suggested by the Bookstore"
+    },
+    "materialTypeKeyList": [
+      "TXT",
+      "CEB",
+      "SUP"
+    ],
+    "isViewByLocation": false,
+    "isISBNVisible": true,
+    "isHEOACheckAvailabilityLink": true,
+    "isSuperSite": false,
+    "isEbookStore": true,
+    "isShowRental": true,
+    "isShowNationalRental": false,
+    "isSharedinventory": false,
+    "isCourseTrackStore": true,
+    "isCourseMaterialPreselected": true,
+    "isStoreIncludEDAllStudents": true,
+    "isDigitalFeeEnabledStore": true,
+    "CRNSearchLevel": "TERM",
+    "courseLabel": "Course",
+    "sectionLabel": "Section",
+    "courseSectionDTO": [
+      {
+        "courseSectionStatus": {
+          "status": "SUCCESS",
+          "code": "0"
+        },
+        "termId": "100091648",
+        "termName": "Spring 2026",
+        "termNumber": "202603",
+        "termStatus": "A",
+        "termOpen": true,
+        "rentalReturnDate": {
+          "year": 2026,
+          "month": 4,
+          "dayOfMonth": 22,
+          "hourOfDay": 0,
+          "minute": 0,
+          "second": 0
+        },
+        "programId": "5216",
+        "programName": "FIT",
+        "campusId": "4107",
+        "campusName": "Fashion Institute of Technology",
+        "institutionName": "Fashion Institute of Technology",
+        "ddcsBreadCrumb": "FIT : Spring 2026 : AB : 112 : 301",
+        "adoptionStatus": "500",
+        "courseMaterialResultsList": [
+          {
+            "rank": 16,
+            "cmId": "100970614110332891",
+            "mtcId": "46479622",
+            "bookImage": "//bkstr.scene7.com/is/image/Bkstr/9781647121860",
+            "title": "Al-Kitaab Part One with Website HC (Lingco)",
+            "edition": "3rd",
+            "author": "Brustad",
+            "isbn": "9781647121860",
+            "materialType": "TXT",
+            "requirementType": "RQ",
+            "isbnDisplay": "9781647121860",
+            "isPackage": false,
+            "priceNewLabel": "FLNew",
+            "priceUsedLabel": "FLUsed",
+            "newBook": "N",
+            "productCatentryId": "110332891",
+            "productPartNumber": "6bdb568c-98f7-42e1-a190-2215936ec442",
+            "publisherCode": "GEORG",
+            "publisherShortName": "GEORG",
+            "copyRightYear": "2021",
+            "publisher": "Georgetown University Press",
+            "inventoryStatusKeyGeneral": "INV_OUT_OF_STOCK_LABEL",
+            "messageBookType": 0,
+            "preSelected": false,
+            "priceRangeDisplay": "$140.00 to $174.75",
+            "printItemDTOs": {
+              "BUY_NEW": {
+                "typeCondition": "BUY_NEW",
+                "priceDisplay": "$174.75",
+                "itemCatentryId": "110332893",
+                "inventoryStatusDB": "OUT_OF_STOCK",
+                "inventoryStatusBus": "OUT_OF_STOCK",
+                "inventoryStatusKey": "INV_OUT_OF_STOCK_LABEL",
+                "binding": "Hardcover",
+                "preselected": false,
+                "priceNumeric": 174.75,
+                "availabilityDate": "",
+                "skuPartNumber": "6bdb568c-98f7-42e1-a190-2215936ec442-n",
+                "nonRentalChargesTotal": "$0.00"
+              }
+            },
+            "includEDMaterialFlag": false,
+            "titleSelectionDisabled": false
+          },
+          {
+            "rank": 16,
+            "cmId": "100970614145568320",
+            "bookImage": "//bkstr.scene7.com/is/image/Bkstr/100162",
+            "title": "HILITER 4PK MAJOR ACCENT ASST",
+            "edition": "N/A",
+            "materialType": "SUP",
+            "requirementType": "BR",
+            "isPackage": false,
+            "priceNewLabel": "FLNew",
+            "priceUsedLabel": "FLUsed",
+            "newBook": "N",
+            "productCatentryId": "145568320",
+            "productPartNumber": "81ab7e70-8d6b-4f3f-a9ca-a915b9f078c9",
+            "messageBookType": 0,
+            "preSelected": false,
+            "priceRangeDisplay": "$4.99",
+            "printItemDTOs": {
+              "BUY_NEW": {
+                "typeCondition": "BUY_NEW",
+                "priceDisplay": "$4.99",
+                "itemCatentryId": "145568321",
+                "inventoryStatusDB": "IN_STOCK",
+                "inventoryStatusBus": "IN_STOCK",
+                "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                "preselected": false,
+                "priceNumeric": 4.99,
+                "availabilityDate": "",
+                "skuPartNumber": "81ab7e70-8d6b-4f3f-a9ca-a915b9f078c9-n",
+                "nonRentalChargesTotal": "$0.00"
+              }
+            },
+            "includEDMaterialFlag": false,
+            "titleSelectionDisabled": false
+          },
+          {
+            "rank": 16,
+            "cmId": "10097061470007430",
+            "bookImage": "//bkstr.scene7.com/is/image/Bkstr/39178",
+            "title": "MECH PENCIL .5MM 5PK BIC",
+            "edition": "N/A",
+            "materialType": "SUP",
+            "requirementType": "BR",
+            "isPackage": false,
+            "priceNewLabel": "FLNew",
+            "priceUsedLabel": "FLUsed",
+            "newBook": "N",
+            "productCatentryId": "70007430",
+            "productPartNumber": "74a9953d-82df-4f54-924d-242a00d4245e",
+            "messageBookType": 0,
+            "preSelected": false,
+            "priceRangeDisplay": "$2.99",
+            "printItemDTOs": {
+              "BUY_NEW": {
+                "typeCondition": "BUY_NEW",
+                "priceDisplay": "$2.99",
+                "itemCatentryId": "70007431",
+                "inventoryStatusDB": "IN_STOCK",
+                "inventoryStatusBus": "IN_STOCK",
+                "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                "preselected": false,
+                "priceNumeric": 2.99,
+                "availabilityDate": "",
+                "skuPartNumber": "74a9953d-82df-4f54-924d-242a00d4245e-n",
+                "nonRentalChargesTotal": "$0.00"
+              }
+            },
+            "includEDMaterialFlag": false,
+            "titleSelectionDisabled": false
+          },
+          {
+            "rank": 16,
+            "cmId": "10097061472645558",
+            "bookImage": "//bkstr.scene7.com/is/image/Bkstr/8507510",
+            "title": "NOTEBK 3SUBJ FIVESTAR",
+            "edition": "N/A",
+            "materialType": "SUP",
+            "requirementType": "BR",
+            "isPackage": false,
+            "priceNewLabel": "FLNew",
+            "priceUsedLabel": "FLUsed",
+            "newBook": "N",
+            "productCatentryId": "72645558",
+            "productPartNumber": "d2c039a2-57a4-44dd-9c2a-34ebed675f37",
+            "messageBookType": 0,
+            "preSelected": false,
+            "priceRangeDisplay": "$8.99",
+            "printItemDTOs": {
+              "BUY_NEW": {
+                "typeCondition": "BUY_NEW",
+                "priceDisplay": "$8.99",
+                "itemCatentryId": "72645559",
+                "inventoryStatusDB": "IN_STOCK",
+                "inventoryStatusBus": "IN_STOCK",
+                "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                "preselected": false,
+                "priceNumeric": 8.99,
+                "availabilityDate": "",
+                "skuPartNumber": "d2c039a2-57a4-44dd-9c2a-34ebed675f37-n",
+                "nonRentalChargesTotal": "$0.00"
+              }
+            },
+            "includEDMaterialFlag": false,
+            "titleSelectionDisabled": false
+          },
+          {
+            "rank": 16,
+            "cmId": "10097061489740435",
+            "bookImage": "//bkstr.scene7.com/is/image/Bkstr/728841",
+            "title": "GEL PEN G2 2PK BLK",
+            "edition": "N/A",
+            "materialType": "SUP",
+            "requirementType": "BR",
+            "isPackage": false,
+            "priceNewLabel": "FLNew",
+            "priceUsedLabel": "FLUsed",
+            "newBook": "N",
+            "productCatentryId": "89740435",
+            "productPartNumber": "4b43e154-831a-4299-b8bc-16e9ee55bbe2",
+            "messageBookType": 0,
+            "preSelected": false,
+            "priceRangeDisplay": "$4.29",
+            "printItemDTOs": {
+              "BUY_NEW": {
+                "typeCondition": "BUY_NEW",
+                "priceDisplay": "$4.29",
+                "itemCatentryId": "89740436",
+                "inventoryStatusDB": "IN_STOCK",
+                "inventoryStatusBus": "IN_STOCK",
+                "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                "preselected": false,
+                "priceNumeric": 4.29,
+                "availabilityDate": "",
+                "skuPartNumber": "4b43e154-831a-4299-b8bc-16e9ee55bbe2-n",
+                "nonRentalChargesTotal": "$0.00"
+              }
+            },
+            "includEDMaterialFlag": false,
+            "titleSelectionDisabled": false
+          },
+          {
+            "rank": 10,
+            "cmId": "100970614160441679",
+            "mtcId": "59686151",
+            "bookImage": "//bkstr.scene7.com/is/image/Bkstr/9781647121877",
+            "title": "Al-Kitaab Part One with Website : A Textbook for Beginning Arabic, Third Edition",
+            "edition": "3rd",
+            "author": "Brustad",
+            "isbn": "9781647121907",
+            "materialType": "CEB",
+            "requirementType": "RQ",
+            "isbnDisplay": "9781647121907",
+            "isPackage": false,
+            "priceNewLabel": "FLNew",
+            "priceUsedLabel": "FLUsed",
+            "newBook": "N",
+            "productCatentryId": "160441679",
+            "productPartNumber": "174bdd27-83a8-47d9-a3ed-487c79b7a9d6",
+            "publisherCode": "GEORG",
+            "publisherShortName": "GEORG",
+            "publisher": "Georgetown University Press",
+            "messageBookType": 0,
+            "preSelected": false,
+            "priceRangeDisplay": "$140.00 to $174.75",
+            "digitalItemDTOs": [
+              {
+                "relatedTradebookCatentryId": 152505629,
+                "tnblFlag": false,
+                "imagePath": "//bkstr.scene7.com/is/image/Bkstr/9781647121877",
+                "typeCondition": "BUY_NEW",
+                "priceDisplay": "$140.00",
+                "priceNumeric": 140,
+                "itemCatentryId": "160441696",
+                "inventoryStatusDB": "IN_STOCK",
+                "inventoryStatusBus": "IN_STOCK",
+                "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                "isPartial": false,
+                "provider": "KRTXT",
+                "isDigitalFeeAllowedPublisher": true,
+                "drmPageDTO": {
+                  "title": "Al-Kitaab Part One with Website : A Textbook for Beginning Arabic, Third Edition",
+                  "access": "Web",
+                  "format": "Kortext Format",
+                  "partialContent": "N",
+                  "copyPasteLimit": "10",
+                  "printLimit": "10",
+                  "refundable": "Y",
+                  "downloadProviderCode": "KRTXT",
+                  "downloadProviderName": "Kortext",
+                  "textKey": "DEFAULT",
+                  "isbn": "9781647121907",
+                  "publisherName": "Georgetown University Press"
+                },
+                "preselected": false,
+                "skuPartNumber": "174bdd27-83a8-47d9-a3ed-487c79b7a9d6-n",
+                "isDigitalDownloadProviderAllowed": false
+              }
+            ],
+            "includEDMaterialFlag": false,
+            "titleSelectionDisabled": false,
+            "downloadProvider": "KRTXT"
+          }
+        ],
+        "division": "",
+        "divisionName": " ",
+        "divisionDescriptorCode": "",
+        "department": "AB",
+        "departmentName": "AB",
+        "departmentDescriptorCode": "AB",
+        "course": "112",
+        "courseName": "112",
+        "courseDescriptorCode": "112",
+        "section": "301",
+        "sectionName": "301",
+        "sectionDescriptorCode": "301",
+        "courseId": "100970614",
+        "displayFlag": true,
+        "salesTrack": "B",
+        "courseMinimum": 0,
+        "includEDProgramName": "Follett ACCESS",
+        "includEdDTO": {
+          "isStoreIncludEDAllStudents": true,
+          "isIncludEDCampus": true,
+          "isIncludEDSection": false,
+          "isIncludEDTitle": false
+        },
+        "instructor": "MOHAMED ABDEL RAHMAN",
+        "sectionAdoptionDTO": {
+          "courseMaterialRelationship": {
+            "100970614110332891": [
+              "100970614160441679"
+            ],
+            "100970614160441679": [
+              "100970614110332891"
+            ]
+          },
+          "materialAdoptions": {
+            "REQUIRED": [
+              {
+                "primaryTitleDisplayDTO": {
+                  "title": "Al-Kitaab Part One with Website HC (Lingco)",
+                  "edition": "3rd",
+                  "author": "Brustad",
+                  "isbn": "9781647121860",
+                  "mnpto": 6,
+                  "bookImage": "//bkstr.scene7.com/is/image/Bkstr/9781647121860",
+                  "includEDMaterialFlag": false,
+                  "copyrightYear": "2021",
+                  "publisher": "Georgetown University Press"
+                },
+                "allMaterials": [
+                  {
+                    "rank": 16,
+                    "cmId": "100970614110332891",
+                    "mtcId": "46479622",
+                    "bookImage": "//bkstr.scene7.com/is/image/Bkstr/9781647121860",
+                    "title": "Al-Kitaab Part One with Website HC (Lingco)",
+                    "edition": "3rd",
+                    "author": "Brustad",
+                    "isbn": "9781647121860",
+                    "materialType": "TXT",
+                    "requirementType": "RQ",
+                    "isbnDisplay": "9781647121860",
+                    "isPackage": false,
+                    "priceNewLabel": "FLNew",
+                    "priceUsedLabel": "FLUsed",
+                    "newBook": "N",
+                    "productCatentryId": "110332891",
+                    "productPartNumber": "6bdb568c-98f7-42e1-a190-2215936ec442",
+                    "publisherCode": "GEORG",
+                    "publisherShortName": "GEORG",
+                    "copyRightYear": "2021",
+                    "publisher": "Georgetown University Press",
+                    "inventoryStatusKeyGeneral": "INV_OUT_OF_STOCK_LABEL",
+                    "messageBookType": 0,
+                    "preSelected": false,
+                    "priceRangeDisplay": "$140.00 to $174.75",
+                    "printItemDTOs": {
+                      "BUY_NEW": {
+                        "typeCondition": "BUY_NEW",
+                        "priceDisplay": "$174.75",
+                        "itemCatentryId": "110332893",
+                        "inventoryStatusDB": "OUT_OF_STOCK",
+                        "inventoryStatusBus": "OUT_OF_STOCK",
+                        "inventoryStatusKey": "INV_OUT_OF_STOCK_LABEL",
+                        "binding": "Hardcover",
+                        "preselected": false,
+                        "priceNumeric": 174.75,
+                        "availabilityDate": "",
+                        "skuPartNumber": "6bdb568c-98f7-42e1-a190-2215936ec442-n",
+                        "nonRentalChargesTotal": "$0.00"
+                      }
+                    },
+                    "includEDMaterialFlag": false,
+                    "titleSelectionDisabled": false
+                  },
+                  {
+                    "rank": 10,
+                    "cmId": "100970614160441679",
+                    "mtcId": "59686151",
+                    "bookImage": "//bkstr.scene7.com/is/image/Bkstr/9781647121877",
+                    "title": "Al-Kitaab Part One with Website : A Textbook for Beginning Arabic, Third Edition",
+                    "edition": "3rd",
+                    "author": "Brustad",
+                    "isbn": "9781647121907",
+                    "materialType": "CEB",
+                    "requirementType": "RQ",
+                    "isbnDisplay": "9781647121907",
+                    "isPackage": false,
+                    "priceNewLabel": "FLNew",
+                    "priceUsedLabel": "FLUsed",
+                    "newBook": "N",
+                    "productCatentryId": "160441679",
+                    "productPartNumber": "174bdd27-83a8-47d9-a3ed-487c79b7a9d6",
+                    "publisherCode": "GEORG",
+                    "publisherShortName": "GEORG",
+                    "publisher": "Georgetown University Press",
+                    "messageBookType": 0,
+                    "preSelected": false,
+                    "priceRangeDisplay": "$140.00 to $174.75",
+                    "digitalItemDTOs": [
+                      {
+                        "relatedTradebookCatentryId": 152505629,
+                        "tnblFlag": false,
+                        "imagePath": "//bkstr.scene7.com/is/image/Bkstr/9781647121877",
+                        "typeCondition": "BUY_NEW",
+                        "priceDisplay": "$140.00",
+                        "priceNumeric": 140,
+                        "itemCatentryId": "160441696",
+                        "inventoryStatusDB": "IN_STOCK",
+                        "inventoryStatusBus": "IN_STOCK",
+                        "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                        "isPartial": false,
+                        "provider": "KRTXT",
+                        "isDigitalFeeAllowedPublisher": true,
+                        "drmPageDTO": {
+                          "title": "Al-Kitaab Part One with Website : A Textbook for Beginning Arabic, Third Edition",
+                          "access": "Web",
+                          "format": "Kortext Format",
+                          "partialContent": "N",
+                          "copyPasteLimit": "10",
+                          "printLimit": "10",
+                          "refundable": "Y",
+                          "downloadProviderCode": "KRTXT",
+                          "downloadProviderName": "Kortext",
+                          "textKey": "DEFAULT",
+                          "isbn": "9781647121907",
+                          "publisherName": "Georgetown University Press"
+                        },
+                        "preselected": false,
+                        "skuPartNumber": "174bdd27-83a8-47d9-a3ed-487c79b7a9d6-n",
+                        "isDigitalDownloadProviderAllowed": false
+                      }
+                    ],
+                    "includEDMaterialFlag": false,
+                    "titleSelectionDisabled": false,
+                    "downloadProvider": "KRTXT"
+                  }
+                ],
+                "primaryCmId": "100970614110332891",
+                "adoptionType": "INDIVIDUAL"
+              }
+            ],
+            "SUGGESTED": [
+              {
+                "primaryTitleDisplayDTO": {
+                  "title": "NOTEBK 3SUBJ FIVESTAR",
+                  "edition": "N/A",
+                  "mnpto": 6,
+                  "bookImage": "//bkstr.scene7.com/is/image/Bkstr/8507510",
+                  "includEDMaterialFlag": false
+                },
+                "allMaterials": [
+                  {
+                    "rank": 16,
+                    "cmId": "10097061472645558",
+                    "bookImage": "//bkstr.scene7.com/is/image/Bkstr/8507510",
+                    "title": "NOTEBK 3SUBJ FIVESTAR",
+                    "edition": "N/A",
+                    "materialType": "SUP",
+                    "requirementType": "BR",
+                    "isPackage": false,
+                    "priceNewLabel": "FLNew",
+                    "priceUsedLabel": "FLUsed",
+                    "newBook": "N",
+                    "productCatentryId": "72645558",
+                    "productPartNumber": "d2c039a2-57a4-44dd-9c2a-34ebed675f37",
+                    "messageBookType": 0,
+                    "preSelected": false,
+                    "priceRangeDisplay": "$8.99",
+                    "printItemDTOs": {
+                      "BUY_NEW": {
+                        "typeCondition": "BUY_NEW",
+                        "priceDisplay": "$8.99",
+                        "itemCatentryId": "72645559",
+                        "inventoryStatusDB": "IN_STOCK",
+                        "inventoryStatusBus": "IN_STOCK",
+                        "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                        "preselected": false,
+                        "priceNumeric": 8.99,
+                        "availabilityDate": "",
+                        "skuPartNumber": "d2c039a2-57a4-44dd-9c2a-34ebed675f37-n",
+                        "nonRentalChargesTotal": "$0.00"
+                      }
+                    },
+                    "includEDMaterialFlag": false,
+                    "titleSelectionDisabled": false
+                  }
+                ],
+                "primaryCmId": "10097061472645558",
+                "adoptionType": "INDIVIDUAL"
+              },
+              {
+                "primaryTitleDisplayDTO": {
+                  "title": "HILITER 4PK MAJOR ACCENT ASST",
+                  "edition": "N/A",
+                  "mnpto": 6,
+                  "bookImage": "//bkstr.scene7.com/is/image/Bkstr/100162",
+                  "includEDMaterialFlag": false
+                },
+                "allMaterials": [
+                  {
+                    "rank": 16,
+                    "cmId": "100970614145568320",
+                    "bookImage": "//bkstr.scene7.com/is/image/Bkstr/100162",
+                    "title": "HILITER 4PK MAJOR ACCENT ASST",
+                    "edition": "N/A",
+                    "materialType": "SUP",
+                    "requirementType": "BR",
+                    "isPackage": false,
+                    "priceNewLabel": "FLNew",
+                    "priceUsedLabel": "FLUsed",
+                    "newBook": "N",
+                    "productCatentryId": "145568320",
+                    "productPartNumber": "81ab7e70-8d6b-4f3f-a9ca-a915b9f078c9",
+                    "messageBookType": 0,
+                    "preSelected": false,
+                    "priceRangeDisplay": "$4.99",
+                    "printItemDTOs": {
+                      "BUY_NEW": {
+                        "typeCondition": "BUY_NEW",
+                        "priceDisplay": "$4.99",
+                        "itemCatentryId": "145568321",
+                        "inventoryStatusDB": "IN_STOCK",
+                        "inventoryStatusBus": "IN_STOCK",
+                        "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                        "preselected": false,
+                        "priceNumeric": 4.99,
+                        "availabilityDate": "",
+                        "skuPartNumber": "81ab7e70-8d6b-4f3f-a9ca-a915b9f078c9-n",
+                        "nonRentalChargesTotal": "$0.00"
+                      }
+                    },
+                    "includEDMaterialFlag": false,
+                    "titleSelectionDisabled": false
+                  }
+                ],
+                "primaryCmId": "100970614145568320",
+                "adoptionType": "INDIVIDUAL"
+              },
+              {
+                "primaryTitleDisplayDTO": {
+                  "title": "GEL PEN G2 2PK BLK",
+                  "edition": "N/A",
+                  "mnpto": 6,
+                  "bookImage": "//bkstr.scene7.com/is/image/Bkstr/728841",
+                  "includEDMaterialFlag": false
+                },
+                "allMaterials": [
+                  {
+                    "rank": 16,
+                    "cmId": "10097061489740435",
+                    "bookImage": "//bkstr.scene7.com/is/image/Bkstr/728841",
+                    "title": "GEL PEN G2 2PK BLK",
+                    "edition": "N/A",
+                    "materialType": "SUP",
+                    "requirementType": "BR",
+                    "isPackage": false,
+                    "priceNewLabel": "FLNew",
+                    "priceUsedLabel": "FLUsed",
+                    "newBook": "N",
+                    "productCatentryId": "89740435",
+                    "productPartNumber": "4b43e154-831a-4299-b8bc-16e9ee55bbe2",
+                    "messageBookType": 0,
+                    "preSelected": false,
+                    "priceRangeDisplay": "$4.29",
+                    "printItemDTOs": {
+                      "BUY_NEW": {
+                        "typeCondition": "BUY_NEW",
+                        "priceDisplay": "$4.29",
+                        "itemCatentryId": "89740436",
+                        "inventoryStatusDB": "IN_STOCK",
+                        "inventoryStatusBus": "IN_STOCK",
+                        "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                        "preselected": false,
+                        "priceNumeric": 4.29,
+                        "availabilityDate": "",
+                        "skuPartNumber": "4b43e154-831a-4299-b8bc-16e9ee55bbe2-n",
+                        "nonRentalChargesTotal": "$0.00"
+                      }
+                    },
+                    "includEDMaterialFlag": false,
+                    "titleSelectionDisabled": false
+                  }
+                ],
+                "primaryCmId": "10097061489740435",
+                "adoptionType": "INDIVIDUAL"
+              },
+              {
+                "primaryTitleDisplayDTO": {
+                  "title": "MECH PENCIL .5MM 5PK BIC",
+                  "edition": "N/A",
+                  "mnpto": 6,
+                  "bookImage": "//bkstr.scene7.com/is/image/Bkstr/39178",
+                  "includEDMaterialFlag": false
+                },
+                "allMaterials": [
+                  {
+                    "rank": 16,
+                    "cmId": "10097061470007430",
+                    "bookImage": "//bkstr.scene7.com/is/image/Bkstr/39178",
+                    "title": "MECH PENCIL .5MM 5PK BIC",
+                    "edition": "N/A",
+                    "materialType": "SUP",
+                    "requirementType": "BR",
+                    "isPackage": false,
+                    "priceNewLabel": "FLNew",
+                    "priceUsedLabel": "FLUsed",
+                    "newBook": "N",
+                    "productCatentryId": "70007430",
+                    "productPartNumber": "74a9953d-82df-4f54-924d-242a00d4245e",
+                    "messageBookType": 0,
+                    "preSelected": false,
+                    "priceRangeDisplay": "$2.99",
+                    "printItemDTOs": {
+                      "BUY_NEW": {
+                        "typeCondition": "BUY_NEW",
+                        "priceDisplay": "$2.99",
+                        "itemCatentryId": "70007431",
+                        "inventoryStatusDB": "IN_STOCK",
+                        "inventoryStatusBus": "IN_STOCK",
+                        "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                        "preselected": false,
+                        "priceNumeric": 2.99,
+                        "availabilityDate": "",
+                        "skuPartNumber": "74a9953d-82df-4f54-924d-242a00d4245e-n",
+                        "nonRentalChargesTotal": "$0.00"
+                      }
+                    },
+                    "includEDMaterialFlag": false,
+                    "titleSelectionDisabled": false
+                  }
+                ],
+                "primaryCmId": "10097061470007430",
+                "adoptionType": "INDIVIDUAL"
+              }
+            ]
+          }
+        },
+        "rentalReturnDateDisplay": "5/22/26"
+      }
+    ],
+    "statusDTO": {
+      "status": "SUCCESS",
+      "code": "0"
+    },
+    "homePageURL": "/Home/11077-537406-1?demoKey=d",
+    "searchLimit": 0,
+    "DDCSBrowseRetentionLevel": "TERM",
+    "accordionControl": "ALL_CLOSED",
+    "ddcsNotesControl": "NOTES_CLOSED",
+    "digitalSurChargeFee": "5.99",
+    "summaryProfile": false
+  }
+]

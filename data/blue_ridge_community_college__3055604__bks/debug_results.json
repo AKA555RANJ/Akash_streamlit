@@ -1,0 +1,107 @@
+[
+  {
+    "parentStoreId": "10701",
+    "storeId": 10701,
+    "storeNumber": "618",
+    "storeDisplayName": "Blue Ridge CC Bookstore",
+    "langId": "-1",
+    "locale": "en_US",
+    "currency": "USD",
+    "requirementTypeLabelMap": {
+      "RQ": "Required Material(s)",
+      "CH": "Choose - Please select from the following...",
+      "RM": "Recommended Material(s)",
+      "BR": "Suggested by the Bookstore"
+    },
+    "materialTypeKeyList": [
+      "TXT",
+      "CEB",
+      "SUP"
+    ],
+    "isViewByLocation": false,
+    "isISBNVisible": true,
+    "isHEOACheckAvailabilityLink": true,
+    "isSuperSite": false,
+    "isEbookStore": true,
+    "isShowRental": true,
+    "isShowNationalRental": false,
+    "isSharedinventory": false,
+    "isCourseTrackStore": true,
+    "isCourseMaterialPreselected": true,
+    "isStoreIncludEDAllStudents": true,
+    "isDigitalFeeEnabledStore": true,
+    "CRNSearchLevel": "NONE",
+    "courseLabel": "Course",
+    "sectionLabel": "Section",
+    "courseSectionDTO": [
+      {
+        "courseSectionStatus": {
+          "status": "FAIL",
+          "code": "700",
+          "description": "Adoption Status not 500"
+        },
+        "termId": "100092286",
+        "termName": "Fall 2026",
+        "termNumber": "2264",
+        "termStatus": "A",
+        "termOpen": true,
+        "rentalReturnDate": {
+          "year": 2026,
+          "month": 11,
+          "dayOfMonth": 14,
+          "hourOfDay": 0,
+          "minute": 0,
+          "second": 0
+        },
+        "programId": "46",
+        "programName": "All",
+        "campusId": "954",
+        "campusName": "Blue Ridge Community College",
+        "institutionName": "Blue Ridge Community College                                ",
+        "ddcsBreadCrumb": "All : Fall 2026 : ACC : 211 : F01",
+        "adoptionStatus": "100",
+        "division": "",
+        "divisionName": " ",
+        "divisionDescriptorCode": "",
+        "department": "ACC",
+        "departmentName": "ACC",
+        "departmentDescriptorCode": "ACC",
+        "course": "211",
+        "courseName": "211",
+        "courseDescriptorCode": "211",
+        "section": "F01",
+        "sectionName": "F01",
+        "sectionDescriptorCode": "F01",
+        "courseId": "101973132",
+        "displayFlag": true,
+        "salesTrack": "B",
+        "courseMinimum": 0,
+        "includEDSectionNote": "Follett ACCESS",
+        "includEDProgramName": "Follett ACCESS",
+        "includEdDTO": {
+          "isStoreIncludEDAllStudents": true,
+          "isIncludEDCampus": true,
+          "isIncludEDSection": true,
+          "isIncludEDTitle": false
+        },
+        "instructor": "Rosemary Parsells",
+        "sectionAdoptionDTO": {
+          "courseMaterialRelationship": {},
+          "materialAdoptions": {}
+        },
+        "rentalReturnDateDisplay": "12/14/26"
+      }
+    ],
+    "statusDTO": {
+      "status": "SUCCESS",
+      "code": "0"
+    },
+    "homePageURL": "/Home/11077-10701-1?demoKey=d",
+    "searchLimit": 0,
+    "DDCSBrowseRetentionLevel": "TERM",
+    "accordionControl": "ALL_CLOSED",
+    "ddcsNotesControl": "NOTES_CLOSED",
+    "digitalSurChargeFee": "5.99",
+    "summaryProfile": false
+  }
+]

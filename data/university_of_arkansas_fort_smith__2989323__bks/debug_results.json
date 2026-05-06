@@ -1,0 +1,211 @@
+[
+  {
+    "parentStoreId": "533405",
+    "storeId": 533405,
+    "storeNumber": "2300",
+    "storeDisplayName": "University of Arkansas - Fort Smith Bookstore",
+    "langId": "-1",
+    "locale": "en_US",
+    "currency": "USD",
+    "requirementTypeLabelMap": {
+      "RQ": "Required Material(s)",
+      "CH": "Choose - Please select from the following...",
+      "RM": "Recommended Material(s)",
+      "BR": "Suggested by the Bookstore"
+    },
+    "materialTypeKeyList": [
+      "TXT",
+      "CEB",
+      "SUP"
+    ],
+    "isViewByLocation": false,
+    "isISBNVisible": true,
+    "isHEOACheckAvailabilityLink": true,
+    "isSuperSite": false,
+    "isEbookStore": true,
+    "isShowRental": true,
+    "isShowNationalRental": false,
+    "isSharedinventory": false,
+    "isCourseTrackStore": true,
+    "isCourseMaterialPreselected": true,
+    "isStoreIncludEDAllStudents": true,
+    "isDigitalFeeEnabledStore": true,
+    "CRNSearchLevel": "NONE",
+    "courseLabel": "Course",
+    "sectionLabel": "Section",
+    "courseSectionDTO": [
+      {
+        "courseSectionStatus": {
+          "status": "SUCCESS",
+          "code": "0"
+        },
+        "termId": "100092871",
+        "termName": "Summer II 2026",
+        "termNumber": "UAFS Summer Second 5 Weeks 2026",
+        "termStatus": "A",
+        "termOpen": true,
+        "rentalReturnDate": {
+          "year": 2026,
+          "month": 7,
+          "dayOfMonth": 7,
+          "hourOfDay": 0,
+          "minute": 0,
+          "second": 0
+        },
+        "programId": "5167",
+        "programName": "All",
+        "campusId": "4063",
+        "campusName": "UAFS",
+        "institutionName": "University of Arkansas - Fort Smith",
+        "ddcsBreadCrumb": "All : Summer II 2026 : BIOL : 20001 : 0G01",
+        "adoptionStatus": "500",
+        "courseMaterialResultsList": [
+          {
+            "cmId": "102329494151467101",
+            "mtcId": "59227699",
+            "bookImage": "//bkstr.scene7.com/is/image/Bkstr/9798385132911",
+            "title": "Microbiology Lab Manual",
+            "edition": "2nd",
+            "author": "Lightner-Burns",
+            "isbn": "9798385132911",
+            "materialType": "TXT",
+            "requirementType": "RQ",
+            "isbnDisplay": "9798385132911",
+            "isPackage": false,
+            "priceNewLabel": "FLNew",
+            "priceUsedLabel": "FLUsed",
+            "newBook": "N",
+            "productCatentryId": "151467101",
+            "productPartNumber": "1a7c0f34-96c2-43a4-8c99-8e42b1f3260d",
+            "publisherCode": "KH",
+            "publisherShortName": "Kendall Hunt",
+            "copyRightYear": "2020",
+            "publisher": "Kendall Hunt Publishing Company",
+            "messageBookType": 0,
+            "preSelected": false,
+            "priceRangeDisplay": "$91.75",
+            "printItemDTOs": {
+              "BUY_NEW": {
+                "typeCondition": "BUY_NEW",
+                "priceDisplay": "$91.75",
+                "itemCatentryId": "151467107",
+                "inventoryStatusDB": "IN_STOCK",
+                "inventoryStatusBus": "IN_STOCK",
+                "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                "preselected": true,
+                "priceNumeric": 91.75,
+                "availabilityDate": "",
+                "skuPartNumber": "1a7c0f34-96c2-43a4-8c99-8e42b1f3260d-n",
+                "nonRentalChargesTotal": "$0.00"
+              }
+            },
+            "includEDMaterialFlag": false,
+            "titleSelectionDisabled": false
+          }
+        ],
+        "division": "",
+        "divisionName": " ",
+        "divisionDescriptorCode": "",
+        "department": "BIOL",
+        "departmentName": "BIOL",
+        "departmentDescriptorCode": "BIOL",
+        "course": "20001",
+        "courseName": "20001",
+        "courseDescriptorCode": "20001",
+        "section": "0G01",
+        "sectionName": "0G01",
+        "sectionDescriptorCode": "0G01",
+        "courseId": "102329494",
+        "displayFlag": true,
+        "salesTrack": "B",
+        "courseMinimum": 0,
+        "includEDProgramName": "Follett ACCESS",
+        "includEdDTO": {
+          "isStoreIncludEDAllStudents": true,
+          "isIncludEDCampus": true,
+          "isIncludEDSection": false,
+          "isIncludEDTitle": false
+        },
+        "instructor": "Susie Boles",
+        "sectionAdoptionDTO": {
+          "courseMaterialRelationship": {},
+          "materialAdoptions": {
+            "REQUIRED": [
+              {
+                "primaryTitleDisplayDTO": {
+                  "title": "Microbiology Lab Manual",
+                  "edition": "2nd",
+                  "author": "Lightner-Burns",
+                  "isbn": "9798385132911",
+                  "mnpto": 6,
+                  "bookImage": "//bkstr.scene7.com/is/image/Bkstr/9798385132911",
+                  "includEDMaterialFlag": false,
+                  "copyrightYear": "2020",
+                  "publisher": "Kendall Hunt Publishing Company"
+                },
+                "allMaterials": [
+                  {
+                    "cmId": "102329494151467101",
+                    "mtcId": "59227699",
+                    "bookImage": "//bkstr.scene7.com/is/image/Bkstr/9798385132911",
+                    "title": "Microbiology Lab Manual",
+                    "edition": "2nd",
+                    "author": "Lightner-Burns",
+                    "isbn": "9798385132911",
+                    "materialType": "TXT",
+                    "requirementType": "RQ",
+                    "isbnDisplay": "9798385132911",
+                    "isPackage": false,
+                    "priceNewLabel": "FLNew",
+                    "priceUsedLabel": "FLUsed",
+                    "newBook": "N",
+                    "productCatentryId": "151467101",
+                    "productPartNumber": "1a7c0f34-96c2-43a4-8c99-8e42b1f3260d",
+                    "publisherCode": "KH",
+                    "publisherShortName": "Kendall Hunt",
+                    "copyRightYear": "2020",
+                    "publisher": "Kendall Hunt Publishing Company",
+                    "messageBookType": 0,
+                    "preSelected": false,
+                    "priceRangeDisplay": "$91.75",
+                    "printItemDTOs": {
+                      "BUY_NEW": {
+                        "typeCondition": "BUY_NEW",
+                        "priceDisplay": "$91.75",
+                        "itemCatentryId": "151467107",
+                        "inventoryStatusDB": "IN_STOCK",
+                        "inventoryStatusBus": "IN_STOCK",
+                        "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                        "preselected": true,
+                        "priceNumeric": 91.75,
+                        "availabilityDate": "",
+                        "skuPartNumber": "1a7c0f34-96c2-43a4-8c99-8e42b1f3260d-n",
+                        "nonRentalChargesTotal": "$0.00"
+                      }
+                    },
+                    "includEDMaterialFlag": false,
+                    "titleSelectionDisabled": false
+                  }
+                ],
+                "primaryCmId": "102329494151467101",
+                "adoptionType": "INDIVIDUAL"
+              }
+            ]
+          }
+        },
+        "rentalReturnDateDisplay": "8/7/26"
+      }
+    ],
+    "statusDTO": {
+      "status": "SUCCESS",
+      "code": "0"
+    },
+    "homePageURL": "/Home/11077-533405-1?demoKey=d",
+    "searchLimit": 0,
+    "DDCSBrowseRetentionLevel": "TERM",
+    "accordionControl": "ALL_CLOSED",
+    "ddcsNotesControl": "NOTES_CLOSED",
+    "digitalSurChargeFee": "5.99",
+    "summaryProfile": false
+  }
+]

@@ -1,0 +1,248 @@
+[
+  {
+    "parentStoreId": "546907",
+    "storeId": 546907,
+    "storeNumber": "2368",
+    "storeDisplayName": "Texas Southern University",
+    "langId": "-1",
+    "locale": "en_US",
+    "currency": "USD",
+    "requirementTypeLabelMap": {
+      "RQ": "Required Material(s)",
+      "CH": "Choose - Please select from the following...",
+      "RM": "Recommended Material(s)",
+      "BR": "Suggested by the Bookstore"
+    },
+    "materialTypeKeyList": [
+      "TXT",
+      "CEB",
+      "SUP"
+    ],
+    "isViewByLocation": false,
+    "isISBNVisible": true,
+    "isHEOACheckAvailabilityLink": true,
+    "isSuperSite": false,
+    "isEbookStore": true,
+    "isShowRental": true,
+    "isShowNationalRental": false,
+    "isSharedinventory": false,
+    "isCourseTrackStore": true,
+    "isCourseMaterialPreselected": true,
+    "isStoreIncludEDAllStudents": true,
+    "isDigitalFeeEnabledStore": true,
+    "CRNSearchLevel": "STORE",
+    "courseLabel": "Course",
+    "sectionLabel": "Section",
+    "courseSectionDTO": [
+      {
+        "courseSectionStatus": {
+          "status": "SUCCESS",
+          "code": "0"
+        },
+        "termId": "100091181",
+        "termName": "Spring 2026",
+        "termNumber": "202620",
+        "termStatus": "A",
+        "termOpen": true,
+        "rentalReturnDate": {
+          "year": 2026,
+          "month": 4,
+          "dayOfMonth": 8,
+          "hourOfDay": 0,
+          "minute": 0,
+          "second": 0
+        },
+        "programId": "5291",
+        "programName": "Texas Southern University",
+        "campusId": "4182",
+        "campusName": "Texas Southern University",
+        "institutionName": "Texas Southern University",
+        "ddcsBreadCrumb": "Texas Southern University : Spring 2026 : ACCT : 231 : 01",
+        "adoptionStatus": "500",
+        "courseMaterialResultsList": [
+          {
+            "cmId": "101252922104663240",
+            "mtcId": "45162161",
+            "bookImage": "//bkstr.scene7.com/is/image/Bkstr/9781264111695",
+            "title": "Connect Online Access for Financial Accounting Fundamentals",
+            "edition": "8th",
+            "author": "Wild",
+            "isbn": "9781260728859",
+            "materialType": "CEB",
+            "requirementType": "RQ",
+            "isbnDisplay": "9781260728859",
+            "isPackage": false,
+            "priceNewLabel": "FLNew",
+            "priceUsedLabel": "FLUsed",
+            "newBook": "N",
+            "productCatentryId": "104663240",
+            "productPartNumber": "31babd73-0d92-4a90-9262-e3b80ddd4e29",
+            "publisherCode": "MCG",
+            "publisherShortName": "McGraw-Hill",
+            "publisher": "McGraw-Hill",
+            "messageBookType": 0,
+            "preSelected": false,
+            "priceRangeDisplay": "$189.75",
+            "digitalItemDTOs": [
+              {
+                "relatedTradebookCatentryId": 104662745,
+                "subscription": "180",
+                "tnblFlag": false,
+                "imagePath": "//bkstr.scene7.com/is/image/Bkstr/9781264111695",
+                "typeCondition": "RENTAL_NEW",
+                "priceDisplay": "$189.75",
+                "priceNumeric": 189.75,
+                "itemCatentryId": "104663249",
+                "inventoryStatusDB": "IN_STOCK",
+                "inventoryStatusBus": "IN_STOCK",
+                "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                "isPartial": false,
+                "provider": "RSBW",
+                "isDigitalFeeAllowedPublisher": true,
+                "drmPageDTO": {
+                  "title": "Connect Online Access for Financial Accounting Fundamentals",
+                  "access": "Web",
+                  "format": "BryteWave Format",
+                  "partialContent": "N",
+                  "refundable": "Y",
+                  "subscription": "180",
+                  "downloadProviderCode": "RSBW",
+                  "downloadProviderName": "RedShelf",
+                  "textKey": "DEFAULT",
+                  "isbn": "9781260728859",
+                  "publisherName": "McGraw-Hill"
+                },
+                "preselected": false,
+                "skuPartNumber": "31babd73-0d92-4a90-9262-e3b80ddd4e29-rn",
+                "isDigitalDownloadProviderAllowed": false
+              }
+            ],
+            "includEDMaterialFlag": false,
+            "titleSelectionDisabled": false,
+            "downloadProvider": "RSBW"
+          }
+        ],
+        "division": "",
+        "divisionName": " ",
+        "divisionDescriptorCode": "",
+        "department": "ACCT",
+        "departmentName": "ACCT",
+        "departmentDescriptorCode": "ACCT",
+        "course": "231",
+        "courseName": "231",
+        "courseDescriptorCode": "231",
+        "section": "01",
+        "sectionName": "01",
+        "sectionDescriptorCode": "01",
+        "courseId": "101252922",
+        "displayFlag": true,
+        "salesTrack": "B",
+        "courseMinimum": 0,
+        "includEDProgramName": "Follett ACCESS",
+        "includEdDTO": {
+          "isStoreIncludEDAllStudents": true,
+          "isIncludEDCampus": true,
+          "isIncludEDSection": false,
+          "isIncludEDTitle": false
+        },
+        "instructor": "Ronnie Alexander",
+        "sectionAdoptionDTO": {
+          "courseMaterialRelationship": {},
+          "materialAdoptions": {
+            "REQUIRED": [
+              {
+                "primaryTitleDisplayDTO": {
+                  "title": "Connect Online Access for Financial Accounting Fundamentals",
+                  "edition": "8th",
+                  "author": "Wild",
+                  "isbn": "9781260728859",
+                  "mnpto": 6,
+                  "bookImage": "//bkstr.scene7.com/is/image/Bkstr/9781264111695",
+                  "includEDMaterialFlag": false,
+                  "publisher": "McGraw-Hill"
+                },
+                "allMaterials": [
+                  {
+                    "cmId": "101252922104663240",
+                    "mtcId": "45162161",
+                    "bookImage": "//bkstr.scene7.com/is/image/Bkstr/9781264111695",
+                    "title": "Connect Online Access for Financial Accounting Fundamentals",
+                    "edition": "8th",
+                    "author": "Wild",
+                    "isbn": "9781260728859",
+                    "materialType": "CEB",
+                    "requirementType": "RQ",
+                    "isbnDisplay": "9781260728859",
+                    "isPackage": false,
+                    "priceNewLabel": "FLNew",
+                    "priceUsedLabel": "FLUsed",
+                    "newBook": "N",
+                    "productCatentryId": "104663240",
+                    "productPartNumber": "31babd73-0d92-4a90-9262-e3b80ddd4e29",
+                    "publisherCode": "MCG",
+                    "publisherShortName": "McGraw-Hill",
+                    "publisher": "McGraw-Hill",
+                    "messageBookType": 0,
+                    "preSelected": false,
+                    "priceRangeDisplay": "$189.75",
+                    "digitalItemDTOs": [
+                      {
+                        "relatedTradebookCatentryId": 104662745,
+                        "subscription": "180",
+                        "tnblFlag": false,
+                        "imagePath": "//bkstr.scene7.com/is/image/Bkstr/9781264111695",
+                        "typeCondition": "RENTAL_NEW",
+                        "priceDisplay": "$189.75",
+                        "priceNumeric": 189.75,
+                        "itemCatentryId": "104663249",
+                        "inventoryStatusDB": "IN_STOCK",
+                        "inventoryStatusBus": "IN_STOCK",
+                        "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                        "isPartial": false,
+                        "provider": "RSBW",
+                        "isDigitalFeeAllowedPublisher": true,
+                        "drmPageDTO": {
+                          "title": "Connect Online Access for Financial Accounting Fundamentals",
+                          "access": "Web",
+                          "format": "BryteWave Format",
+                          "partialContent": "N",
+                          "refundable": "Y",
+                          "subscription": "180",
+                          "downloadProviderCode": "RSBW",
+                          "downloadProviderName": "RedShelf",
+                          "textKey": "DEFAULT",
+                          "isbn": "9781260728859",
+                          "publisherName": "McGraw-Hill"
+                        },
+                        "preselected": false,
+                        "skuPartNumber": "31babd73-0d92-4a90-9262-e3b80ddd4e29-rn",
+                        "isDigitalDownloadProviderAllowed": false
+                      }
+                    ],
+                    "includEDMaterialFlag": false,
+                    "titleSelectionDisabled": false,
+                    "downloadProvider": "RSBW"
+                  }
+                ],
+                "primaryCmId": "101252922104663240",
+                "adoptionType": "INDIVIDUAL"
+              }
+            ]
+          }
+        },
+        "rentalReturnDateDisplay": "5/8/26"
+      }
+    ],
+    "statusDTO": {
+      "status": "SUCCESS",
+      "code": "0"
+    },
+    "homePageURL": "/Home/11077-546907-1?demoKey=d",
+    "searchLimit": 0,
+    "DDCSBrowseRetentionLevel": "TERM",
+    "accordionControl": "ALL_CLOSED",
+    "ddcsNotesControl": "NOTES_CLOSED",
+    "digitalSurChargeFee": "5.99",
+    "summaryProfile": false
+  }
+]

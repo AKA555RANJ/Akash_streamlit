@@ -250,7 +250,7 @@ def fetch_courses(sess, store_id, term_id, program_id):
 
 def normalize_term(s):
     s = re.sub(r'\s*\(.*?\)\s*', ' ', s or "").strip()
-    s = re.sub(r'^\d+-[A-Z]+\d+_', '', s)  # strip division prefix e.g. "1-P15_"
+    s = re.sub(r'^\d+-[A-Z]+\d+_', '', s)
     return s.strip().upper()
 
 def fmt(code):
@@ -269,6 +269,7 @@ def parse_results(raw, source_url, dept, course, section, term_name):
                      "material_adoption_code": "This course does not require any course materials"})
         return rows
 
+    seen_rows = set()
     for store_data in raw:
         for sec in store_data.get("courseSectionDTO", []):
             instructor   = sec.get("instructor", "") or sec.get("instructorName", "")
@@ -277,10 +278,13 @@ def parse_results(raw, source_url, dept, course, section, term_name):
             materials    = sec.get("courseMaterialResultsList", [])
 
             if not materials:
-                rows.append({**base, "course_title": course_title,
-                             "section_instructor": instructor,
-                             "isbn": "", "title": "", "author": "",
-                             "material_adoption_code": "This course does not require any course materials"})
+                key = (fmt(section), "", "")
+                if key not in seen_rows:
+                    seen_rows.add(key)
+                    rows.append({**base, "course_title": course_title,
+                                 "section_instructor": instructor,
+                                 "isbn": "", "title": "", "author": "",
+                                 "material_adoption_code": "This course does not require any course materials"})
                 continue
 
             for mat in materials:
@@ -295,10 +299,13 @@ def parse_results(raw, source_url, dept, course, section, term_name):
                     adoption = "Required"
 
                 if isbn or title:
-                    rows.append({**base, "course_title": course_title,
-                                 "section_instructor": instructor,
-                                 "isbn": isbn, "title": title, "author": author,
-                                 "material_adoption_code": adoption})
+                    key = (fmt(section), isbn, title)
+                    if key not in seen_rows:
+                        seen_rows.add(key)
+                        rows.append({**base, "course_title": course_title,
+                                     "section_instructor": instructor,
+                                     "isbn": isbn, "title": title, "author": author,
+                                     "material_adoption_code": adoption})
 
     if not rows:
         rows.append({**base, "course_title": "", "section_instructor": "",

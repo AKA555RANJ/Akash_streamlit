@@ -12,14 +12,14 @@ from tqdm import tqdm
 
 sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, 'reconfigure') else None
 
-SCHOOL_NAME = "cape_fear_community_college"
-SCHOOL_ID   = "3055607"
-STORE_SLUG  = "capefearstore"
+SCHOOL_NAME = "texas_southern_university"
+SCHOOL_ID   = "3102818"
+STORE_SLUG  = "tsustore"
 BASE_URL    = "https://www.bkstr.com"
 SVC_URL     = "https://svc.bkstr.com"
 STORE_HOME  = f"{BASE_URL}/{STORE_SLUG}/shop/textbooks-and-course-materials"
 FLARESOLVERR_URL     = "http://localhost:8191/v1"
-FLARESOLVERR_SESSION = "cfcc_bkstr_scraper"
+FLARESOLVERR_SESSION = "texas_southern_university_bkstr_scraper"
 
 REQUEST_DELAY = 1.0
 
@@ -157,11 +157,11 @@ def svc_post_results(sess, store_id, catalog_id, term_id, program_id,
         "termId":    term_id,
         "programId": program_id,
         "courses": [{
-            "secondaryvalues":      f"{dept}/{course}/{section}",
-            "divisionDisplayName":  "",
+            "secondaryvalues":       f"{dept}/{course}/{section}",
+            "divisionDisplayName":   "",
             "departmentDisplayName": dept,
-            "courseDisplayName":    course,
-            "sectionDisplayName":   section,
+            "courseDisplayName":     course,
+            "sectionDisplayName":    section,
         }],
     }
     for attempt in range(retries):
@@ -249,7 +249,9 @@ def fetch_courses(sess, store_id, term_id, program_id):
     return unique
 
 def normalize_term(s):
-    return re.sub(r'\s*\(.*?\)\s*', ' ', s or "").strip().upper()
+    s = re.sub(r'\s*\(.*?\)\s*', ' ', s or "").strip()
+    s = re.sub(r'^\d+-[A-Z]+\d+_', '', s)
+    return s.strip().upper()
 
 def fmt(code):
     code = (code or "").strip()
@@ -271,7 +273,8 @@ def parse_results(raw, source_url, dept, course, section, term_name):
     for store_data in raw:
         for sec in store_data.get("courseSectionDTO", []):
             instructor   = sec.get("instructor", "") or sec.get("instructorName", "")
-            course_title = sec.get("courseName", "")
+            raw_title    = sec.get("courseName", "") or ""
+            course_title = "" if raw_title.strip() == course.strip() else raw_title
             materials    = sec.get("courseMaterialResultsList", [])
 
             if not materials:

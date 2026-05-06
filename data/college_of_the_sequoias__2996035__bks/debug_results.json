@@ -1,0 +1,247 @@
+[
+  {
+    "parentStoreId": "534920",
+    "storeId": 534920,
+    "storeNumber": "2308",
+    "storeDisplayName": "Giant Student Store",
+    "langId": "-1",
+    "locale": "en_US",
+    "currency": "USD",
+    "requirementTypeLabelMap": {
+      "RQ": "Required Material(s)",
+      "CH": "Choose - Please select from the following...",
+      "RM": "Recommended Material(s)",
+      "BR": "Suggested by the Bookstore"
+    },
+    "materialTypeKeyList": [
+      "TXT",
+      "CEB",
+      "SUP"
+    ],
+    "isViewByLocation": false,
+    "isISBNVisible": true,
+    "isHEOACheckAvailabilityLink": true,
+    "isSuperSite": false,
+    "isEbookStore": true,
+    "isShowRental": true,
+    "isShowNationalRental": false,
+    "isSharedinventory": false,
+    "isCourseTrackStore": true,
+    "isCourseMaterialPreselected": true,
+    "isStoreIncludEDAllStudents": true,
+    "isDigitalFeeEnabledStore": true,
+    "CRNSearchLevel": "TERM",
+    "courseLabel": "Course",
+    "sectionLabel": "Section",
+    "courseSectionDTO": [
+      {
+        "courseSectionStatus": {
+          "status": "SUCCESS",
+          "code": "0"
+        },
+        "termId": "100090751",
+        "termName": "Spring 2026",
+        "termNumber": "202620",
+        "termStatus": "A",
+        "termOpen": true,
+        "rentalReturnDate": {
+          "year": 2026,
+          "month": 4,
+          "dayOfMonth": 20,
+          "hourOfDay": 0,
+          "minute": 0,
+          "second": 0
+        },
+        "programId": "5186",
+        "programName": "COS",
+        "campusId": "4081",
+        "campusName": "COS",
+        "institutionName": "College of the Sequoias Bookstore",
+        "ddcsBreadCrumb": "COS : Spring 2026 : ACCT : 001 : 20005",
+        "adoptionStatus": "500",
+        "courseMaterialResultsList": [
+          {
+            "cmId": "100267385129005553",
+            "mtcId": "52305604",
+            "bookImage": "//bkstr.scene7.com/is/image/Bkstr/9780138101619",
+            "title": "MyLab Accounting with Pearson eText Access Code for Financial Accounting",
+            "edition": "14th",
+            "author": "Tietz",
+            "isbn": "9780138101619",
+            "materialType": "CEB",
+            "requirementType": "RQ",
+            "isbnDisplay": "9780138101619",
+            "isPackage": false,
+            "priceNewLabel": "FLNew",
+            "priceUsedLabel": "FLUsed",
+            "newBook": "N",
+            "productCatentryId": "129005553",
+            "productPartNumber": "40fb2c98-6e06-4cf3-957f-1400fa3963f2",
+            "publisherCode": "PH",
+            "publisherShortName": "PH",
+            "publisher": "Pearson",
+            "messageBookType": 0,
+            "preSelected": false,
+            "priceRangeDisplay": "$186.75",
+            "digitalItemDTOs": [
+              {
+                "relatedTradebookCatentryId": 128998415,
+                "subscription": "180",
+                "tnblFlag": false,
+                "imagePath": "//bkstr.scene7.com/is/image/Bkstr/9780138101619",
+                "typeCondition": "RENTAL_NEW",
+                "priceDisplay": "$186.75",
+                "priceNumeric": 186.75,
+                "itemCatentryId": "129005569",
+                "inventoryStatusDB": "IN_STOCK",
+                "inventoryStatusBus": "IN_STOCK",
+                "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                "isPartial": false,
+                "provider": "RSBW",
+                "isDigitalFeeAllowedPublisher": true,
+                "drmPageDTO": {
+                  "title": "MyLab Accounting with Pearson eText Access Code for Financial Accounting",
+                  "access": "Web",
+                  "format": "BryteWave Format",
+                  "partialContent": "N",
+                  "refundable": "Y",
+                  "subscription": "180",
+                  "downloadProviderCode": "RSBW",
+                  "downloadProviderName": "RedShelf",
+                  "textKey": "DEFAULT",
+                  "isbn": "9780138101619",
+                  "publisherName": "Pearson"
+                },
+                "preselected": false,
+                "skuPartNumber": "40fb2c98-6e06-4cf3-957f-1400fa3963f2-rn",
+                "isDigitalDownloadProviderAllowed": false
+              }
+            ],
+            "includEDMaterialFlag": false,
+            "titleSelectionDisabled": false,
+            "downloadProvider": "RSBW"
+          }
+        ],
+        "division": "",
+        "divisionName": " ",
+        "divisionDescriptorCode": "",
+        "department": "ACCT",
+        "departmentName": "ACCT",
+        "departmentDescriptorCode": "ACCT",
+        "course": "001",
+        "courseName": "001",
+        "courseDescriptorCode": "001",
+        "section": "20005",
+        "sectionName": "20005",
+        "sectionDescriptorCode": "20005",
+        "courseId": "100267385",
+        "displayFlag": true,
+        "salesTrack": "B",
+        "courseMinimum": 0,
+        "includEdDTO": {
+          "isStoreIncludEDAllStudents": true,
+          "isIncludEDCampus": false,
+          "isIncludEDSection": false,
+          "isIncludEDTitle": false
+        },
+        "instructor": "Andres Hinojosa",
+        "sectionAdoptionDTO": {
+          "courseMaterialRelationship": {},
+          "materialAdoptions": {
+            "REQUIRED": [
+              {
+                "primaryTitleDisplayDTO": {
+                  "title": "MyLab Accounting with Pearson eText Access Code for Financial Accounting",
+                  "edition": "14th",
+                  "author": "Tietz",
+                  "isbn": "9780138101619",
+                  "mnpto": 6,
+                  "bookImage": "//bkstr.scene7.com/is/image/Bkstr/9780138101619",
+                  "includEDMaterialFlag": false,
+                  "publisher": "Pearson"
+                },
+                "allMaterials": [
+                  {
+                    "cmId": "100267385129005553",
+                    "mtcId": "52305604",
+                    "bookImage": "//bkstr.scene7.com/is/image/Bkstr/9780138101619",
+                    "title": "MyLab Accounting with Pearson eText Access Code for Financial Accounting",
+                    "edition": "14th",
+                    "author": "Tietz",
+                    "isbn": "9780138101619",
+                    "materialType": "CEB",
+                    "requirementType": "RQ",
+                    "isbnDisplay": "9780138101619",
+                    "isPackage": false,
+                    "priceNewLabel": "FLNew",
+                    "priceUsedLabel": "FLUsed",
+                    "newBook": "N",
+                    "productCatentryId": "129005553",
+                    "productPartNumber": "40fb2c98-6e06-4cf3-957f-1400fa3963f2",
+                    "publisherCode": "PH",
+                    "publisherShortName": "PH",
+                    "publisher": "Pearson",
+                    "messageBookType": 0,
+                    "preSelected": false,
+                    "priceRangeDisplay": "$186.75",
+                    "digitalItemDTOs": [
+                      {
+                        "relatedTradebookCatentryId": 128998415,
+                        "subscription": "180",
+                        "tnblFlag": false,
+                        "imagePath": "//bkstr.scene7.com/is/image/Bkstr/9780138101619",
+                        "typeCondition": "RENTAL_NEW",
+                        "priceDisplay": "$186.75",
+                        "priceNumeric": 186.75,
+                        "itemCatentryId": "129005569",
+                        "inventoryStatusDB": "IN_STOCK",
+                        "inventoryStatusBus": "IN_STOCK",
+                        "inventoryStatusKey": "INV_IN_STOCK_LABEL",
+                        "isPartial": false,
+                        "provider": "RSBW",
+                        "isDigitalFeeAllowedPublisher": true,
+                        "drmPageDTO": {
+                          "title": "MyLab Accounting with Pearson eText Access Code for Financial Accounting",
+                          "access": "Web",
+                          "format": "BryteWave Format",
+                          "partialContent": "N",
+                          "refundable": "Y",
+                          "subscription": "180",
+                          "downloadProviderCode": "RSBW",
+                          "downloadProviderName": "RedShelf",
+                          "textKey": "DEFAULT",
+                          "isbn": "9780138101619",
+                          "publisherName": "Pearson"
+                        },
+                        "preselected": false,
+                        "skuPartNumber": "40fb2c98-6e06-4cf3-957f-1400fa3963f2-rn",
+                        "isDigitalDownloadProviderAllowed": false
+                      }
+                    ],
+                    "includEDMaterialFlag": false,
+                    "titleSelectionDisabled": false,
+                    "downloadProvider": "RSBW"
+                  }
+                ],
+                "primaryCmId": "100267385129005553",
+                "adoptionType": "INDIVIDUAL"
+              }
+            ]
+          }
+        },
+        "rentalReturnDateDisplay": "5/20/26"
+      }
+    ],
+    "statusDTO": {
+      "status": "SUCCESS",
+      "code": "0"
+    },
+    "homePageURL": "/Home/11077-534920-1?demoKey=d",
+    "searchLimit": 0,
+    "DDCSBrowseRetentionLevel": "TERM",
+    "accordionControl": "ALL_CLOSED",
+    "ddcsNotesControl": "NOTES_CLOSED",
+    "digitalSurChargeFee": "5.99",
+    "summaryProfile": false
+  }
+]

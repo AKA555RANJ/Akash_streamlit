@@ -334,6 +334,12 @@ def parse_course_desc(course_desc, department_name=""):
                 rest = rest[1:]
                 section = "|" + rest[0]
                 rest    = rest[1:]
+        elif rest and re.match(r"^[A-Za-z]{2,6}$", rest[0]):
+            course_code = "|" + rest[0]
+            rest        = rest[1:]
+            if rest and re.match(r"^[A-Za-z]{0,3}\d+[A-Za-z]{0,3}$", rest[0]):
+                section = "|" + rest[0]
+                rest    = rest[1:]
         return dept_code, course_code, section, " ".join(rest)
     dept_code   = department_name.upper() if department_name else ""
     course_code = "|" + first if re.match(r"^\d", first) else first

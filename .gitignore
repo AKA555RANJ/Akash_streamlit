@@ -5,6 +5,8 @@ Data/
 # Python
 __pycache__/
 *.pyc
+.venv_catalog/
+.venv/
 
 # Editor
 .vscode/

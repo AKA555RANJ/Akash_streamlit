@@ -36,9 +36,12 @@ These were labeled "Web View Rows" but the rendered page is CourseLeaf -> out of
 ## Remaining target schools (not yet done)
 Tractable (standard tech, needs page mapping):
 - Williams (3037159) — WordPress catalog (wp-json API + dept pages); also has a PDF
-- Los Rios (American River 2995968, Folsom Lake 2996053, Sacramento City 2996026):
-  courses nested deeper than the description-of-courses page; needs more mapping
 - UMass Boston (3037211): term-based schedule pages, multi-level; deferred
+- Los Rios (American River 2995968, Folsom Lake 2996053, Sacramento City 2996026):
+  the "unofficial catalog preview" has NO course-description listing; courses appear
+  only inside program-requirement tables (Code|Title|Units) -> duplicates across
+  programs, incomplete coverage, no descriptions. Needs manager decision on whether
+  a deduped program-table scrape is acceptable.
 
 Hard — FlareSolverr alone insufficient (TLS-blocked / JS SPA needing interaction):
 - CurriQunet SPA (Chaffey 2995976, Palomar 2995726, Riverside City 2996025) —

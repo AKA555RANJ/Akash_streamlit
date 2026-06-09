@@ -18,6 +18,8 @@ and `Type of Catalog` (col L) = `Web`. Each school scraped from its
 | 3007266 | University of Northern Colorado | SmartCatalogIQ | done | 3333 | yes (2026-2027) | UG+grad subject pages; credits inline |
 | 3035086 | Nicholls State University | Web View Rows | done | 1561 | yes (2026-2027) | 91 subject pages; credits = first of C-L-L triple; 40 blank credits (no triple) |
 | 3091104 | Rhodes College | Web View Rows | done | 1420 | NO | year not on page (see note below); index + per-course detail pages for credits; term not exposed; site antibot rate-limits detail pages |
+| 3050281 | Metropolitan CC-Kansas City | eLumen (SPA) | done | 939 | yes (2026-2027) | reverse-engineered eLumen JSON API (api-prod.elumenapp.com): courses -> departments -> course detail; credits inline |
+| 3037159 | Williams College | class schedule (SPA) | done | 1378 | yes (2026-2027) | FlareSolverr-rendered /list/; section listing deduped to courses; credits NOT in listing (left blank); also has a PDF catalog |
 
 ## Notes for "year not on page" schools
 Standard note: "2026-2027 not explicitly shown on the catalog page; scraped whatever
@@ -33,19 +35,23 @@ These were labeled "Web View Rows" but the rendered page is CourseLeaf -> out of
 - CSU Chico (2996064) — courseleaf (was hidden behind Cloudflare)
 - RIT (3067286) — courseleaf (served 2025-2026)
 
-## Remaining target schools (not yet done)
-Tractable (standard tech, needs page mapping):
-- Williams (3037159) — WordPress catalog (wp-json API + dept pages); also has a PDF
-- UMass Boston (3037211): term-based schedule pages, multi-level; deferred
-- Los Rios (American River 2995968, Folsom Lake 2996053, Sacramento City 2996026):
-  the "unofficial catalog preview" has NO course-description listing; courses appear
-  only inside program-requirement tables (Code|Title|Units) -> duplicates across
-  programs, incomplete coverage, no descriptions. Needs manager decision on whether
-  a deduped program-table scrape is acceptable.
+## UNREACHABLE from this environment (confirmed network-level block)
+Cannot be scraped here via any tool (curl=000, FlareSolverr error, headless+headful
+Playwright = ERR_CONNECTION_REFUSED / timeout). Needs a different network/IP:
+- CurriQunet (Chaffey 2995976, Palomar 2995726, Riverside City 2996025) — connection refused
+- Maricopa Scottsdale (2990779) curriculum.maricopa.edu — connection times out
 
-Hard — FlareSolverr alone insufficient (TLS-blocked / JS SPA needing interaction):
-- CurriQunet SPA (Chaffey 2995976, Palomar 2995726, Riverside City 2996025) —
-  HTTP 000 to all clients (TLS-level block) + SPA
-- eLumen SPA (Metropolitan CC-Kansas City 3050281) — returns 753-byte app shell only
-- Maricopa (Mesa CC 2990776, Paradise Valley 2990782 render 2025-2026 landing pages;
-  Scottsdale 2990779 curriculum.maricopa.edu is a SPA that errored in FlareSolverr)
+## Remaining target schools (not yet done)
+- Maricopa Mesa CC (2990776) & Paradise Valley (2990782): reachable via FlareSolverr but
+  render 2025-2026 landing pages, not a clean 2026-2027 course listing. Needs review.
+- UMass Boston (3037211): term-based schedule pages, multi-level; deferred.
+- Los Rios (American River 2995968, Folsom Lake 2996053, Sacramento City 2996026):
+  "unofficial catalog preview" has NO course-description listing; courses appear only
+  inside program-requirement tables (Code|Title|Units) -> dupes/incomplete, no
+  descriptions. Needs manager decision on whether a deduped program-table scrape is OK.
+
+## Tooling notes
+- FlareSolverr (localhost:8191) used for Cloudflare/403 sites (Williams) and to unmask
+  CSU Chico/RIT as CourseLeaf.
+- Playwright (system Chrome via channel="chrome") used to capture SPA APIs; revealed
+  the eLumen JSON API which the mcckc spider now calls directly.

@@ -17,7 +17,7 @@ and `Type of Catalog` (col L) = `Web`. Each school scraped from its
 | 3009619 | Southern Connecticut State University | Web View Rows | done | 2023 | yes (2026-2027) | UG+grad; term filtered to 2026-2027 + not-yet-offered |
 | 3007266 | University of Northern Colorado | SmartCatalogIQ | done | 3333 | yes (2026-2027) | UG+grad subject pages; credits inline |
 | 3035086 | Nicholls State University | Web View Rows | done | 1561 | yes (2026-2027) | 91 subject pages; credits = first of C-L-L triple; 40 blank credits (no triple) |
-| 3091104 | Rhodes College | Web View Rows | done | ~1442 | NO | year not on page (see note below); index + per-course detail pages for credits; term not exposed |
+| 3091104 | Rhodes College | Web View Rows | done | 1420 | NO | year not on page (see note below); index + per-course detail pages for credits; term not exposed; site antibot rate-limits detail pages |
 
 ## Notes for "year not on page" schools
 Standard note: "2026-2027 not explicitly shown on the catalog page; scraped whatever
@@ -28,15 +28,21 @@ Catalog Available = Yes (col I)."
   on the courses index or the per-course detail pages. Scraped from col K
   (`https://catalog.rhodes.edu/courses`), col I = Yes. Term also not exposed.
 
+## Excluded after FlareSolverr inspection (actually CourseLeaf)
+These were labeled "Web View Rows" but the rendered page is CourseLeaf -> out of scope:
+- CSU Chico (2996064) — courseleaf (was hidden behind Cloudflare)
+- RIT (3067286) — courseleaf (served 2025-2026)
+
 ## Remaining target schools (not yet done)
-Need a JS browser or reverse-engineered API (single-page apps), or are bot-blocked —
-candidates for the "wait / confirm with manager" bucket:
-- CurriQunet SPA (Chaffey 2995976, Palomar 2995726, Riverside City 2996025)
-- eLumen SPA (Metropolitan CC-Kansas City 3050281)
-- Maricopa (Mesa CC 2990776 & Paradise Valley 2990782 return 403; Scottsdale 2990779
-  curriculum.maricopa.edu is a SPA)
-- CSU Chico (2996064) and RIT (3067286): Cloudflare JS challenge (HTTP 202/empty)
-- Williams (3037159): HTTP 403 even with browser headers
-- UMass Boston (3037211): term-based schedule pages, multi-level; deferred
+Tractable (standard tech, needs page mapping):
+- Williams (3037159) — WordPress catalog (wp-json API + dept pages); also has a PDF
 - Los Rios (American River 2995968, Folsom Lake 2996053, Sacramento City 2996026):
   courses nested deeper than the description-of-courses page; needs more mapping
+- UMass Boston (3037211): term-based schedule pages, multi-level; deferred
+
+Hard — FlareSolverr alone insufficient (TLS-blocked / JS SPA needing interaction):
+- CurriQunet SPA (Chaffey 2995976, Palomar 2995726, Riverside City 2996025) —
+  HTTP 000 to all clients (TLS-level block) + SPA
+- eLumen SPA (Metropolitan CC-Kansas City 3050281) — returns 753-byte app shell only
+- Maricopa (Mesa CC 2990776, Paradise Valley 2990782 render 2025-2026 landing pages;
+  Scottsdale 2990779 curriculum.maricopa.edu is a SPA that errored in FlareSolverr)

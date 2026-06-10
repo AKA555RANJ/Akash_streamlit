@@ -108,8 +108,8 @@ course_catalog_scrapy/
    `page.crop((0,0,w/2,h))` and `(w/2,0,w,h)`) to avoid 2-column text merging (Palomar).
 6. If no reachable current source exists → mark UNDELIVERABLE in notes, hand to manager.
 
-## 8. Status of the 18 targets
-DONE (16, pushed to main; CSVs in `data/<slug>/`):
+## 8. Status of the 18 targets (14 scraped · 2 excluded · 2 undeliverable)
+SCRAPED & DONE (14, pushed to main; CSVs in `data/<slug>/`):
 
 | school_id | school | platform | rows |
 |---|---|---|---|

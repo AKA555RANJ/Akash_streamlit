@@ -1,8 +1,12 @@
 import csv
 import re
+import sys
 from pathlib import Path
 
 import pdfplumber
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from course_catalog_scrapy.pipelines import format_dept_code
 
 PDF_URL = "https://www.palomar.edu/catalog/wp-content/uploads/sites/8/2026/05/2026-2027-Catalog-Volume-LXXV-Reduced.pdf"
 PDF_PATH = "/tmp/palomar.pdf"
@@ -34,9 +38,10 @@ def main():
                     if code in seen:
                         continue
                     seen.add(code)
+                    fdept, fcode = format_dept_code(dept, code)
                     rows.append({
-                        "school_id": SCHOOL_ID, "department_code": dept,
-                        "course_code": code, "course_title": title.strip(),
+                        "school_id": SCHOOL_ID, "department_code": fdept,
+                        "course_code": fcode, "course_title": title.strip(),
                         "credits": units, "graduate_type": "Undergraduate",
                         "term": "", "academic_year": year, "source_url": PDF_URL,
                     })

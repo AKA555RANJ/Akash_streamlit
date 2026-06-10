@@ -32,10 +32,9 @@ Read it with openpyxl via **system** `python3` (has openpyxl); the venv may not.
 - In scope: **col I = TRUE** AND **col L == "Web"** exactly (skip `PDF` and `Web, PDF`).
 - **EXCLUDE** these platforms (col M): `Class Search` (course-search), `Catod_Navoid`
   (acalog catoid/navoid), `AZ Sitemap` (= CourseLeaf), `Coursedog`.
-  - **Exception (manager-directed):** the Maricopa CCD `Coursedog` catalog WAS scraped
-    (Mesa/Paradise Valley/Scottsdale) after the manager corrected Mesa's col K to the
-    Coursedog URL. Coursedog has a clean public JSON API (see §8 + SCRAPE_NOTES); treat
-    the blanket exclusion as overridable when manager points a school at it.
+  - **Exclusion DROPPED (manager-directed, see §8b):** the platform-exclusion list is no
+    longer in force — previously-excluded platforms (Coursedog, CourseLeaf, acalog, …) are
+    now in scope. Coursedog (Mesa/PV/Scottsdale) and CourseLeaf (7 schools) already scraped.
 - **Targets**: `Web View Rows`, `CurriQunet`, `eLumen`, `SmartCatalogIQ`, plus genuine
   static blank-Sub-Type rows. `Selfservice` (Banner/Ellucian) = skip.
 - Always verify the real platform: some "Web View Rows" rows are CourseLeaf hidden behind
@@ -108,8 +107,9 @@ course_catalog_scrapy/
    `page.crop((0,0,w/2,h))` and `(w/2,0,w,h)`) to avoid 2-column text merging (Palomar).
 6. If no reachable current source exists → mark UNDELIVERABLE in notes, hand to manager.
 
-## 8. Status of the 18 targets (14 scraped · 2 excluded · 2 undeliverable)
-SCRAPED & DONE (14, pushed to main; CSVs in `data/<slug>/`):
+## 8. Status — 21 scraped (original 18-target set: 14 scraped · 2 excluded · 2 undeliverable;
+## PLUS 7 from the dropped-exclusion expansion, see §8b)
+SCRAPED & DONE (14 from the original target set, pushed to main; CSVs in `data/<slug>/`):
 
 | school_id | school | platform | rows |
 |---|---|---|---|
@@ -134,7 +134,21 @@ source_url). Los Rios three are DERIVED from per-program requirement tables (no 
 listing exists; incomplete, no descriptions). UMass Boston needs a browser UA (default 403).
 See SCRAPE_NOTES.md for per-platform details.
 
-EXCLUDED (actually CourseLeaf): CSU Chico (2996064), RIT (3067286).
+## 8b. Expansion: exclusion list DROPPED (manager direction)
+Manager asked to scrape previously-excluded platforms too (work down the in-scope Web rows from
+the top). 86 in-scope Web rows total; ~73 were unscraped. Biggest scrapable groups: CourseLeaf
+(24, was "AZ Sitemap"), Coursedog (8, technique proven), acalog/Catod_Navoid (10). Built a shared
+`courseleaf_spider.py` (handles all 3 CourseLeaf layouts — see SCRAPE_NOTES). 7 CourseLeaf done so
+far then PAUSED at manager request (cap of 7): UIUC (3023894, 9452), LMU (3006182, 4665), CSU San
+Bernardino (2996062, 4049), CSU Dominguez (2996065, 3035), CSU Bakersfield (2996060, 2461), Columbus
+State (3017973, 2349), Northern Iowa (3020616, 1919). NEXT when resumed: more CourseLeaf, then the
+Coursedog batch (generic spider; tenants like fsu_peoplesoft, umn_umntc_peoplesoft — capture
+catalogId via Playwright like Maricopa), then acalog. Class Search / Self-Service / blank = dynamic
+portals, case-by-case. (Note: CSU Chico 2996064 + RIT 3067286 below were excluded as CourseLeaf
+when CourseLeaf was out of scope; they are now scrapable with courseleaf_spider if wanted.)
+
+EXCLUDED earlier as CourseLeaf (now scrapable via courseleaf_spider if desired):
+CSU Chico (2996064), RIT (3067286).
 
 UNDELIVERABLE here (CurriQunet network block — need a different network/IP where
 curriqunet.com resolves): Chaffey (2995976), Riverside (2996025). [Scottsdale was here but

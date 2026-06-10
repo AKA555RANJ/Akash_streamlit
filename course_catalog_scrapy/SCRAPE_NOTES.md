@@ -28,6 +28,13 @@ and `Type of Catalog` (col L) = `Web`. Each school scraped from its
 | 2995968 | American River College | Web View Rows (program tables) | done | 1579 | yes (2026-2027) | DERIVED: courses only in per-program requirement tables, deduped by code; no descriptions |
 | 2996053 | Folsom Lake College | Web View Rows (program tables) | done | 525 | yes (2026-2027) | DERIVED: per-program tables, deduped; smallest Los Rios college |
 | 2996026 | Sacramento City College | Web View Rows (program tables) | done | 1049 | yes (2026-2027) | DERIVED: per-program tables, deduped |
+| 3023894 | University of Illinois Urbana-Champaign | CourseLeaf | done | 9452 | yes (2026-2027) | shared courseleaf_spider; index->subject |
+| 3006182 | Loyola Marymount University | CourseLeaf | done | 4665 | yes (2026-2027) | modern detail-* span layout |
+| 2996062 | California State University-San Bernardino | CourseLeaf | done | 4049 | NO | classic coursetitle/coursehours spans; year not on page |
+| 2996065 | California State University-Dominguez Hills | CourseLeaf | done | 3035 | yes (2026-2027) | modern detail-* span layout |
+| 2996060 | California State University-Bakersfield | CourseLeaf | done | 2461 | yes (2026-2027) | modern detail-* span layout |
+| 3017973 | Columbus State University | CourseLeaf | done | 2349 | yes (2026-2027) | detail-coursehours lecture-lab-credit triple "(3-0-3)"->3 |
+| 3020616 | University of Northern Iowa | CourseLeaf | done | 1919 | NO | free-text "CODE. Title — N hrs."; ~2% variable-credit blanks; year not on page |
 
 ## Maricopa Coursedog note (Mesa, Paradise Valley, Scottsdale)
 Maricopa CCD runs ONE Coursedog tenant (`maricopa_peoplesoft_direct`). Each college is a
@@ -50,6 +57,17 @@ DERIVED and INCOMPLETE: only courses cited by some program's requirements, no de
 credits = units (single value or range like `1-3`, taken from the Units cell or a trailing
 `(N)`/`(1 - 4)` in the title), `graduate_type=Undergraduate`, `term` blank. Official catalog
 expected ~Aug 2026.
+
+## CourseLeaf batch (formerly excluded "AZ Sitemap") — `courseleaf_spider.py`
+Per manager direction the platform-exclusion list was dropped; CourseLeaf catalogs are now
+in scope. ONE shared spider (base `CourseLeafSpider` + per-school subclass) crawls the subject
+index -> per-subject pages (single-page catalogs handled too), parsing `div.courseblock` across
+the three CourseLeaf layouts: (1) modern theme `span.detail-code/detail-title/detail-hours[_html]
+/detail-coursehours`; (2) classic `span.coursetitle` + `span.coursehours`; (3) free text in
+`p.courseblocktitle`. Credits handle single ("3"), range ("1-3"), lecture-lab-credit triple
+("(3-0-3)"->3), and keywords credit/unit/hour/hrs/cr. `academic_year`=2026-2027 only when that
+string is on the page (else blank). Needs a browser UA. 7 done so far (paused at manager request):
+UIUC, LMU, CSU San Bernardino, CSU Dominguez, CSU Bakersfield, Columbus State, Northern Iowa.
 
 ## Notes for "year not on page" schools
 Standard note: "2026-2027 not explicitly shown on the catalog page; scraped whatever

@@ -32,6 +32,10 @@ Read it with openpyxl via **system** `python3` (has openpyxl); the venv may not.
 - In scope: **col I = TRUE** AND **col L == "Web"** exactly (skip `PDF` and `Web, PDF`).
 - **EXCLUDE** these platforms (col M): `Class Search` (course-search), `Catod_Navoid`
   (acalog catoid/navoid), `AZ Sitemap` (= CourseLeaf), `Coursedog`.
+  - **Exception (manager-directed):** the Maricopa CCD `Coursedog` catalog WAS scraped
+    (Mesa/Paradise Valley/Scottsdale) after the manager corrected Mesa's col K to the
+    Coursedog URL. Coursedog has a clean public JSON API (see §8 + SCRAPE_NOTES); treat
+    the blanket exclusion as overridable when manager points a school at it.
 - **Targets**: `Web View Rows`, `CurriQunet`, `eLumen`, `SmartCatalogIQ`, plus genuine
   static blank-Sub-Type rows. `Selfservice` (Banner/Ellucian) = skip.
 - Always verify the real platform: some "Web View Rows" rows are CourseLeaf hidden behind
@@ -105,7 +109,7 @@ course_catalog_scrapy/
 6. If no reachable current source exists → mark UNDELIVERABLE in notes, hand to manager.
 
 ## 8. Status of the 18 targets
-DONE (7, pushed to main; CSVs in `data/<slug>/`):
+DONE (16, pushed to main; CSVs in `data/<slug>/`):
 
 | school_id | school | platform | rows |
 |---|---|---|---|
@@ -116,19 +120,26 @@ DONE (7, pushed to main; CSVs in `data/<slug>/`):
 | 3050281 | Metropolitan CC-Kansas City | eLumen SPA (API) | 939 |
 | 3037159 | Williams College | class-schedule SPA (FlareSolverr) | 1378 |
 | 2995726 | Palomar College | PDF (web unreachable) | 932 |
+| 3037211 | UMass Boston | Web View Rows (index+detail) | 1569 |
+| 2990776 | Mesa CC | Coursedog SPA (JSON API) | 6149 |
+| 2990782 | Paradise Valley CC | Coursedog SPA (JSON API) | 6149 |
+| 2990779 | Scottsdale CC | Coursedog SPA (JSON API) | 6149 |
+| 2995968 | American River | Web View Rows (program tables, derived) | 1579 |
+| 2996053 | Folsom Lake | Web View Rows (program tables, derived) | 525 |
+| 2996026 | Sacramento City | Web View Rows (program tables, derived) | 1049 |
+
+Notes: Mesa/PV/Scottsdale are ONE Maricopa district Coursedog catalog (common course
+numbering -> identical course bank across the three; CSVs differ only by school_id /
+source_url). Los Rios three are DERIVED from per-program requirement tables (no standalone
+listing exists; incomplete, no descriptions). UMass Boston needs a browser UA (default 403).
+See SCRAPE_NOTES.md for per-platform details.
 
 EXCLUDED (actually CourseLeaf): CSU Chico (2996064), RIT (3067286).
 
-UNREACHABLE web + no 2026-2027 PDF (need a different network/IP — curriqunet.com /
-curriculum.maricopa.edu are network-blocked here): Chaffey (2995976), Riverside (2996025),
-Scottsdale (2990779).
-
-NOT DONE — needs decision/work:
-- Maricopa Mesa CC (2990776), Paradise Valley (2990782): render 2025-2026 landing pages.
-- Los Rios: American River (2995968), Folsom Lake (2996053), Sacramento City (2996026):
-  "unofficial catalog preview" has only program-requirement tables (dupes/incomplete, no
-  descriptions) — needs manager OK on a deduped program-table scrape.
-- UMass Boston (3037211): term-based schedule pages, multi-level.
+UNDELIVERABLE here (CurriQunet network block — need a different network/IP where
+curriqunet.com resolves): Chaffey (2995976), Riverside (2996025). [Scottsdale was here but
+was RECOVERED via the Maricopa Coursedog — only its old curriculum.maricopa.edu URL was
+blocked.]
 
 ## 9. Per-school implementation notes (selectors / APIs / gotchas)
 - **Southern CT**: `div.course-box[id]` → `h2` "CODE NNN - Title", `p.course-credits`,

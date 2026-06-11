@@ -9,11 +9,7 @@ FIELDNAMES = [
 ]
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
-
 def format_dept_code(dept, code):
-    """Split a scraped course code into (department, number) and prefix each with a
-    leading '|' for the CSV. The '|' forces text in spreadsheets so codes like '010'
-    are not converted to '10'. e.g. dept='AAC', code='AAC 200' -> ('|AAC', '|200')."""
     dept = (dept or "").strip()
     code = (code or "").strip()
     number = code
@@ -21,7 +17,6 @@ def format_dept_code(dept, code):
         number = code[len(dept):]
     number = number.lstrip(" -")
     return (f"|{dept}" if dept else ""), (f"|{number}" if number else "")
-
 
 class CsvExportPipeline:
     def open_spider(self, spider):

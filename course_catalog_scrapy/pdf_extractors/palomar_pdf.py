@@ -19,7 +19,6 @@ FIELDNAMES = ["school_id", "department_code", "course_code", "course_title",
 HEADER_RE = re.compile(r'^([A-Z]{2,4})\s(\d{2,3}[A-Z]?)\s+(.+?)\s+\((\d+(?:\.\d+)?)\)\s*$', re.M)
 YEAR_RE = re.compile(r'20\d\d\s*[-–]\s*20\d\d')
 
-
 def main():
     out_dir = DATA_DIR / SLUG
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -51,7 +50,6 @@ def main():
         wr.writeheader()
         wr.writerows(rows)
     print(f"wrote {len(rows)} rows to {path} | year={year}")
-
 
 if __name__ == "__main__":
     main()

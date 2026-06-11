@@ -11,10 +11,8 @@ CODE_RE = re.compile(r"^([A-Z]{2,5})\s?\d")
 CREDITS_RE = re.compile(r"([\d.]+)\s*Credits?", re.I)
 YEAR_RE = re.compile(r"20\d\d-20\d\d")
 
-
 def content_url(route):
     return API.format(key=route.replace("/", ","))
-
 
 class McckcSpider(scrapy.Spider):
     name = "mcckc"

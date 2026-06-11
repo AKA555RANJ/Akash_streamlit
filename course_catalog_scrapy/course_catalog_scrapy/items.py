@@ -1,6 +1,5 @@
 import scrapy
 
-
 class CourseItem(scrapy.Item):
     school_id = scrapy.Field()
     department_code = scrapy.Field()

@@ -9,7 +9,6 @@ SUBJ_RE = re.compile(
     r"^/en/[^/]+/(?:undergraduate|graduate)-catalog/course-descriptions/[^/]+$"
 )
 
-
 class UncoSpider(scrapy.Spider):
     name = "unco"
     school_id = "3007266"

@@ -7,11 +7,8 @@ from course_catalog_scrapy.items import CourseItem
 COURSE_CODE_RE = re.compile(r"^([A-Z]{2,5})\s?(\d{3}[A-Z]?)\b")
 CREDITS_RE = re.compile(r"(\d+(?:\.\d+)?(?:\s*-\s*\d+(?:\.\d+)?)?)\s*credit", re.I)
 YEAR_RE = re.compile(r"\d{4}-\d{4}")
-# Southern CT-specific term handling ("Last Term Offered"): keep a course only if its
-# last term falls within the catalog's academic_year; keep not-yet-offered courses.
 _SEASON_RE = re.compile(r"(Fall|Spring|Summer|Winter)\s+(\d{4})(?:\s*-\s*(\d{2,4}))?", re.I)
 _AY_RE = re.compile(r"(\d{4})\s*-\s*(\d{4})")
-
 
 def _term_in_academic_year(term, academic_year):
     ay = _AY_RE.search(academic_year or "")
@@ -26,13 +23,11 @@ def _term_in_academic_year(term, academic_year):
         return term if year == start else ""
     return term if year == end else ""
 
-
 def _term_decision(last_term, academic_year):
     if not last_term or not _SEASON_RE.search(last_term):
         return True, ""
     in_ay = _term_in_academic_year(last_term, academic_year)
     return (True, in_ay) if in_ay else (False, "")
-
 
 class SouthernCtSpider(scrapy.Spider):
     name = "southern_ct"

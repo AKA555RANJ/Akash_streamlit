@@ -9,10 +9,8 @@ from course_catalog_scrapy.items import CourseItem
 FLARESOLVERR = "http://localhost:8191/v1"
 LIST_URL = "https://catalog.williams.edu/list/"
 CODE_RE = re.compile(r"^([A-Z]{2,5})\s?\d")
-# After "DEPT NUM - ": "01 (S) SEM Title here" -> strip section, (sem), type code.
 TITLE_RE = re.compile(r"^\S+\s*(?:\([^)]*\)\s*)?(?:[A-Z]{2,4}\s+)?(.*)$")
 YEAR_RE = re.compile(r"20\d\d-?\d{2,4}")
-
 
 class WilliamsSpider(scrapy.Spider):
     name = "williams"

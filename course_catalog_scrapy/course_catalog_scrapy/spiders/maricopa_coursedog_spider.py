@@ -8,13 +8,11 @@ from course_catalog_scrapy.items import CourseItem
 
 API = "https://app.coursedog.com/api/v1"
 TENANT = "maricopa_peoplesoft_direct"
-# Fall 2026 effective date = AY2026-2027 (the col K catalog).
 EFFECTIVE = "2026-08-22,2026-08-22"
 COLUMNS = ("name,courseNumber,subjectCode,code,career,college,longName,"
            "status,institution,institutionId,credits")
 PAGE = 500
-YEAR_RE = re.compile(r"(\d{2})\s*-\s*(\d{2})")   # "26-27" in the catalog displayName
-
+YEAR_RE = re.compile(r"(\d{2})\s*-\s*(\d{2})")
 
 def _fmt_num(v):
     if v is None:
@@ -25,15 +23,7 @@ def _fmt_num(v):
     except (TypeError, ValueError):
         return str(v)
 
-
 class MaricopaCoursedogSpider(scrapy.Spider):
-    """Base spider for Maricopa County CCD colleges on Coursedog.
-
-    The district runs one Coursedog tenant (maricopa_peoplesoft_direct); each college is a
-    separate catalog (distinct catalogId) selected by an offerNumber filter, served via a
-    public JSON API (no auth; gated on Origin/Referer). Reverse-engineered with Playwright
-    (HANDOFF s7.3). Subclasses set name/school_id/slug/subdomain/catalog_id/offer_number.
-    """
 
     custom_settings = {"ROBOTSTXT_OBEY": False, "DOWNLOAD_DELAY": 0.3,
                        "CONCURRENT_REQUESTS": 4}
@@ -51,7 +41,6 @@ class MaricopaCoursedogSpider(scrapy.Spider):
         return h
 
     def start_requests(self):
-        # 1) catalog metadata -> academic_year from its displayName ("26-27 ... Catalog")
         yield scrapy.Request(
             f"{API}/ca/{TENANT}/catalogs/{self.catalog_id}",
             headers=self._headers(), callback=self.parse_catalog, dont_filter=True)
@@ -124,7 +113,6 @@ class MaricopaCoursedogSpider(scrapy.Spider):
             return mx
         return f"{mn}-{mx}"
 
-
 class MesaSpider(MaricopaCoursedogSpider):
     name = "mesa"
     school_id = "2990776"
@@ -133,7 +121,6 @@ class MesaSpider(MaricopaCoursedogSpider):
     catalog_id = "RQzc6b76uitYyaXJt27C"
     offer_number = 4
 
-
 class ParadiseValleySpider(MaricopaCoursedogSpider):
     name = "paradise_valley"
     school_id = "2990782"
@@ -141,7 +128,6 @@ class ParadiseValleySpider(MaricopaCoursedogSpider):
     subdomain = "paradisevalley"
     catalog_id = "HirEuyo6daAN3xmWWf45"
     offer_number = 9
-
 
 class ScottsdaleSpider(MaricopaCoursedogSpider):
     name = "scottsdale"

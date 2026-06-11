@@ -5,9 +5,7 @@ import scrapy
 from course_catalog_scrapy.items import CourseItem
 
 YEAR_RE = re.compile(r"20\d\d-20\d\d")
-# Real course codes in the requirement tables, e.g. "ACCT 101", "CISA 315", "BIOL 310H".
 CODE_RE = re.compile(r"^[A-Z]{2,5}\s+\d{2,4}[A-Z]?$")
-# Trailing units in the title when the Units cell is blank: "(3)" or a range "(1 - 4)".
 TITLE_UNITS_RE = re.compile(
     r"\s*\(\s*(\d+(?:\.\d+)?(?:\s*-\s*\d+(?:\.\d+)?)?)\s*\)\s*$"
 )
@@ -15,18 +13,9 @@ PROGRAM_HREF_RE = re.compile(
     r"/2026-2027-unofficial-catalog-preview/programs-of-study/list-of-programs/[^/]+$"
 )
 
-
 class LosRiosSpider(scrapy.Spider):
-    """Base spider for Los Rios "2026-2027 unofficial catalog preview" sites.
 
-    These previews have NO standalone course-description listing; courses appear only
-    inside per-program requirement tables (Course Code | Course Title | Units). We crawl
-    every program page and dedupe by course code. The result is therefore DERIVED and
-    INCOMPLETE (only courses cited by some program's requirements, no descriptions) — see
-    SCRAPE_NOTES.md. Subclasses set name/school_id/slug/host.
-    """
-
-    host = None  # set by subclass
+    host = None
     custom_settings = {"ROBOTSTXT_OBEY": False}
 
     def start_requests(self):
@@ -62,7 +51,7 @@ class LosRiosSpider(scrapy.Spider):
             if m:
                 title = TITLE_UNITS_RE.sub("", title).strip()
                 if not units:
-                    units = re.sub(r"\s*-\s*", "-", m.group(1))   # "1 - 4" -> "1-4"
+                    units = re.sub(r"\s*-\s*", "-", m.group(1))
             yield CourseItem(
                 school_id=self.school_id,
                 department_code=code.split()[0],
@@ -75,7 +64,6 @@ class LosRiosSpider(scrapy.Spider):
                 source_url=response.url,
             )
 
-
 class AmericanRiverSpider(LosRiosSpider):
     name = "american_river"
     school_id = "2995968"
@@ -83,14 +71,12 @@ class AmericanRiverSpider(LosRiosSpider):
     host = "arc.losrios.edu"
     allowed_domains = ["arc.losrios.edu"]
 
-
 class FolsomLakeSpider(LosRiosSpider):
     name = "folsom_lake"
     school_id = "2996053"
     slug = "folsom_lake_college__2996053__cc"
     host = "flc.losrios.edu"
     allowed_domains = ["flc.losrios.edu"]
-
 
 class SacramentoCitySpider(LosRiosSpider):
     name = "sacramento_city"

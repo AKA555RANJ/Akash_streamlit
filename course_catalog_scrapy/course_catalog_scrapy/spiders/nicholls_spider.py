@@ -9,7 +9,6 @@ FULL_RE = re.compile(r"^([A-Z]{2,5}\s?\d{3}[A-Z]?)[.\s]+(.*?)\.?\s+(\d+(?:\.\d+)
 STRONG_RE = re.compile(r"^([A-Z]{2,5}\s?\d{3}[A-Z]?)\.?\s*(.*)$")
 YEAR_RE = re.compile(r"20\d\d-20?\d\d")
 
-
 class NichollsSpider(scrapy.Spider):
     name = "nicholls"
     school_id = "3035086"

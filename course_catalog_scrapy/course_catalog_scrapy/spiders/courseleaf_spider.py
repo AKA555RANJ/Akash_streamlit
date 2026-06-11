@@ -6,11 +6,8 @@ import scrapy
 from course_catalog_scrapy.items import CourseItem
 
 CODE_RE = re.compile(r"^([A-Z]{2,6})\s*(\d{2,4}[A-Z0-9]*)")
-# leading cross-listed duplicate code, e.g. "/UNIV 31CI. " before the real title
 XLIST_RE = re.compile(r"^/\s*[A-Z]{2,6}\s*\d[\w]*\.?\s*")
-# a number or low-high range (used on a field already known to hold credit hours)
 HOURS_NUM_RE = re.compile(r"(\d+(?:\.\d+)?)(?:\s*(?:to|through|-|–|—)\s*(\d+(?:\.\d+)?))?")
-# in free text the number must be followed by a credit keyword
 CRED_RE = re.compile(
     r"(\d+(?:\.\d+)?)(?:\s*(?:to|through|-|–|—)\s*(\d+(?:\.\d+)?))?"
     r"\s*(?:credits?|units?|hours?|hrs?|s\.h\.|cr\.?)\b", re.I)
@@ -19,30 +16,20 @@ TRAIL_CRED_RE = re.compile(
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
-
 def _norm(s):
     return re.sub(r"\s+", " ", (s or "").replace("\xa0", " ")).strip()
-
 
 def _rng(m):
     return (m.group(1) + ("-" + m.group(2) if m.group(2) else "")) if m else ""
 
-
 def _hours(text):
-    """Credits from a hours field. Handles a lecture-lab-credit triple '(3-0-3)' -> '3'
-    (last number), a low-high range '1-3', and a single value '3' / '(4 sem hours)'."""
     t = text or ""
     triple = re.search(r"\b\d+(?:\.\d+)?-\d+(?:\.\d+)?-(\d+(?:\.\d+)?)\b", t)
     if triple:
         return triple.group(1)
     return _rng(HOURS_NUM_RE.search(t))
 
-
 def parse_courseblock(b):
-    """Return (dept, code, title, credits) from a CourseLeaf div.courseblock, handling the
-    three common layouts: modern theme spans (detail-code/detail-title/detail-hours),
-    classic spans (coursetitle/coursehours), and free text in courseblocktitle."""
-    # Layout 1 (modern theme): separate detail-* spans
     code_txt = _norm(" ".join(b.css("span.detail-code ::text").getall()))
     if code_txt:
         title = _norm(" ".join(b.css("span.detail-title ::text").getall()))
@@ -54,7 +41,6 @@ def parse_courseblock(b):
         code = _norm(m.group(1) + " " + m.group(2)) if m else code_txt
         return dept, code, title, _hours(hours)
 
-    # Layout 2 (classic spans): coursetitle "CODE NNN. Title." + coursehours "Units: 3"
     ct = _norm(" ".join(b.css("span.coursetitle ::text").getall()))
     if ct:
         ch = _norm(" ".join(b.css(
@@ -66,7 +52,6 @@ def parse_courseblock(b):
         title = _norm(ct[m.end():]).strip(". ") if m else ct
         return dept, code, title, _hours(ch)
 
-    # Layout 3 (free text): "CODE  Title  credit: N Hours."  /  "CODE. Title - N hrs."
     full = _norm("".join(b.css("p.courseblocktitle ::text, h3.courseblocktitle ::text").getall()))
     m = CODE_RE.match(full)
     if not m:
@@ -79,13 +64,7 @@ def parse_courseblock(b):
     title = TRAIL_CRED_RE.sub("", title).strip(" .:–—-·")
     return dept, code, title, credits
 
-
 class CourseLeafSpider(scrapy.Spider):
-    """Base for CourseLeaf (bkstr 'AZ Sitemap') catalogs. Subclasses set
-    name/school_id/slug/allowed_domains and `start_pages` = [(index_url, graduate_type), ...].
-    An index page either lists subject links (base_path + one segment) or carries the
-    course blocks directly (single-page catalog); both are handled. Dedupe by code.
-    academic_year is set to 2026-2027 only when that string is present on the page."""
 
     custom_settings = {"ROBOTSTXT_OBEY": False, "DOWNLOAD_DELAY": 0.25,
                        "CONCURRENT_REQUESTS": 6, "USER_AGENT": UA}
@@ -101,7 +80,7 @@ class CourseLeafSpider(scrapy.Spider):
                                  cb_kwargs={"index_url": url, "graduate_type": gt})
 
     def parse_index(self, response, index_url, graduate_type):
-        if response.css("div.courseblock"):          # single-page catalog
+        if response.css("div.courseblock"):
             yield from self._emit(response, graduate_type)
             return
         base = urlparse(index_url).path
@@ -134,14 +113,12 @@ class CourseLeafSpider(scrapy.Spider):
                 term="", academic_year=academic_year, source_url=response.url,
             )
 
-
 class UIUCSpider(CourseLeafSpider):
     name = "uiuc"
     school_id = "3023894"
     slug = "university_of_illinois_urbana-champaign__3023894__cc"
     allowed_domains = ["catalog.illinois.edu"]
     start_pages = [("https://catalog.illinois.edu/courses-of-instruction/", "")]
-
 
 class CSUSanBernardinoSpider(CourseLeafSpider):
     name = "csu_san_bernardino"
@@ -150,14 +127,12 @@ class CSUSanBernardinoSpider(CourseLeafSpider):
     allowed_domains = ["catalog.csusb.edu"]
     start_pages = [("https://catalog.csusb.edu/coursesaz/", "")]
 
-
 class CSUBakersfieldSpider(CourseLeafSpider):
     name = "csu_bakersfield"
     school_id = "2996060"
     slug = "california_state_university-bakersfield__2996060__cc"
     allowed_domains = ["catalog.csub.edu"]
     start_pages = [("https://catalog.csub.edu/course-descriptions/", "")]
-
 
 class NorthernIowaSpider(CourseLeafSpider):
     name = "northern_iowa"
@@ -166,7 +141,6 @@ class NorthernIowaSpider(CourseLeafSpider):
     allowed_domains = ["catalog.uni.edu"]
     start_pages = [("https://catalog.uni.edu/courses/", "")]
 
-
 class LMUSpider(CourseLeafSpider):
     name = "lmu"
     school_id = "3006182"
@@ -174,14 +148,12 @@ class LMUSpider(CourseLeafSpider):
     allowed_domains = ["bulletin.lmu.edu"]
     start_pages = [("https://bulletin.lmu.edu/course-descriptions/", "")]
 
-
 class ColumbusStateSpider(CourseLeafSpider):
     name = "columbus_state"
     school_id = "3017973"
     slug = "columbus_state_university__3017973__cc"
     allowed_domains = ["catalog.columbusstate.edu"]
     start_pages = [("https://catalog.columbusstate.edu/course-descriptions/", "")]
-
 
 class CSUDominguezSpider(CourseLeafSpider):
     name = "csu_dominguez"

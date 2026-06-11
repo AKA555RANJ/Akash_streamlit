@@ -4,31 +4,20 @@ import scrapy
 
 from course_catalog_scrapy.items import CourseItem
 
-# col K term for AY2026-2027. UMB also exposes 2026 Spring / 2026 Summer (AY2025-2026),
-# so we crawl only the Fall 2026 listing reachable from the col K URL.
 TERM = "2026 Fall"
-# Detail page: <span class="class-div-header">Credits: </span><span class="class-div-info">3/3</span>
 CREDITS_XPATH = (
     "//span[contains(@class,'class-div-header')][contains(.,'Credits')]"
     "/following-sibling::span[contains(@class,'class-div-info')][1]/text()"
 )
 NUM_RE = re.compile(r"\d+(?:\.\d+)?")
 
-
 class UMassBostonSpider(scrapy.Spider):
-    """UMass Boston course catalog (courses.umb.edu).
-
-    Static multi-level HTML: subjects index -> per-subject course listing -> per-course
-    detail page (credits only live on the detail page). academic_year is left blank: the
-    pages show the term ("2026 Fall") but no explicit 2026-2027 string (see SCRAPE_NOTES).
-    """
 
     name = "umb"
     school_id = "3037211"
     slug = "university_of_massachusetts-boston__3037211__cc"
     allowed_domains = ["courses.umb.edu"]
     start_urls = [f"https://courses.umb.edu/course_catalog/subjects/{TERM}"]
-    # Default Scrapy UA gets a 403 from courses.umb.edu; a browser UA returns 200.
     custom_settings = {
         "USER_AGENT": (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -38,7 +27,6 @@ class UMassBostonSpider(scrapy.Spider):
     }
 
     def parse(self, response):
-        # Subject links: .../course_catalog/courses/{ugrd|grd}_{SUBJ}_{TERM}
         for href in response.css("a::attr(href)").getall():
             if "/course_catalog/courses/" not in href:
                 continue
@@ -58,8 +46,8 @@ class UMassBostonSpider(scrapy.Spider):
             href = a.css("::attr(href)").get() or ""
             if "/course_catalog/course_info/" not in href:
                 continue
-            seg = href.split("/course_info/", 1)[1]            # e.g. ugrd_BIOL_2026 Fall_101
-            seg = seg.split("_", 1)[1] if "_" in seg else seg   # BIOL_2026 Fall_101
+            seg = href.split("/course_info/", 1)[1]
+            seg = seg.split("_", 1)[1] if "_" in seg else seg
             dept = seg.split("_2026", 1)[0].strip()
             number = seg.rsplit("_", 1)[1].strip() if "_" in seg else ""
             code = f"{dept} {number}".strip()
@@ -72,7 +60,7 @@ class UMassBostonSpider(scrapy.Spider):
             )
 
     def parse_course(self, response, dept, code, title, graduate_type):
-        info = response.xpath(CREDITS_XPATH).get() or ""   # e.g. "3/3"
+        info = response.xpath(CREDITS_XPATH).get() or ""
         m = NUM_RE.search(info)
         yield CourseItem(
             school_id=self.school_id,

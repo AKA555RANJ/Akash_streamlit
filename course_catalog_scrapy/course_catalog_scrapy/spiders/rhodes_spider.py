@@ -7,7 +7,6 @@ from course_catalog_scrapy.items import CourseItem
 CODE_RE = re.compile(r"^([A-Z]{2,5})\s*\d")
 YEAR_RE = re.compile(r"20\d\d-20?\d\d")
 
-
 class RhodesSpider(scrapy.Spider):
     name = "rhodes"
     school_id = "3091104"

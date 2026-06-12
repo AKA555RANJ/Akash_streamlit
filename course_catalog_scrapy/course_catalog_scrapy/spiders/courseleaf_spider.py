@@ -34,8 +34,7 @@ def parse_courseblock(b):
     if code_txt:
         title = re.sub(r"^[\s.:·–—-]+", "", _norm(" ".join(b.css("span.detail-title ::text").getall())))
         hours = _norm(" ".join(b.css(
-            "span.detail-hours_html ::text, span.detail-hours ::text, "
-            "span.detail-coursehours ::text").getall()))
+            'span[class*="detail-"][class*="hours"] ::text').getall()))
         m = CODE_RE.match(code_txt)
         if m:
             dept, code = m.group(1), _norm(m.group(1) + " " + m.group(2))
@@ -233,3 +232,30 @@ class USCColumbiaSpider(CourseLeafSpider):
         ("https://academicbulletins.sc.edu/undergraduate/course-descriptions/", "Undergraduate"),
         ("https://academicbulletins.sc.edu/graduate/course-descriptions/", "Graduate"),
     ]
+
+
+class GreenvilleTechSpider(CourseLeafSpider):
+    name = "greenville_tech"
+    school_id = "3088551"
+    slug = "greenville_technical_college__3088551__cc"
+    allowed_domains = ["catalog.gvltec.edu"]
+    start_pages = [("https://catalog.gvltec.edu/course-descriptions/", "")]
+
+
+class TAMUCorpusChristiSpider(CourseLeafSpider):
+    name = "tamu_corpus_christi"
+    school_id = "3094270"
+    slug = "texas_a_and_m_university-corpus_christi__3094270__cc"
+    allowed_domains = ["catalog.tamucc.edu"]
+    start_pages = [
+        ("https://catalog.tamucc.edu/undergraduate/courses-az/", "Undergraduate"),
+        ("https://catalog.tamucc.edu/graduate/courses-az/", "Graduate"),
+    ]
+
+
+class FrederickCCSpider(CourseLeafSpider):
+    name = "frederick_cc"
+    school_id = "3039667"
+    slug = "frederick_community_college__3039667__cc"
+    allowed_domains = ["frederick-public.courseleaf.com"]
+    start_pages = [("https://frederick-public.courseleaf.com/credit-course-descriptions/", "")]

@@ -32,13 +32,17 @@ def _hours(text):
 def parse_courseblock(b):
     code_txt = _norm(" ".join(b.css("span.detail-code ::text").getall()))
     if code_txt:
-        title = _norm(" ".join(b.css("span.detail-title ::text").getall()))
+        title = re.sub(r"^[\s.:·–—-]+", "", _norm(" ".join(b.css("span.detail-title ::text").getall())))
         hours = _norm(" ".join(b.css(
             "span.detail-hours_html ::text, span.detail-hours ::text, "
             "span.detail-coursehours ::text").getall()))
         m = CODE_RE.match(code_txt)
-        dept = m.group(1) if m else ""
-        code = _norm(m.group(1) + " " + m.group(2)) if m else code_txt
+        if m:
+            dept, code = m.group(1), _norm(m.group(1) + " " + m.group(2))
+        else:
+            parts = code_txt.split()
+            dept = parts[0] if parts and parts[0].isalpha() else ""
+            code = code_txt
         return dept, code, title, _hours(hours)
 
     ct = _norm(" ".join(b.css("span.coursetitle ::text").getall()))
@@ -49,7 +53,7 @@ def parse_courseblock(b):
         m = CODE_RE.match(ct)
         dept = m.group(1) if m else ""
         code = _norm(m.group(1) + " " + m.group(2)) if m else ct
-        title = _norm(ct[m.end():]).strip(". ") if m else ct
+        title = re.sub(r"^[\s.:·–—-]+", "", _norm(ct[m.end():])).rstrip(" .") if m else ct
         return dept, code, title, _hours(ch)
 
     full = _norm("".join(b.css("p.courseblocktitle ::text, h3.courseblocktitle ::text").getall()))
@@ -161,3 +165,71 @@ class CSUDominguezSpider(CourseLeafSpider):
     slug = "california_state_university-dominguez_hills__2996065__cc"
     allowed_domains = ["catalog.csudh.edu"]
     start_pages = [("https://catalog.csudh.edu/courses/", "")]
+
+
+class StLouisCCSpider(CourseLeafSpider):
+    name = "st_louis_cc"
+    school_id = "3050288"
+    slug = "saint_louis_community_college__3050288__cc"
+    allowed_domains = ["catalog.stlcc.edu"]
+    start_pages = [("https://catalog.stlcc.edu/course-descriptions/courses/", "")]
+
+
+class CSUChicoSpider(CourseLeafSpider):
+    name = "csu_chico"
+    school_id = "2996064"
+    slug = "california_state_university-chico__2996064__cc"
+    allowed_domains = ["catalog.csuchico.edu"]
+    start_pages = [("https://catalog.csuchico.edu/courses/", "")]
+
+
+class UCDavisSpider(CourseLeafSpider):
+    name = "uc_davis"
+    school_id = "2996091"
+    slug = "university_of_california-davis__2996091__cc"
+    allowed_domains = ["catalog.ucdavis.edu"]
+    start_pages = [("https://catalog.ucdavis.edu/courses-subject-code/", "")]
+
+
+class PaceSpider(CourseLeafSpider):
+    name = "pace"
+    school_id = "3067276"
+    slug = "pace_university__3067276__cc"
+    allowed_domains = ["catalog.pace.edu"]
+    start_pages = [
+        ("https://catalog.pace.edu/undergraduate/courses-a-z/", "Undergraduate"),
+        ("https://catalog.pace.edu/graduate/courses-a-z/", "Graduate"),
+    ]
+
+
+class CUDenverSpider(CourseLeafSpider):
+    name = "cu_denver"
+    school_id = "3007318"
+    slug = "university_of_colorado_denver__3007318__cc"
+    allowed_domains = ["catalog.ucdenver.edu"]
+    start_pages = [
+        ("https://catalog.ucdenver.edu/cu-denver/undergraduate/courses-a-z/", "Undergraduate"),
+        ("https://catalog.ucdenver.edu/cu-denver/graduate/courses-a-z/", "Graduate"),
+    ]
+
+
+class TexasSouthernSpider(CourseLeafSpider):
+    name = "texas_southern"
+    school_id = "3102818"
+    slug = "texas_southern_university__3102818__cc"
+    allowed_domains = ["catalog.tsu.edu"]
+    start_pages = [
+        ("https://catalog.tsu.edu/undergraduate/course-descriptions/", "Undergraduate"),
+        ("https://catalog.tsu.edu/graduate/course-descriptions/", "Graduate"),
+    ]
+
+
+class USCColumbiaSpider(CourseLeafSpider):
+    name = "usc_columbia"
+    school_id = "3088564"
+    slug = "university_of_south_carolina-columbia__3088564__cc"
+    allowed_domains = ["academicbulletins.sc.edu"]
+    start_pages = [
+        ("https://academicbulletins.sc.edu/undergraduate/course-descriptions/", "Undergraduate"),
+        ("https://academicbulletins.sc.edu/graduate/course-descriptions/", "Graduate"),
+    ]

@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 
 import scrapy
 
-from course_catalog_scrapy.items import CourseItem
+from course_catalog_scrapy.items import CourseItem, year_from_url
 
 API = "https://app.coursedog.com/api/v1"
 COLUMNS = "code,subjectCode,courseNumber,name,longName,credits,career,college,status"
@@ -53,8 +53,7 @@ class CoursedogSpider(scrapy.Spider):
                              dont_filter=True)
 
     def parse_catalog(self, response):
-        dn = (response.json() or {}).get("displayName") or ""
-        self.academic_year = _year(dn)
+        self.academic_year = year_from_url(self.origin)
         yield self._courses_request(0)
 
     def _courses_request(self, skip):

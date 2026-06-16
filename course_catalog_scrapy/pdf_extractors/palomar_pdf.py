@@ -7,6 +7,7 @@ import pdfplumber
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from course_catalog_scrapy.pipelines import format_dept_code
+from course_catalog_scrapy.items import year_from_url
 
 PDF_URL = "https://www.palomar.edu/catalog/wp-content/uploads/sites/8/2026/05/2026-2027-Catalog-Volume-LXXV-Reduced.pdf"
 PDF_PATH = "/tmp/palomar.pdf"
@@ -17,21 +18,16 @@ FIELDNAMES = ["school_id", "department_code", "course_code", "course_title",
               "credits", "graduate_type", "term", "academic_year", "source_url"]
 
 HEADER_RE = re.compile(r'^([A-Z]{2,4})\s(\d{2,3}[A-Z]?)\s+(.+?)\s+\((\d+(?:\.\d+)?)\)\s*$', re.M)
-YEAR_RE = re.compile(r'20\d\d\s*[-–]\s*20\d\d')
 
 def main():
     out_dir = DATA_DIR / SLUG
     out_dir.mkdir(parents=True, exist_ok=True)
-    rows, seen, year = [], set(), ""
+    rows, seen, year = [], set(), year_from_url(PDF_URL)
     with pdfplumber.open(PDF_PATH) as pdf:
         for pg in pdf.pages:
             w = pg.width
             for x0, x1 in ((0, w / 2), (w / 2, w)):
                 text = pg.crop((x0, 0, x1, pg.height)).extract_text() or ""
-                if not year:
-                    ym = YEAR_RE.search(text)
-                    if ym:
-                        year = re.sub(r'\s', '', ym.group(0)).replace('–', '-')
                 for dept, num, title, units in HEADER_RE.findall(text):
                     code = f"{dept} {num}"
                     if code in seen:

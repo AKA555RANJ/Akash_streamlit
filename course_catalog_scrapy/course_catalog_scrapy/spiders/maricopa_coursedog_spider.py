@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 
 import scrapy
 
-from course_catalog_scrapy.items import CourseItem
+from course_catalog_scrapy.items import CourseItem, year_from_url
 
 API = "https://app.coursedog.com/api/v1"
 TENANT = "maricopa_peoplesoft_direct"
@@ -46,9 +46,7 @@ class MaricopaCoursedogSpider(scrapy.Spider):
             headers=self._headers(), callback=self.parse_catalog, dont_filter=True)
 
     def parse_catalog(self, response):
-        dn = (response.json() or {}).get("displayName") or ""
-        m = YEAR_RE.search(dn)
-        self.academic_year = f"20{m.group(1)}-20{m.group(2)}" if m else ""
+        self.academic_year = year_from_url(self.origin)
         yield self._courses_request(0)
 
     def _courses_request(self, skip):

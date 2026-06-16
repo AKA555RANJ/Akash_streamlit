@@ -2,7 +2,7 @@ import re
 
 import scrapy
 
-from course_catalog_scrapy.items import CourseItem
+from course_catalog_scrapy.items import CourseItem, year_from_url
 
 COURSE_CODE_RE = re.compile(r"^([A-Z]{2,5})\s?(\d{3}[A-Z]?)\b")
 CREDITS_RE = re.compile(r"(\d+(?:\.\d+)?(?:\s*-\s*\d+(?:\.\d+)?)?)\s*credit", re.I)
@@ -52,7 +52,7 @@ class SouthernCtSpider(scrapy.Spider):
         return m.group(0) if m else ""
 
     def parse(self, response, graduate_type):
-        academic_year = self._academic_year(response)
+        filter_year = self._academic_year(response)
         for box in response.css("div.course-box"):
             heading = " ".join(t.strip() for t in box.css("h2 ::text").getall() if t.strip())
             code_match = COURSE_CODE_RE.match(heading)
@@ -62,7 +62,7 @@ class SouthernCtSpider(scrapy.Spider):
             credits_match = CREDITS_RE.search(credits_text)
             term_text = " ".join(t.strip() for t in box.css("p.last-term-offered ::text").getall() if t.strip())
             last_term = term_text.split(":", 1)[1].strip() if ":" in term_text else term_text
-            keep, term = _term_decision(last_term, academic_year)
+            keep, term = _term_decision(last_term, filter_year)
             if not keep:
                 continue
             box_id = box.attrib.get("id", "")
@@ -74,6 +74,6 @@ class SouthernCtSpider(scrapy.Spider):
                 credits=credits_match.group(1).replace(" ", "") if credits_match else "",
                 graduate_type=graduate_type,
                 term=term,
-                academic_year=academic_year,
+                academic_year=year_from_url(response.url),
                 source_url=f"{response.url}#{box_id}" if box_id else response.url,
             )

@@ -2,10 +2,9 @@ import re
 
 import scrapy
 
-from course_catalog_scrapy.items import CourseItem
+from course_catalog_scrapy.items import CourseItem, year_from_url
 
 CODE_RE = re.compile(r"^([A-Z]{2,5})\s*\d")
-YEAR_RE = re.compile(r"20\d\d-20?\d\d")
 
 class RhodesSpider(scrapy.Spider):
     name = "rhodes"
@@ -28,7 +27,8 @@ class RhodesSpider(scrapy.Spider):
 
     def parse_course(self, response, code, title):
         credits = "".join((response.css("div.course__credits span::text").get() or "").split())
-        m = YEAR_RE.search(response.text)
+        term_txt = " ".join(response.css("div.course__term ::text").getall())
+        term = re.sub(r"\s+", " ", term_txt).replace("Term:", "").strip(" ,")
         cm = CODE_RE.match(code)
         yield CourseItem(
             school_id=self.school_id,
@@ -37,7 +37,7 @@ class RhodesSpider(scrapy.Spider):
             course_title=title,
             credits=credits,
             graduate_type="Undergraduate",
-            term="",
-            academic_year=m.group(0) if m else "",
+            term=term,
+            academic_year=year_from_url(response.url),
             source_url=response.url,
         )

@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 
 import scrapy
 
-from course_catalog_scrapy.items import CourseItem
+from course_catalog_scrapy.items import CourseItem, year_from_url
 
 CODE_RE = re.compile(r"^([A-Z]{2,6})\s*(\d{2,4}[A-Z0-9]*)")
 XLIST_RE = re.compile(r"^/\s*[A-Z]{2,6}\s*\d[\w]*\.?\s*")
@@ -104,7 +104,7 @@ class CourseLeafSpider(scrapy.Spider):
         yield from self._emit(response, graduate_type)
 
     def _emit(self, response, graduate_type):
-        academic_year = "2026-2027" if "2026-2027" in response.text else ""
+        academic_year = year_from_url(response.url)
         for b in response.css("div.courseblock"):
             dept, code, title, credits = parse_courseblock(b)
             if not code or not title or code in self.seen:

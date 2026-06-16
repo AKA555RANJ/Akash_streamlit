@@ -11,6 +11,13 @@ DEFAULT_REQUEST_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.5",
 }
-ITEM_PIPELINES = {"course_catalog_scrapy.pipelines.CsvExportPipeline": 1}
+SPIDER_MIDDLEWARES = {
+    "course_catalog_scrapy.middlewares.AttachRawHtmlMiddleware": 100,
+}
+ITEM_PIPELINES = {
+    "course_catalog_scrapy.pipelines.HTMLCompactStoragePipeline": 100,
+    "course_catalog_scrapy.pipelines.CleanCourseTitlePipeline": 200,
+    "course_catalog_scrapy.pipelines.CsvExportPipeline": 300,
+}
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"

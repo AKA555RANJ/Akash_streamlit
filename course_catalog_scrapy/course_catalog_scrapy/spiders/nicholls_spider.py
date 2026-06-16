@@ -2,7 +2,7 @@ import re
 
 import scrapy
 
-from course_catalog_scrapy.items import CourseItem
+from course_catalog_scrapy.items import CourseItem, year_from_url
 
 SUBJ_RE = re.compile(r"/catalog-2026-2027/courses_of_instruction/[^/#?]+/?$")
 FULL_RE = re.compile(r"^([A-Z]{2,5}\s?\d{3}[A-Z]?)[.\s]+(.*?)\.?\s+(\d+(?:\.\d+)?)\s*-\s*\d+\s*-\s*\d+")
@@ -25,8 +25,7 @@ class NichollsSpider(scrapy.Spider):
                 yield response.follow(clean, callback=self.parse_subject)
 
     def parse_subject(self, response):
-        ym = YEAR_RE.search(response.text)
-        academic_year = ym.group(0) if ym else ""
+        academic_year = year_from_url(response.url)
         for p in response.css("div.elementor-widget-container p"):
             ptext = " ".join(t.strip() for t in p.css("::text").getall() if t.strip())
             m = FULL_RE.match(ptext)

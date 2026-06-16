@@ -2,7 +2,7 @@ import re
 
 import scrapy
 
-from course_catalog_scrapy.items import CourseItem
+from course_catalog_scrapy.items import CourseItem, year_from_url
 
 YEAR_RE = re.compile(r"20\d\d-20\d\d")
 CODE_RE = re.compile(r"^[A-Z]{2,5}\s+\d{2,4}[A-Z]?$")
@@ -33,8 +33,7 @@ class LosRiosSpider(scrapy.Spider):
                 yield response.follow(href, callback=self.parse_program)
 
     def parse_program(self, response):
-        ym = YEAR_RE.search(response.text)
-        academic_year = ym.group(0) if ym else ""
+        academic_year = year_from_url(response.url)
         for tr in response.css("tr"):
             cells = {}
             for td in tr.css("td[data-th]"):

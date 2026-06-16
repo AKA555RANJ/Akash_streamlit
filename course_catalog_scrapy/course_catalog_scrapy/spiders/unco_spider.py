@@ -2,7 +2,7 @@ import re
 
 import scrapy
 
-from course_catalog_scrapy.items import CourseItem
+from course_catalog_scrapy.items import CourseItem, year_from_url
 
 YEAR_RE = re.compile(r"20\d\d-20\d\d")
 SUBJ_RE = re.compile(
@@ -32,8 +32,7 @@ class UncoSpider(scrapy.Spider):
                 yield response.follow(href, callback=self.parse_subject, cb_kwargs={"graduate_type": graduate_type})
 
     def parse_subject(self, response, graduate_type):
-        m = YEAR_RE.search(response.text)
-        academic_year = m.group(0) if m else ""
+        academic_year = year_from_url(response.url)
         for h2 in response.css("div.courselist h2.course-name"):
             code = (h2.css("span::text").get() or "").strip()
             if not code:

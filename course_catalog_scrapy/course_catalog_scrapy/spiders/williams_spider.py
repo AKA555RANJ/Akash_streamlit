@@ -4,7 +4,7 @@ import re
 import scrapy
 from scrapy.selector import Selector
 
-from course_catalog_scrapy.items import CourseItem
+from course_catalog_scrapy.items import CourseItem, year_from_url
 
 FLARESOLVERR = "http://localhost:8191/v1"
 LIST_URL = "https://catalog.williams.edu/list/"
@@ -28,8 +28,7 @@ class WilliamsSpider(scrapy.Spider):
     def parse(self, response):
         html = json.loads(response.text)["solution"]["response"]
         sel = Selector(text=html)
-        ym = YEAR_RE.search(html)
-        academic_year = self._norm_year(ym.group(0)) if ym else ""
+        academic_year = year_from_url(response.url)
 
         seen = set()
         for a in sel.css("a.Accordion"):

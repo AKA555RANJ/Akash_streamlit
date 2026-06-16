@@ -2,7 +2,7 @@ import re
 
 import scrapy
 
-from course_catalog_scrapy.items import CourseItem
+from course_catalog_scrapy.items import CourseItem, year_from_url
 
 TENANT = "mcckc.elumenapp.com"
 API = "https://api-prod.elumenapp.com/catalog/sites/publish/content/{key}?tenant=" + TENANT
@@ -56,6 +56,6 @@ class McckcSpider(scrapy.Spider):
             credits=cm.group(1) if cm else "",
             graduate_type="Undergraduate",
             term="",
-            academic_year=ym.group(0) if ym else "",
+            academic_year=year_from_url(src),
             source_url=src,
         )

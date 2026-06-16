@@ -11,11 +11,10 @@ from course_catalog_scrapy.text_utils import clean_course_title
 FIELDNAMES = [
     "school_id", "department_code", "course_code", "course_title", "credits",
     "graduate_type", "term", "academic_year", "source_url",
-    "crawled_on", "updated_on", "html_backup_path",
+    "backup_filename", "crawled_on", "updated_on",
 ]
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
-HTML_BACKUP_REL = "dist/html_backup"
-HTML_BACKUP_DIR = Path(__file__).resolve().parents[2] / HTML_BACKUP_REL
+HTML_BACKUP_DIR = Path(__file__).resolve().parents[2] / "dist" / "html_backup"
 
 
 def format_dept_code(dept, code):
@@ -48,9 +47,10 @@ class HTMLCompactStoragePipeline:
                 raw_html = raw_html.encode("utf-8")
             content_hash = hashlib.sha256(raw_html).hexdigest()[:8]
             filename = f"{content_hash}.html.gz"
-            # Stored path is repo-relative (portable); file is written to the absolute dir.
-            item["html_backup_path"] = os.path.join(HTML_BACKUP_REL, str(school_id), filename)
-            target_dir = os.path.join(self.base_dir, str(school_id))
+            # CSV stores just the filename; files are sharded by the first 2 hash chars:
+            # dist/html_backup/<school_id>/<hash[:2]>/<hash>.html.gz
+            item["backup_filename"] = filename
+            target_dir = os.path.join(self.base_dir, str(school_id), content_hash[:2])
             file_path = os.path.join(target_dir, filename)
 
             if content_hash in self.seen_hashes:

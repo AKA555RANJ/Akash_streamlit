@@ -27,4 +27,4 @@ class CourseItem(scrapy.Item):
     source_url = scrapy.Field()
 
     raw_html = scrapy.Field()
-    html_backup_path = scrapy.Field()
+    backup_filename = scrapy.Field()

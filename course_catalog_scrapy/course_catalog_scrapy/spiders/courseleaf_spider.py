@@ -5,7 +5,7 @@ import scrapy
 
 from course_catalog_scrapy.items import CourseItem, year_from_url
 
-CODE_RE = re.compile(r"^([A-Z]{2,6})\s*(\d{2,4}[A-Z0-9]*)")
+CODE_RE = re.compile(r"^([A-Z]{2,6})[\s\-]*(\d{2,4}[A-Z0-9]*)")
 XLIST_RE = re.compile(r"^/\s*[A-Z]{2,6}\s*\d[\w]*\.?\s*")
 HOURS_NUM_RE = re.compile(r"(\d+(?:\.\d+)?)(?:\s*(?:to|through|-|–|—)\s*(\d+(?:\.\d+)?))?")
 CRED_RE = re.compile(
@@ -29,19 +29,30 @@ def _hours(text):
         return triple.group(1)
     return _rng(HOURS_NUM_RE.search(t))
 
+def _code_dept(code_txt):
+    m = CODE_RE.match(code_txt)
+    if m:
+        return m.group(1), _norm(m.group(1) + " " + m.group(2))
+    parts = code_txt.split()
+    return (parts[0] if parts and parts[0].isalpha() else ""), code_txt
+
+
 def parse_courseblock(b):
     code_txt = _norm(" ".join(b.css("span.detail-code ::text").getall()))
     if code_txt:
         title = re.sub(r"^[\s.:·–—-]+", "", _norm(" ".join(b.css("span.detail-title ::text").getall())))
+        hours = _norm(" ".join(b.css('span[class*="detail-"][class*="hours"] ::text').getall()))
+        dept, code = _code_dept(code_txt)
+        return dept, code, title, _hours(hours)
+
+    cbc = _norm(" ".join(b.css("span.courseblockcode ::text").getall()))
+    if cbc:
+        title = re.sub(r"^[\s.:·–—-]+", "", _norm(" ".join(
+            b.css("span.courseblock__title ::text").getall())))
         hours = _norm(" ".join(b.css(
+            'span[class*="courseblock"][class*="hours"] ::text, '
             'span[class*="detail-"][class*="hours"] ::text').getall()))
-        m = CODE_RE.match(code_txt)
-        if m:
-            dept, code = m.group(1), _norm(m.group(1) + " " + m.group(2))
-        else:
-            parts = code_txt.split()
-            dept = parts[0] if parts and parts[0].isalpha() else ""
-            code = code_txt
+        dept, code = _code_dept(cbc)
         return dept, code, title, _hours(hours)
 
     ct = _norm(" ".join(b.css("span.coursetitle ::text").getall()))
@@ -61,10 +72,18 @@ def parse_courseblock(b):
         return "", "", "", ""
     dept, code = m.group(1), _norm(m.group(1) + " " + m.group(2))
     rest = XLIST_RE.sub("", full[m.end():].lstrip(" .:–—-·")).lstrip(" .:–—-·")
-    cm = CRED_RE.search(rest)
-    credits = _rng(cm) if cm else ""
-    title = rest[:cm.start()] if cm else rest
+    if "|" in rest:                                  # pipe-delimited: TITLE | N hours
+        segs = [s.strip() for s in rest.split("|") if s.strip()]
+        title = segs[0] if segs else rest
+        credits = _hours(segs[-1]) if len(segs) > 1 and re.search(r"\d", segs[-1]) else ""
+    else:
+        cm = CRED_RE.search(rest)
+        credits = _rng(cm) if cm else ""
+        title = rest[:cm.start()] if cm else rest
     title = TRAIL_CRED_RE.sub("", title).strip(" .:–—-·")
+    if not credits:                                  # credits in a sibling <p class="courseblock">
+        cm2 = CRED_RE.search(_norm(" ".join(b.css("p.courseblock ::text").getall())))
+        credits = _rng(cm2) if cm2 else ""
     return dept, code, title, credits
 
 class CourseLeafSpider(scrapy.Spider):
@@ -259,3 +278,35 @@ class FrederickCCSpider(CourseLeafSpider):
     slug = "frederick_community_college__3039667__cc"
     allowed_domains = ["frederick-public.courseleaf.com"]
     start_pages = [("https://frederick-public.courseleaf.com/credit-course-descriptions/", "")]
+
+
+class CalPolySpider(CourseLeafSpider):
+    name = "cal_poly"
+    school_id = "2996059"
+    slug = "california_polytechnic_state_university__2996059__cc"
+    allowed_domains = ["catalog.calpoly.edu"]
+    start_pages = [("https://catalog.calpoly.edu/courses/", "")]
+
+
+class CuyahogaSpider(CourseLeafSpider):
+    name = "cuyahoga"
+    school_id = "3073727"
+    slug = "cuyahoga_community_college_district__3073727__cc"
+    allowed_domains = ["catalog.tri-c.edu"]
+    start_pages = [("https://catalog.tri-c.edu/course-descriptions/", "")]
+
+
+class DePaulSpider(CourseLeafSpider):
+    name = "depaul"
+    school_id = "3027769"
+    slug = "depaul_university__3027769__cc"
+    allowed_domains = ["catalog.depaul.edu"]
+    start_pages = [("https://catalog.depaul.edu/course-descriptions/", "")]
+
+
+class StarkStateSpider(CourseLeafSpider):
+    name = "stark_state"
+    school_id = "3073939"
+    slug = "stark_state_college__3073939__cc"
+    allowed_domains = ["catalog.starkstate.edu"]
+    start_pages = [("https://catalog.starkstate.edu/course-descriptions/", "")]

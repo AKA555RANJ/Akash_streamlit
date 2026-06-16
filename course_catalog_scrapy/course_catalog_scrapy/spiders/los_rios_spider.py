@@ -83,3 +83,11 @@ class SacramentoCitySpider(LosRiosSpider):
     slug = "sacramento_city_college__2996026__cc"
     host = "scc.losrios.edu"
     allowed_domains = ["scc.losrios.edu"]
+
+
+class CosumnesRiverSpider(LosRiosSpider):
+    name = "cosumnes_river"
+    school_id = "2995983"
+    slug = "cosumnes_river_college__2995983__cc"
+    host = "crc.losrios.edu"
+    allowed_domains = ["crc.losrios.edu"]

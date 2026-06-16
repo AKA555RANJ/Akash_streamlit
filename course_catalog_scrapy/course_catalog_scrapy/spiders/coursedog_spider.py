@@ -144,3 +144,25 @@ class CarsonNewmanSpider(CoursedogSpider):
     catalog_id = 'eaYrB8CAwF58LHI7hqkq'
     effective = '2026-08-01,2026-08-01'
     body = '{"condition":"AND","filters":[{"filters":[{"id":"startTerm-course","condition":"field","name":"startTerm","inputType":"text","group":"course","type":"doesNotContain","value":"2027 Spring Transfer","customField":false},{"id":"courseNumber-course","condition":"field","name":"courseNumber","inputType":"text","group":"course","type":"doesNotContain","value":"ELEC"},{"id":"courseNumber-course","condition":"field","name":"courseNumber","inputType":"text","group":"course","type":"doesNotContain","value":"GER"},{"id":"courseNumber-course","condition":"field","name":"courseNumber","inputType":"text","group":"course","type":"doesNotContain","value":"VRS"},{"id":"courseNumber-course","condition":"field","name":"courseNumber","inputType":"text","group":"course","type":"doesNotContain","value":"REQU"}],"id":"r6xkd4Xa","condition":"and"}]}'
+
+
+class FSUSpider(CoursedogSpider):
+    name = "fsu"
+    school_id = "3012765"
+    slug = "florida_state_university__3012765__cc"
+    origin = "https://bulletin.fsu.edu"
+    tenant = "fsu_peoplesoft"
+    catalog_id = "f8cXWDJD0Lphf2KTcUZh"
+    effective = "2026-08-24,2026-08-24"
+    body = '{"condition":"AND","filters":[{"filters":[{"id":"offerNumber-course","condition":"field","name":"offerNumber","inputType":"number","group":"course","type":"isNot","value":99},{"id":"status-course","condition":"field","name":"status","inputType":"select","group":"course","type":"is","value":"Active","customField":false}],"id":"JfBrN8M5","condition":"and"}]}'
+
+
+class WCULASpider(CoursedogSpider):
+    name = "wcu_la"
+    school_id = "2996273"
+    slug = "west_coast_university-los_angeles__2996273__cc"
+    origin = 'https://wcucurrent.catalog.prod.coursedog.com'
+    tenant = 'wcu_campusnexus'
+    catalog_id = 'CH4gxLXlt5m9ocXA5QeJ'
+    effective = '2026-01-01,2026-01-01'
+    body = '{"condition":"AND","filters":[{"filters":[{"id":"status-course","condition":"field","name":"status","inputType":"select","group":"course","type":"is","value":"Active","customField":false}],"id":"w0cZZITs","condition":"or"}]}'

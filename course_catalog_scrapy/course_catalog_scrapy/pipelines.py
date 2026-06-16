@@ -14,7 +14,8 @@ FIELDNAMES = [
     "crawled_on", "updated_on", "html_backup_path",
 ]
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
-HTML_BACKUP_DIR = Path(__file__).resolve().parents[2] / "dist" / "html_backup"
+HTML_BACKUP_REL = "dist/html_backup"
+HTML_BACKUP_DIR = Path(__file__).resolve().parents[2] / HTML_BACKUP_REL
 
 
 def format_dept_code(dept, code):
@@ -46,9 +47,11 @@ class HTMLCompactStoragePipeline:
             if isinstance(raw_html, str):
                 raw_html = raw_html.encode("utf-8")
             content_hash = hashlib.sha256(raw_html).hexdigest()[:8]
+            filename = f"{content_hash}.html.gz"
+            # Stored path is repo-relative (portable); file is written to the absolute dir.
+            item["html_backup_path"] = os.path.join(HTML_BACKUP_REL, str(school_id), filename)
             target_dir = os.path.join(self.base_dir, str(school_id))
-            file_path = os.path.join(target_dir, f"{content_hash}.html.gz")
-            item["html_backup_path"] = file_path
+            file_path = os.path.join(target_dir, filename)
 
             if content_hash in self.seen_hashes:
                 return item

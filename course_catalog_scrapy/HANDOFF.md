@@ -239,7 +239,30 @@ blocked.]
   (blank); year "2026-27" normalized to "2026-2027". Cloudflare-gated (needs FlareSolverr).
 - **Palomar** (PDF): `pdf_extractors/palomar_pdf.py`. COURSES section ~pp.203-358, 2-column.
   Column-crop each page; header regex `^(DEPT)\s(NUM)\s+(title)\s+\((units)\)$`. Year from
-  PDF text. Web catalog (CurriQunet) is network-unreachable.
+  PDF URL (`year_from_url(PDF_URL)` → 2026-2027). Web catalog (CurriQunet) unreachable.
+- **CourseLeaf** (`courseleaf_spider.py`, ~25 schools): base spider crawls a subject index
+  (`base_path` + one path segment) → per-subject pages; single-page catalogs handled too.
+  `parse_courseblock` handles 4 layouts in order: (1) `span.detail-code`/`detail-title`/
+  `detail-*hours*`; (2) `span.courseblockcode`/`courseblock__title`/`courseblock__hours`
+  (Cal Poly); (3) `span.coursetitle`/`coursehours` (CSUSB); (4) free text in
+  `p.courseblocktitle` — supports pipe-delimited `CODE | Title | N hours` (DePaul),
+  hyphen codes `ACCT-1011` (Cuyahoga), and a sibling `<p class="courseblock">N Credits`
+  fallback (Cuyahoga). Hours via `span[class*="detail-"][class*="hours"]`; lecture-lab-credit
+  triple `(3-0-3)`→last number; ranges `(1-3)` kept. UG+grad = two start_pages. NEEDS browser
+  UA (default Scrapy UA = 403 on many). academic_year = year_from_url (blank for most).
+- **Coursedog** (`coursedog_spider.py` + `maricopa_coursedog_spider.py`): POST
+  `app.coursedog.com/api/v1/cm/<tenant>/courses/search/$filters?catalogId=&skip=&limit=500&
+  effectiveDatesRange=YYYY-08-..&columns=code,subjectCode,courseNumber,longName,credits,...`
+  with a JSON filter body, headers `Origin/Referer = <school>.catalog.*`. Public (no auth).
+  Capture tenant (URL `/cm/<tenant>/`), catalogId + effectiveDatesRange (query) and the body
+  via Playwright network capture of the live `/courses` page; paginate skip/limit until
+  listLength. credits = `credits.creditHours.{min,max}` else `.value` else `numberOfCredits`.
+  Maricopa = ONE district catalog per college (offerNumber filter); pick the 2026-2027
+  catalogId (check displayName — avoid 2025/calendar-year/draft unless intended).
+- **Los Rios** (`los_rios_spider.py`): no standalone course list; crawl every
+  `…/list-of-programs/<program>` page, parse `<td data-th="Course Code/Course Title/Units">`,
+  dedupe by code. Units from cell or trailing `(N)`/`(1 - 4)` in the title. academic_year
+  2026-2027 (in the URL). DERIVED/incomplete (no descriptions) — note in SCRAPE_NOTES.
 
 ## 10. Gotchas learned
 - `curriqunet.com` → connection refused to ALL tools (curl=000, FlareSolverr, headless &
@@ -250,21 +273,50 @@ blocked.]
 - `data/` is gitignored; CSVs are force-added (`git add -f`) and tracked via Git LFS.
 - ROBOTSTXT_OBEY robots.txt 500 errors are harmless; the crawl proceeds.
 
-## 11. Adding a new school (workflow)
-1. From `Catalog-Data`, get school_id, slug (col E), col K URL, col M Sub Type.
-2. Probe the URL (curl). If 403/202/empty → render via FlareSolverr and check the real
-   platform (exclude if CourseLeaf/Coursedog/etc.).
-3. Pick a technique from §7. Inspect the DOM/API/PDF to find code/title/credits/year.
-4. Write `spiders/<school>_spider.py` (set `name`, `school_id`, `slug`, `allowed_domains`).
-   Keep any term logic inside the spider. Do NOT format codes in the spider — the pipeline
-   adds the `|` and splits dept/number.
-5. Smoke test, then full run. Validate: empty fields, year, credits, row count.
-6. Update `SCRAPE_NOTES.md`. Commit spider + `git add -f` the CSV; push.
+## 11. How to pick & scrape the NEXT batch (e.g. "next 7")
+SELECT candidates from `Catalog-Data` (workbook `Course Catalog - Rational Solver-11.xlsx`):
+- In scope: col I = TRUE AND col L == "Web", and NOT already in `data/<slug>/` (see §8 list).
+- EXCLUDE: `catoid=` URLs (acalog/Catod_Navoid — manager said skip), CurriQunet
+  (`*.curriqunet.com`, network-blocked here), and dynamic portals (Banner Self-Service,
+  IU `sisjee`, DukeHub, ASU class-search, MIT/Penn/Moorpark/Emory custom systems).
+- PREFER the platforms we can do cleanly (reuse the shared spiders):
+  - **CourseLeaf** (col M "AZ Sitemap", or blank but URL is a `catalog.*`/`bulletin.*`
+    with `div.courseblock`) → add a `CourseLeafSpider` subclass. Parser handles 4 layouts
+    (see §9). PROBE first: fetch a subject page, run `parse_courseblock`, confirm
+    code/title/credits non-empty.
+  - **Coursedog** (`*.catalog.prod.coursedog.com` or `app.coursedog.com`) → capture
+    tenant/catalogId/effectiveDatesRange/filter-body via Playwright (see §9 Maricopa/§ Coursedog),
+    add a `CoursedogSpider` subclass. Verify the catalog is 2026-2027 (check displayName /
+    effective date — reject calendar-year or 2025 defaults; find the right catalogId).
+  - **Los Rios** (`*.losrios.edu/2026-2027-unofficial-catalog-preview/...`) → add a
+    `LosRiosSpider` subclass (program-table scrape).
+- Probe ~8-10, keep the ones that parse cleanly → pick the cleanest 7. Don't ship a school
+  with systemic blank credits / bad codes / wrong year.
 
-## 12. Git / commit
-- Branch `main` (user pushes directly here per their instruction).
-- `git add -f data/<slug>/<slug>.csv` (data/ is gitignored, LFS-tracked).
-- Commit message ends with: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
+BUILD: add a thin subclass to the relevant shared spider (name, school_id, slug,
+allowed_domains, start_pages/params). Do NOT write title/credit/code/date logic in the
+spider — the pipelines do title-clean, code-split (`|`), crawled_on/updated_on, and HTML
+backup automatically (§5b). academic_year comes from the start URL only (§4).
+
+QC EVERY school (both):
+- Quality: 0 blank course_code/title, 0 duplicate (dept,code), leading `|`, credits filled,
+  academic_year blank-or-`2026-2027`, 12 columns in the §4 order.
+- COMPLETENESS (do not skip — this caught TAMU-CC's 60-vs-3298): CourseLeaf → compare index
+  subjects vs scraped, code-level check unscraped subjects are empty/cross-listed not missed;
+  Coursedog → CSV unique codes == API listLength; Los Rios → programs on index vs scraped.
+
+## 12. How to push to main (data only unless told otherwise)
+- Branch is `main`, push directly (manager's workflow).
+- CSV: `git add -f data/<slug>/<slug>.csv` (data/ is gitignored; LFS-tracked via
+  `data/**/*.csv filter=lfs`).
+- HTML backups: `cd dist/html_backup && zip -rq ../../html_backups/<school_id>.zip <school_id>`
+  then `git add html_backups/<school_id>.zip` (LFS; dist/ stays gitignored).
+- **Commit messages: neutral, NO AI / `Co-Authored-By: Claude` trailer** (manager wants no
+  AI attribution anywhere in the repo). Code files were comment-stripped for the same reason.
+- Keep **code** commits separate from **data** when the manager asks to hold code; otherwise
+  push together. On request, build a single bundle `course_catalog_bundle.zip` with
+  `code/` (comment-stripped) + `csv/` + `html/` folders.
+- Update `SCRAPE_NOTES.md` (per-school) and this HANDOFF (status/§8) each batch.
 
 ## 13. Related memory files
 `project-course-catalog-scrapy` (progress), `feedback-catalog-csv-conventions`

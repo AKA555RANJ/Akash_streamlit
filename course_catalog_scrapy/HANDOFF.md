@@ -41,38 +41,79 @@ Read it with openpyxl via **system** `python3` (has openpyxl); the venv may not.
   Cloudflare — render with FlareSolverr and check before building (CSU Chico, RIT were
   unmasked as CourseLeaf and excluded).
 
-## 4. Output schema — `CourseItem` (9 fields, fixed order)
-`school_id, department_code, course_code, course_title, credits, graduate_type, term,
-academic_year, source_url`
+## 4. Output schema — CSV (12 columns, FIXED ORDER — matches manager sample
+## `south_college__3091089__cc.csv`, follow for ALL scrapes from 2026-06-16 onward)
+```
+school_id, department_code, course_code, course_title, credits, graduate_type, term,
+academic_year, source_url, backup_filename, crawled_on, updated_on
+```
+The CourseItem also has transient fields `raw_html` + `backup_filename` (see §5b). The CSV
+columns above are emitted by `CsvExportPipeline`; crawled_on/updated_on/backup_filename are
+NOT carried by the spider — the pipelines fill them.
 
-### CSV conventions (manager-confirmed — see feedback memory)
+### CSV conventions (manager-confirmed)
 - **Split** the scraped code: `department_code` = letters, `course_code` = number only.
   Done in the **shared pipeline** (`format_dept_code`), NOT in spiders.
 - **Leading `|`**: store `|AAC` and `|200` (the `|` forces text so `010` is not coerced
   to `10`). PDF extractors import the same `format_dept_code` helper.
-- `school_id` = 7-digit col A.
-- `graduate_type` = `Undergraduate` / `Graduate` when known, else blank.
-- `term` = blank unless the page exposes it. **Term-selection logic must live INSIDE the
-  spider** (not a shared util) — at 100+ spiders a shared term module becomes unmanageable.
-- **academic_year policy**: scrape from the page when present. If the page shows no explicit
-  2026-2027, leave it **blank** (never hard-code), still scrape (col I = Yes + we crawl the
-  col K AY2026-2027 URL), and add a note in `SCRAPE_NOTES.md`.
-- CSV path: `data/<col-E-slug>/<col-E-slug>.csv`.
+- `school_id` = 7-digit col A. `graduate_type` = Undergraduate/Graduate when known else blank.
+- **course_title**: cleaned by `CleanCourseTitlePipeline` → `text_utils.clean_course_title`
+  (strips trailing `*`, credit text like `(3)`/`3 credits`, trailing punctuation). KNOWN
+  edge cases of that method: `C#`→`C`, and `(1868-2000)` year-ranges get dropped — accepted
+  (manager's exact method).
+- **academic_year**: ONLY from the **start URL** (`items.year_from_url(response.url)` finds
+  `20\d\d-20\d\d` / `20\d\d-\d\d`). If the year is not in the URL → **blank**. NEVER scrape
+  it from page content/titles/descriptions (Rhodes once wrongly pulled `2016-2017` from a
+  course description). Schools that keep a year: UNC Greeley (`/en/2026-2027/`), Los Rios
+  (`/2026-2027-unofficial-catalog-preview/`), MCC-KC (`2026-2027/` route), Palomar (PDF URL).
+- **term**: keep EXACTLY as the page shows (`Spring`, `Fall`, `Spring, Fall`). NO year
+  adjustment (never synthesize `Spring 2026`). Capture it if the page exposes it (Rhodes:
+  `div.course__term`). Term logic lives inside the spider.
+- **crawled_on / updated_on**: set by `CsvExportPipeline` to
+  `datetime.now().strftime("%Y-%m-%d %H:%M:%S")` (both equal). Manual per-school timesheet
+  dates are applied post-hoc only when the manager asks.
+- **backup_filename**: just the gz filename (e.g. `41b28602.html.gz`), set by the HTML
+  pipeline. NOT a path — the folder is `<school_id>/<filename[:2]>/`.
+- CSV path: `data/<col-E-slug>/<col-E-slug>.csv` (gitignored; `git add -f`; Git LFS).
 
 ## 5. Architecture
-ONE shared Scrapy project, ONE shared pipeline. Only the per-school spider file changes.
+ONE shared Scrapy project. Shared spiders are PARAMETERISED base classes (one base + thin
+per-school subclasses), NOT one file per school. Files:
 ```
 course_catalog_scrapy/
   scrapy.cfg
   course_catalog_scrapy/
-    items.py          # CourseItem
-    settings.py       # ROBOTSTXT_OBEY, DOWNLOAD_DELAY=1, asyncio reactor, CsvExportPipeline
-    pipelines.py      # CsvExportPipeline + format_dept_code()  <-- shared, do not fork per school
-    spiders/<school>_spider.py   # one per school
-  pdf_extractors/<school>_pdf.py # standalone pdfplumber scripts (import format_dept_code)
-  SCRAPE_NOTES.md     # per-school status
-  HANDOFF.md          # this file
+    items.py        # CourseItem (+ raw_html, backup_filename) + year_from_url()
+    settings.py     # SPIDER_MIDDLEWARES{AttachRawHtmlMiddleware:100}; ITEM_PIPELINES below
+    middlewares.py  # AttachRawHtmlMiddleware: sets item['raw_html']=response.body on every CourseItem
+    pipelines.py    # format_dept_code + 3 pipelines (see §5b)
+    text_utils.py   # clean_course_title, html_to_text (lazy html2text), extract_course_title_from_long_line
+    spiders/
+      courseleaf_spider.py        # base CourseLeafSpider + ~25 subclasses (4 layouts, see §9)
+      coursedog_spider.py         # base CoursedogSpider + subclasses (UMN-TC/Duluth, USD, Carson-Newman, FSU, WCU-LA)
+      maricopa_coursedog_spider.py# Maricopa district Coursedog (Mesa/PV/Scottsdale)
+      los_rios_spider.py          # base LosRiosSpider + ARC/FLC/SCC/Cosumnes (program tables)
+      <one-off>_spider.py         # southern_ct, unco, nicholls, rhodes, mcckc, williams, umass_boston
+  pdf_extractors/palomar_pdf.py   # standalone pdfplumber (imports format_dept_code + year_from_url)
+  SCRAPE_NOTES.md / HANDOFF.md
+dist/html_backup/   # gz HTML backups (GITIGNORED, local only)  -> see §5b
+html_backups/       # per-school <school_id>.zip (pushed to main, LFS)
 ```
+
+## 5b. Pipelines + HTML backup (added 2026-06-16, manager-required)
+ITEM_PIPELINES run in this order:
+1. `HTMLCompactStoragePipeline` (100) — gzips `response.body` to
+   `dist/html_backup/<school_id>/<hash[:2]>/<hash>.html.gz` (sha256[:8]; deduped by content
+   hash so multi-course pages store once). Sets `item['backup_filename']=<hash>.html.gz`,
+   then deletes `raw_html`. API spiders store JSON (still the raw source); PDF (Palomar) has none.
+2. `CleanCourseTitlePipeline` (200) — `clean_course_title(item['course_title'])`.
+3. `CsvExportPipeline` (300) — writes the 12-col CSV; fills crawled_on/updated_on=now.
+`AttachRawHtmlMiddleware` (spider middleware) attaches raw_html to every CourseItem in one
+place, so spiders don't need to.
+**HTML delivery to git:** after a school is crawled, zip its backup folder ->
+`html_backups/<school_id>.zip` (contains `<school_id>/<hash[:2]>/<hash>.html.gz`); build with
+`cd dist/html_backup && zip -rq ../../html_backups/<school_id>.zip <school_id>`. Push the zip
+to main (LFS). `dist/` itself stays gitignored. Sample reference: manager's `3091089.zip`.
 
 ## 6. Environment
 - venv: `/Users/akashranjan/Akash_streamlit/.venv_catalog` (python 3.9.6, Scrapy 2.13.4,
@@ -107,8 +148,22 @@ course_catalog_scrapy/
    `page.crop((0,0,w/2,h))` and `(w/2,0,w,h)`) to avoid 2-column text merging (Palomar).
 6. If no reachable current source exists → mark UNDELIVERABLE in notes, hand to manager.
 
-## 8. Status — 21 scraped (original 18-target set: 14 scraped · 2 excluded · 2 undeliverable;
-## PLUS 7 from the dropped-exclusion expansion, see §8b)
+## 8. Status — 42 schools scraped & pushed (as of 2026-06-16)
+Counts by platform: CourseLeaf 25 (UIUC, LMU, CSU San Bernardino/Bakersfield/Dominguez/Chico,
+Columbus State, N. Iowa, St Louis CC, UC Davis, Pace, CU Denver, Texas Southern, USC Columbia,
+Greenville Tech, TAMU-CC, Frederick CC, Cal Poly, Cuyahoga, DePaul, Stark State), Coursedog 8
+(Mesa/PV/Scottsdale = Maricopa district; UMN-TC/Duluth, USD, Carson-Newman, FSU, WCU-LA),
+Los Rios program-table 4 (American River, Folsom Lake, Sacramento City, Cosumnes River),
+SmartCatalogIQ 1 (UNC Greeley), eLumen 1 (MCC-KC), FlareSolverr 1 (Williams), static 2
+(Southern CT, Nicholls), PDF 1 (Palomar).
+CAVEATS: FSU = draft 2026-27 General Bulletin; WCU-LA = calendar-2026 catalog (both
+academic_year blank). NOTE: only the last 7 (Cal Poly, Cuyahoga, DePaul, Stark, Cosumnes,
+FSU, WCU-LA) have the new 12-col schema + HTML backups + html_backups/<id>.zip; earlier ones
+predate that and would need a re-scrape to add backups.
+SCOPE: manager said DO NOT scrape `catoid=` (acalog/Catod_Navoid) schools. CurriQunet
+(Chaffey 2995976, Riverside 2996025) network-blocked here = UNDELIVERABLE.
+
+--- (historical) original 18-target set: 14 scraped · 2 excluded (CourseLeaf) · 2 undeliverable ---
 SCRAPED & DONE (14 from the original target set, pushed to main; CSVs in `data/<slug>/`):
 
 | school_id | school | platform | rows |

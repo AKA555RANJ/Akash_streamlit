@@ -148,14 +148,76 @@ to main (LFS). `dist/` itself stays gitignored. Sample reference: manager's `309
    `page.crop((0,0,w/2,h))` and `(w/2,0,w,h)`) to avoid 2-column text merging (Palomar).
 6. If no reachable current source exists → mark UNDELIVERABLE in notes, hand to manager.
 
-## 8. Status — 42 schools scraped & pushed (as of 2026-06-16)
-Counts by platform: CourseLeaf 25 (UIUC, LMU, CSU San Bernardino/Bakersfield/Dominguez/Chico,
+## 8. Status — ~80 schools scraped & pushed (as of 2026-06-21); see dated batch blocks below
+NOTE: the per-platform counts in this paragraph are frozen at 2026-06-16; the BATCH blocks
+below (06-16b, 06-17, 06-19→06-21) are the authoritative record of everything added since.
+New spiders since: banner_ssb, asu, columbia, modern_campus (course-teaser), enmu,
+pdf_catalog, mid_michigan, iu_igps, rice (+ acalog, coursedog/courseleaf subclasses).
+Counts by platform: CourseLeaf 26 (UIUC, LMU, CSU San Bernardino/Bakersfield/Dominguez/Chico,
 Columbus State, N. Iowa, St Louis CC, UC Davis, Pace, CU Denver, Texas Southern, USC Columbia,
-Greenville Tech, TAMU-CC, Frederick CC, Cal Poly, Cuyahoga, DePaul, Stark State), Coursedog 8
-(Mesa/PV/Scottsdale = Maricopa district; UMN-TC/Duluth, USD, Carson-Newman, FSU, WCU-LA),
-Los Rios program-table 4 (American River, Folsom Lake, Sacramento City, Cosumnes River),
-SmartCatalogIQ 1 (UNC Greeley), eLumen 1 (MCC-KC), FlareSolverr 1 (Williams), static 2
-(Southern CT, Nicholls), PDF 1 (Palomar).
+Greenville Tech, TAMU-CC, Frederick CC, Cal Poly, Cuyahoga, DePaul, Stark State, +Moorpark),
+Coursedog 9 (Mesa/PV/Scottsdale = Maricopa district; UMN-TC/Duluth, USD, Carson-Newman, FSU,
+WCU-LA, +Rowan@Burlington), acalog 3 (Ivy Tech, Trident Tech, CSU Long Beach), Los Rios
+program-table 4 (American River, Folsom Lake, Sacramento City, Cosumnes River), SmartCatalogIQ
+1 (UNC Greeley), eLumen 1 (MCC-KC), FlareSolverr 1 (Williams), static 3 (Southern CT, Nicholls,
++UW-Seattle), Drupal course-teaser 1 (Emory & Henry), PDF 1 (Palomar).
+
+BATCH 2026-06-16b (7, pushed as course_catalog_bundle.zip @ commit 60e2af4): Moorpark 1106,
+UW-Seattle 15749, Emory & Henry 1074, Ivy Tech 2430, Trident 1070, CSU Long Beach 5346,
+Rowan@Burlington 801. CAVEAT: in -14 these all turned out OWNED (Moorpark/Emory→Admin,
+UW/Rowan→Akash, Ivy/Trident/CSULB→Admin "Completed") — i.e. that batch overlapped claimed work
+(ownership not checked at pick time). New code from it stays valid: acalog_spider.py (AcalogSpider)
++ CoursedogSpider catalog-derived body/effective/year when body=None. Angelina (3094051) DROPPED
+(Coursedog API returns 0 courses).
+
+BATCH 2026-06-17 (7, CLEAN unassigned per the §11 ownership check, pushed as
+course_catalog_bundle.zip — supersedes the 60e2af4 bundle): 6 Indiana University campuses via
+IU iGPS sisjee JSON API (`iu_igps_spider.py`) — South Bend 1065, Northwest 801, Kokomo 695,
+Southeast 831, East 638, Indianapolis 2737 — plus Rice University 6527 (Banner SWKSCAT static,
+`rice_spider.py`). = 13,294 rows. All R=None/O=None in -14 (no Admin/Akash). New shared spiders:
+iu_igps_spider.py, rice_spider.py.
+
+BATCHES 2026-06-19 → 06-21 (clean, pushed; RS-15 source; all non-AZ-Sitemap, R not Admin/Akash).
+KEY LESSON: trust **col K (the real platform URL)**, not col M (Sub Type) — labels mislead
+(e.g. "Class Search"/"Selfservice"/"BLANK" rows are really Banner SSB / Coursedog / course-teaser).
+Schools delivered (date / rows / platform / spider):
+- UC-Riverside 6834, Yeshiva 4747, Kutztown 3198 — **Banner 9 SSB** course catalog API
+  (`banner_ssb_spider.py`): termSelection->term/search->courseSearchResults JSON. Fixes:
+  html.unescape titles ("DNA &amp;"->"&"); skip "----" subject-credit placeholders (no digit in num).
+  Kutztown needs `mepCode` (PASSHE shared Banner). Term = Fall 2026 course catalog.
+- IU-Bloomington 5027 — IU iGPS (`iu_igps_spider.py`, inst IUBLA).
+- ASU-Downtown 14808 — **ASU course microservice** (`asu_spider.py`):
+  eadvs-cscc-catalog-api.apps.asu.edu/.../search/courses (Authorization: "Bearer null", no real
+  auth); per-subject; UNITSMINIMUM/MAXIMUM credits. University-wide catalog.
+- Columbia 3515 — **Directory of Classes** (`columbia_spider.py`): 174 Fall-2026 subject pages,
+  sections deduped to courses, Points=credits. GOTCHA: subject pages MIX subjects (ITAL page
+  lists Hungarian) — take the real subject code from the section link, not the page filename.
+- Course-teaser / "Clean Catalog" (Modern Campus Drupal, `modern_campus_spider.py` =
+  CourseTeaserSpider): NHTI 620, Northwest Nazarene 909, Full Sail 699, Oakwood 1023 (all
+  `/classes?page=N`), Craven 565 (`/courses` — set `classes_path`). a.course-teaser-badge +
+  h2.course-teaser-title + div.course-teaser-credits.
+- Coursedog (`coursedog_spider.py` subclasses): Whitman 2013, Eastern Arizona 1062, Midland 872
+  (undergrad+grad in one spider via `catalogs` list). Rowan@Burlington 801. _credits FIX: use
+  creditHours.value / numberOfCredits when min/max are 0 (Anthology tenant). Whitman/EAC/Midland
+  body derived from catalog coursesFilters (body=None). EMPTY Coursedog catalogs (skip): Angelina,
+  Trocaire (listLength 0).
+- Mid Michigan 621 — accordion HTML (`mid_michigan_spider.py`): h3.accordion-header buttons
+  "DEPT.NUM Title CREDITS (lec-lab)"; year from /2026-2027-catalog/ URL.
+- PDFs (column-aware pdfplumber): ENMU 1583 (`enmu_spider.py`, UG+grad), La Sierra 1410, Regent
+  2004, Pacific Union 344 (`pdf_catalog_spider.py` = PdfCatalogSpider base + subclasses). Technique:
+  detect 2-column gutter via word x-gap (NOT page midpoint — splits codes); TIGHT parser = wordy
+  letter-led title + paren credits "(N units/cr)". Only PDFs with a real per-course Course-
+  Descriptions section work.
+
+PDF REALITY (probed all 34 in-scope PDFs — see SCRAPE_NOTES): only 4 are cleanly scrapable
+(ENMU, La Sierra, Regent, Pacific Union — paren-credit descriptions). The other 30 are
+degree-plan / check-sheet / prereq formatted: credits extract as page-numbers/contact-hours,
+codes scattered in requirement lists -> NOT cleanly extractable (would ship garbage). Do not retry.
+
+STILL NOT SCRAPABLE (confirmed, do not retry): Lord Fairfax (acalog behind bot-challenge
+FlareSolverr can't solve), Trocaire/Angelina (empty Coursedog), Cedarville/Fayetteville/Coastal
+Carolina (Colleague Self-Service 30-row cap), Duke (Shibboleth login), Madison/Lake Land/WPI/
+Columbus State (JS SPAs), Chaffey/Riverside + 2 more (CurriQunet network-block).
 CAVEATS: FSU = draft 2026-27 General Bulletin; WCU-LA = calendar-2026 catalog (both
 academic_year blank). NOTE: only the last 7 (Cal Poly, Cuyahoga, DePaul, Stark, Cosumnes,
 FSU, WCU-LA) have the new 12-col schema + HTML backups + html_backups/<id>.zip; earlier ones
@@ -274,8 +336,15 @@ blocked.]
 - ROBOTSTXT_OBEY robots.txt 500 errors are harmless; the crawl proceeds.
 
 ## 11. How to pick & scrape the NEXT batch (e.g. "next 7")
-SELECT candidates from `Catalog-Data` (workbook `Course Catalog - Rational Solver-11.xlsx`):
+SELECT candidates from `Catalog-Data` (latest workbook, currently `Rational Solver-14.xlsx`):
 - In scope: col I = TRUE AND col L == "Web", and NOT already in `data/<slug>/` (see §8 list).
+- **OWNERSHIP CHECK (REQUIRED — manager-enforced 2026-06-17):** also require col **O (Spider
+  Status) EMPTY** AND col **R (Scraper Name) NOT "Admin" and NOT "Akash"** (cols Q=Total Unique
+  Courses, R=Scraper Name, S=Drive Link). Picking an Admin/Akash-owned row = duplicating someone
+  else's work. NOTE: as of -14 nearly every clean/easy platform (CourseLeaf, acalog, populated
+  Coursedog, static) is already owned by Admin/Akash; the only unassigned rows left are dynamic
+  SPAs (IU sisjee [done], ASU [classes API is auth-gated 401], Ellucian Colleague Self-Service
+  [JS-rendered], Banner/Class-Search) + network-blocked CurriQunet + dead Angelina Coursedog.
 - EXCLUDE: `catoid=` URLs (acalog/Catod_Navoid — manager said skip), CurriQunet
   (`*.curriqunet.com`, network-blocked here), and dynamic portals (Banner Self-Service,
   IU `sisjee`, DukeHub, ASU class-search, MIT/Penn/Moorpark/Emory custom systems).

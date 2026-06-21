@@ -148,7 +148,7 @@ to main (LFS). `dist/` itself stays gitignored. Sample reference: manager's `309
    `page.crop((0,0,w/2,h))` and `(w/2,0,w,h)`) to avoid 2-column text merging (Palomar).
 6. If no reachable current source exists → mark UNDELIVERABLE in notes, hand to manager.
 
-## 8. Status — ~80 schools scraped & pushed (as of 2026-06-21); see dated batch blocks below
+## 8. Status — ~84 schools scraped & pushed (as of 2026-06-21); see dated batch blocks below
 NOTE: the per-platform counts in this paragraph are frozen at 2026-06-16; the BATCH blocks
 below (06-16b, 06-17, 06-19→06-21) are the authoritative record of everything added since.
 New spiders since: banner_ssb, asu, columbia, modern_campus (course-teaser), enmu,
@@ -208,6 +208,25 @@ Schools delivered (date / rows / platform / spider):
   detect 2-column gutter via word x-gap (NOT page midpoint — splits codes); TIGHT parser = wordy
   letter-led title + paren credits "(N units/cr)". Only PDFs with a real per-course Course-
   Descriptions section work.
+
+BATCH 2026-06-21b (bundle-6, 4 schools / 8,613 rows; RS-15 rows 535-594 scan; all R/O empty):
+- Greenfield CC 336, UNT Dallas 1550 (UG+grad, two catalogs -> one CSV w/ graduate_type),
+  South Mountain CC 6131 (Maricopa 6th college, catalog xl2hM3DML8ekjw7BStjW, offerNumber 7=SMC07,
+  == Rio Salado common course bank) — Coursedog. New subclasses GreenfieldSpider/UNTDallasSpider
+  (coursedog_spider.py; body/effective/year derived from each catalog's coursesFilters/displayName;
+  UNT threads a per-catalog origin so UG/grad source_url differ), SouthMountainSpider
+  (maricopa_coursedog_spider.py). Greenfield/UNT academic_year=2026-2027 (displayName); South
+  Mountain blank (consistent with Maricopa siblings).
+- Wilkes CC 596 — PDF (WilkesSpider in pdf_catalog_spider.py): NC-CC 2-column Course-Descriptions
+  section via geometric left/right half-crop (the gutter+top/3 path merged the two columns);
+  regex "DEPT NNN Title <3-4 ints>" with CREDIT = LAST int (per the catalog's own legend); section
+  bounded dynamically from the "section contains descriptions of courses" intro page so the
+  program-requirement tables (same line format) are skipped. 596 courses / 104 subjects, 0
+  blanks/dups; academic_year blank (URL year is underscore-separated, like La Sierra/Regent).
+  UPDATES the "only 4 PDFs scrapable" finding: NC community-college catalogs that carry a regular
+  Course-Descriptions table ARE scrapable (credit = last of class/lab/clinical/credit), unlike the
+  degree-plan/check-sheet PDFs. NOT scraped from 535-594: 544 Pima Medical-Las Vegas (Vol XI
+  national PDF = known not-scrapable); every other row is I=FALSE (no 2026-2027 catalog).
 
 PDF REALITY (probed all 34 in-scope PDFs — see SCRAPE_NOTES): only 4 are cleanly scrapable
 (ENMU, La Sierra, Regent, Pacific Union — paren-credit descriptions). The other 30 are

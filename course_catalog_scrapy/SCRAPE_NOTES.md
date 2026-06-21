@@ -204,6 +204,34 @@ data/. CHECK COL K for the real platform — col M (Sub Type) labels are unrelia
 - Mid Michigan (`mid_michigan_spider.py`): accordion buttons "DEPT.NUM Title CR (lec-lab)".
 - IU iGPS add: Bloomington (IUBLA). Rice: Banner SWKSCAT static.
 
+## Batch 2026-06-21b (bundle-6): RS-15 rows 535-594 scan — 4 schools, 8,613 rows
+Scanned Catalog-Data rows 535-594 (all already J-N filled). Scrapable in-scope candidates = the
+I=TRUE rows on a platform we can do; all four below have col O (Spider Status) and R (Scraper Name)
+empty (unowned). Trusted col K for the real platform.
+- **Greenfield CC (3037197)** — Coursedog (tenant gcc_banner_sql, catalog Tq3vInBCVkfzBa5krhiu);
+  336; academic_year 2026-2027 (displayName "2026-2027 Catalog"); body/effective derived from the
+  catalog's coursesFilters (== the live SPA's filter; verified count match).
+- **UNT Dallas (3094311)** — Coursedog (tenant untdallas_peoplesoft), TWO catalogs in one CSV:
+  UG (iy0jnKLU4sRy9tAZl2Xg, 1204, graduate_type Undergraduate) + Grad (fXSWetEuBzJ3jRXSr0Tv, 346,
+  Graduate) = 1550; per-catalog origin so UG rows -> undergrad.catalog.untdallas.edu, grad rows ->
+  graduate.catalog.untdallas.edu; academic_year 2026-2027.
+- **South Mountain CC (2990780)** — Maricopa district Coursedog (6th college; catalog
+  xl2hM3DML8ekjw7BStjW, offerNumber 7 = inst SMC07); 6131 (identical bank to Rio Salado — Maricopa
+  common course numbering); academic_year blank (year_from_url(origin), consistent with Mesa/PV/
+  Scottsdale/Rio Salado); graduate_type Undergraduate.
+- **Wilkes CC (3055652)** — PDF (L=PDF, CATALOG_2026_2027-2.pdf). WilkesSpider (pdf_catalog_spider.py):
+  NC-community-college 2-column Course-Descriptions section. Geometric left/right half-crop (the
+  shared gutter+top/3 path row-merged the two columns, corrupting titles/credits). Header regex
+  "DEPT NNN Title <3-4 small ints>" with CREDIT = the LAST int (catalog legend: class/lab/[clinical]/
+  credit). Section bounded dynamically from the "section contains descriptions of courses" intro
+  page so the earlier program-requirement tables (same line format) are not scraped. 596 courses,
+  104 subjects, 0 blank/dup; high-credit outliers (HEO 12, BLET/LET 110 37, NUR 8/10) verified
+  legit. academic_year blank (URL "2026_2027" is underscore-separated -> year_from_url misses it,
+  same as La Sierra/Regent). Confirms NC-CC catalogs with a real Course-Descriptions table ARE
+  scrapable (vs degree-plan PDFs).
+- NOT scraped from 535-594: 544 Pima Medical-Las Vegas (Vol XI national PDF = known not-scrapable);
+  all other rows I=FALSE.
+
 ## PDF scraping (probed all 34 in-scope PDFs 2026-06-21)
 Column-aware pdfplumber: detect the 2-column gutter via the word x-gap (NOT page midpoint, which
 splits codes like "HPE"+"458"); group words into visual lines; parse with a TIGHT regex (wordy

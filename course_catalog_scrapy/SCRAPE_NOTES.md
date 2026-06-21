@@ -232,6 +232,30 @@ empty (unowned). Trusted col K for the real platform.
 - NOT scraped from 535-594: 544 Pima Medical-Las Vegas (Vol XI national PDF = known not-scrapable);
   all other rows I=FALSE.
 
+## Batch 2026-06-22 (bundle-7): RS-15 rows 595-677 scan — 4 schools, 2,634 rows
+Scanned Catalog-Data rows 595-677 (595-654 filled, 655-677 still blank J-N = I=FALSE, not scraped).
+Scrapable in-scope I=TRUE candidates (all O/R empty):
+- **Alfred University (3067170)** — Clean Catalog, "course-teaser-table" layout (distinct from the
+  course-teaser layout: selectors are div.course-teaser-table-label a / h2.course-teaser-table-title
+  a span.field__item / div.course-teaser-table-credits span.credits). NEW CourseTeaserTableSpider
+  base (modern_campus_spider.py). Two sources merged: undergraduatecatalog.alfred.edu/undergraduate-
+  courses (Undergraduate, 1443) + graduatecatalog.alfred.edu/graduate-courses (Graduate, 282) = 1725;
+  paginated ?page=0..N. academic_year blank (no year on page/URL).
+- **Northeast Ohio Medical (3073781)** — Coursedog (tenant neomed_banner_sql, catalog
+  AAiqrvKholCprlJDolzR "2026-2027 Catalog", 457); body/effective/year derived from coursesFilters/
+  displayName; AY 2026-2027; fractional medical credits (0.5,1.5) preserved.
+- **Northeastern Oklahoma A&M (3077922)** — PDF (NortheasternOklahomaSpider). Single-column
+  descriptions; regex "DEPT NNNN Title  Class N[, Lab N], Cr. N" with credit = the Cr. value (4-digit
+  course numbers). Section bounded by the all-caps "COURSE DESCRIPTIONS" header (TOC line is mixed
+  case). 214; AY blank (URL "2025__2027" double-underscore -> year_from_url misses it).
+- **Highland CC (3031374)** — PDF (HighlandSpider). "DEPT NNN Title [GE|SWT|^|@] (credits)" with
+  1-2 letter dept codes (A=Art, BS=Biology); trailing transfer/age markers stripped. Section bounded
+  by the "Indicates the number of credits" legend page (pages before it are program/requirement
+  tables of the same format). 238; high-credit BS 240/246 (EMT 12/13) verified legit; AY 2025-2027
+  (biennial, from URL).
+- NOT scraped: 611 South Seattle (Web,PDF Seattle Colleges biennial), 614/632 Fortis Pensacola/
+  Columbus (rolling national PDF = known not-scrapable). 655-677 = blank-fill rows (all I=FALSE).
+
 ## PDF scraping (probed all 34 in-scope PDFs 2026-06-21)
 Column-aware pdfplumber: detect the 2-column gutter via the word x-gap (NOT page midpoint, which
 splits codes like "HPE"+"458"); group words into visual lines; parse with a TIGHT regex (wordy

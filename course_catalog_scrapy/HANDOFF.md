@@ -148,7 +148,7 @@ to main (LFS). `dist/` itself stays gitignored. Sample reference: manager's `309
    `page.crop((0,0,w/2,h))` and `(w/2,0,w,h)`) to avoid 2-column text merging (Palomar).
 6. If no reachable current source exists → mark UNDELIVERABLE in notes, hand to manager.
 
-## 8. Status — ~84 schools scraped & pushed (as of 2026-06-21); see dated batch blocks below
+## 8. Status — ~88 schools scraped & pushed (as of 2026-06-22); see dated batch blocks below
 NOTE: the per-platform counts in this paragraph are frozen at 2026-06-16; the BATCH blocks
 below (06-16b, 06-17, 06-19→06-21) are the authoritative record of everything added since.
 New spiders since: banner_ssb, asu, columbia, modern_campus (course-teaser), enmu,
@@ -227,6 +227,27 @@ BATCH 2026-06-21b (bundle-6, 4 schools / 8,613 rows; RS-15 rows 535-594 scan; al
   Course-Descriptions table ARE scrapable (credit = last of class/lab/clinical/credit), unlike the
   degree-plan/check-sheet PDFs. NOT scraped from 535-594: 544 Pima Medical-Las Vegas (Vol XI
   national PDF = known not-scrapable); every other row is I=FALSE (no 2026-2027 catalog).
+
+BATCH 2026-06-22 (bundle-7, 4 schools / 2,634 rows; RS-15 rows 595-677 scan; all R/O empty):
+- Alfred University 1725 — Clean Catalog "course-teaser-table" variant (NEW CourseTeaserTableSpider
+  in modern_campus_spider.py): div.course-teaser-table-label a = code, h2.course-teaser-table-title
+  = title, div.course-teaser-table-credits span.credits = credits; UG (undergraduatecatalog) + grad
+  (graduatecatalog) merged into one CSV w/ graduate_type; academic_year blank (no year in URL).
+- Northeast Ohio Medical (NEOMED) 457 — Coursedog (NeomedSpider; tenant neomed_banner_sql, catalog
+  AAiqrvKholCprlJDolzR = "2026-2027 Catalog"); body/effective/year derived from catalog object;
+  AY 2026-2027; fractional medical credits (0.5/1.5) preserved.
+- Northeastern Oklahoma A&M 214 — PDF (NortheasternOklahomaSpider in pdf_catalog_spider.py):
+  single-column descriptions, regex "DEPT NNNN Title  Class N[, Lab N], Cr. N" with CREDIT = the
+  Cr value; section bounded by the "COURSE DESCRIPTIONS" header. AY blank (URL "2025__2027"
+  double-underscore evades year_from_url).
+- Highland CC 238 — PDF (HighlandSpider): "DEPT NNN Title [GE|SWT|^|@] (credits)" with 1-2 letter
+  dept codes; trailing transfer/age markers stripped from title; section bounded by the "Indicates
+  the number of credits" legend (skips the earlier program tables of identical format). AY
+  2025-2027 (biennial, from URL). NOT scraped from 595-677: South Seattle (Web,PDF biennial),
+  Fortis Pensacola/Columbus (known not-scrapable rolling national PDF); rest I=FALSE.
+NEW shared layout: CourseTeaserTableSpider (Clean Catalog "table" variant). PDF lesson reinforced:
+NC/OK/KS community-college catalogs with a regular Course-Descriptions section ARE scrapable
+(bound to the section header to skip the program/requirement tables of the same line format).
 
 PDF REALITY (probed all 34 in-scope PDFs — see SCRAPE_NOTES): only 4 are cleanly scrapable
 (ENMU, La Sierra, Regent, Pacific Union — paren-credit descriptions). The other 30 are

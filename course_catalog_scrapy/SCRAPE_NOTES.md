@@ -256,6 +256,27 @@ Scrapable in-scope I=TRUE candidates (all O/R empty):
 - NOT scraped: 611 South Seattle (Web,PDF Seattle Colleges biennial), 614/632 Fortis Pensacola/
   Columbus (rolling national PDF = known not-scrapable). 655-677 = blank-fill rows (all I=FALSE).
 
+## Batch 2026-06-22b (bundle-8): COMBINED 11-school delivery (13,374 rows)
+Two new spiders this round (rows 692/701): **JamestownSpider** (Coursedog tenant suny_jcc_banner,
+catalog h1vfdEhiUE1gsEtGuQyJ "SUNY JCC 2026-2027 College Catalog", 719/722) and **PlazaSpider**
+(PDF pdf_catalog_spider.py; "DEPT NNN Title N credits", section-bounded by "COURSE DESCRIPTIONS";
+300; one cosmetic title CR 104 -> "IV" from tab-split). SWAU (row 680) skipped = already present in
+catalog_scrape_2627/.
+bundle-8 merges OUR 6 (Alfred 1725, NEOMED 457, NEOAM 214, Highland 238, Jamestown 719, Plaza 300)
+with 5 schools from the parallel `catalog_scrape_2627/` tool that were NOT already in our data,
+NORMALIZED to the 12-col schema (dept/code |-split; credits parsed from "(N Credits)"/"Credits N",
+blank for the acalog/clean-catalog ones that ship code/title only; academic_year=2026-2027 from the
+filename; source_url from workbook col K; dedup by (dept,code)):
+- UConn-Stamford 3009591 (CourseLeaf, 7445; the source also had a description column -> dropped to
+  fit the schema, preserved in catalog_scrape_2627/),
+- Lord Fairfax/Laurel Ridge 3106117 (Acalog, 486, credits blank),
+- SUNY Corning 3067459 (Clean Catalog, 590, credits filled),
+- SWAU 3094146 (Clean Catalog, 760, credits blank),
+- SW Michigan 3042629 (Acalog, 440, credits blank).
+EXCLUDED from the table-of-7 because already in our data: Craven (3055614, prior bundle) and Alfred
+(3067170 - we used our own UG+grad 1725, not the tool's UG-only 1444). External schools carry no
+HTML/PDF backups (not crawled by our pipeline).
+
 ## PDF scraping (probed all 34 in-scope PDFs 2026-06-21)
 Column-aware pdfplumber: detect the 2-column gutter via the word x-gap (NOT page midpoint, which
 splits codes like "HPE"+"458"); group words into visual lines; parse with a TIGHT regex (wordy

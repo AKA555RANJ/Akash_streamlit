@@ -249,6 +249,21 @@ NEW shared layout: CourseTeaserTableSpider (Clean Catalog "table" variant). PDF 
 NC/OK/KS community-college catalogs with a regular Course-Descriptions section ARE scrapable
 (bound to the section header to skip the program/requirement tables of the same line format).
 
+BATCH 2026-06-22b (bundle-8, COMBINED 11 schools / 13,374 rows; course_catalog_bundle-8.zip):
+OUR 6 (RS-15 rows 595-704, 12-col + backups): Alfred 1725, NEOMED 457, NEOAM 214, Highland 238,
+Jamestown 719 (Coursedog suny_jcc_banner / catalog h1vfdEhiUE1gsEtGuQyJ "SUNY JCC 2026-2027";
+NEW JamestownSpider), Plaza 300 (PDF; NEW PlazaSpider, "CODE NNN Title N credits", section-bounded).
+PLUS 5 from the parallel `catalog_scrape_2627/` tool (3-4 col source -> NORMALIZED here to the 12-col
+schema: dept/code |-split, credits parsed from "(N Credits)"/"Credits N", academic_year 2026-2027 from
+the filename, source_url from col K, dedup by (dept,code)):
+- UConn-Stamford 7445 (CourseLeaf; credits filled; its 7,137 descriptions were DROPPED to fit the
+  12-col schema and remain in catalog_scrape_2627/),
+- Lord Fairfax/Laurel Ridge 486 (Acalog, credits blank), SUNY Corning 590 (Clean Catalog, credits
+  filled), SWAU 760 (Clean Catalog, credits blank), SW Michigan 440 (Acalog, credits blank).
+Craven (3055614) + Alfred (3067170) also exist in that tool's output but were ALREADY in our data ->
+excluded from the merge (we used our own Alfred 1725). bundle-8 = code/ + csv/ (11) + html/ (our 3
+web schools) + pdf/ (our 3 PDF schools); the 5 external schools have no backups (not crawled by us).
+
 PDF REALITY (probed all 34 in-scope PDFs — see SCRAPE_NOTES): only 4 are cleanly scrapable
 (ENMU, La Sierra, Regent, Pacific Union — paren-credit descriptions). The other 30 are
 degree-plan / check-sheet / prereq formatted: credits extract as page-numbers/contact-hours,

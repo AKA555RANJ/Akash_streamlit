@@ -41,8 +41,25 @@ Read it with openpyxl via **system** `python3` (has openpyxl); the venv may not.
   Cloudflare — render with FlareSolverr and check before building (CSU Chico, RIT were
   unmasked as CourseLeaf and excluded).
 
-## 4. Output schema — CSV (12 columns, FIXED ORDER — matches manager sample
-## `south_college__3091089__cc.csv`, follow for ALL scrapes from 2026-06-16 onward)
+## SCHEMA CHANGE 2026-06-23 (manager-directed): CREDITS DROPPED -> 11 columns.
+`credits` is no longer collected/emitted (CsvExportPipeline FIELDNAMES, Palomar, IU spider all
+updated; spider credit logic left in place but unused). academic_year is now read FROM THE PAGE
+when shown (see §4a). Output is now:
+```
+school_id, department_code, course_code, course_title, graduate_type, term,
+academic_year, source_url, backup_filename, crawled_on, updated_on
+```
+
+## 4a. academic_year — now PAGE-derived when present (manager/client-directed 2026-06-23)
+Client flagged blank academic_year where the page clearly shows it. New rule: capture the catalog
+year from the PAGE when shown, else from the URL, else blank. `items.year_from_page(html)` reads it
+from the <title> or a YYYY-YYYY next to Edition/Catalog/Bulletin. Wired: CourseLeaf (`2026-2027
+Edition`), Clean Catalog/course-teaser (home <title> "College Catalog 2026-2027" — fetch the home
+first), Maricopa (catalog displayName "26-27 ..."), IU (= AY of the scraped terms). Coursedog already
+derived from displayName. PDF/static keep URL-or-blank.
+
+## 4b. (historical) Output schema — CSV (12 columns) BEFORE the 2026-06-23 credits drop
+## (matches manager sample `south_college__3091089__cc.csv`, used 2026-06-16 .. 2026-06-22)
 ```
 school_id, department_code, course_code, course_title, credits, graduate_type, term,
 academic_year, source_url, backup_filename, crawled_on, updated_on
@@ -263,6 +280,23 @@ the filename, source_url from col K, dedup by (dept,code)):
 Craven (3055614) + Alfred (3067170) also exist in that tool's output but were ALREADY in our data ->
 excluded from the merge (we used our own Alfred 1725). bundle-8 = code/ + csv/ (11) + html/ (our 3
 web schools) + pdf/ (our 3 PDF schools); the 5 external schools have no backups (not crawled by us).
+
+BUNDLE-9 2026-06-23 (FULL RE-SCRAPE + QC of all 77 Akash-owned schools in RS-16; 238,659 rows):
+Applied the 3 manager-directed changes to every school: (1) drop credits -> 11 col; (2) academic_year
+from page (§4a); (3) IU term-coverage = union of all available AY terms (Summer 2026 + Fall 2026 now;
+fixes the "less than live" miss — IU-Bloomington 5027 -> 5414). LIVE-COMPLETENESS QC (compare to the
+source's own total, NOT the prior count): Coursedog/Maricopa vs API listLength, Banner vs totalCount,
+CourseLeaf vs index subjects; for any gap, deep-diff live-unique-codes vs ours (dedup vs real miss).
+REAL under-collections caught & fixed (would have passed a prior-count check): **UNI 1919->2812
+(+893)** and **DePaul 8790->9186 (+396)** — root cause CODE_RE capped dept at [A-Z]{2,6}; widened to
+handle long (THEATRE/TEACHING), two-word (MUS HIST), ampersand (A&S/T&L) and single-letter codes.
+Also: Nicholls global dedup (-34 dup), Stark/CourseLeaf no-number-block guard. 3 schools REBUILT as
+proper spiders instead of the external `catalog_scrape_2627` CSVs: UConn-Stamford (CourseLeaf UG+grad
+7445), SUNY Corning (Clean Catalog 590), SWAU (Clean Catalog UG+grad 760) — all match the external
+counts exactly and add academic_year+grad_type. STILL external (FlareSolverr can't beat acalog
+anti-bot, 202/0): Lord Fairfax 3106117, SW Michigan 3042629 — normalized to 11-col. EXCLUDED (no data
+anywhere): H Councill Trenholm 2988057, The School of Architecture 2990789. Pushed as
+course_catalog_bundle-9.zip (code/ + csv/ 77 + html/ 74 backups + pdf/ 8).
 
 PDF REALITY (probed all 34 in-scope PDFs — see SCRAPE_NOTES): only 4 are cleanly scrapable
 (ENMU, La Sierra, Regent, Pacific Union — paren-credit descriptions). The other 30 are

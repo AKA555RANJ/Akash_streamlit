@@ -277,6 +277,32 @@ EXCLUDED from the table-of-7 because already in our data: Craven (3055614, prior
 (3067170 - we used our own UG+grad 1725, not the tool's UG-only 1444). External schools carry no
 HTML/PDF backups (not crawled by our pipeline).
 
+## 2026-06-23 — schema change + full re-scrape/QC of 77 (bundle-9)
+THREE manager/client-directed changes applied to ALL spiders:
+1. **Credits dropped** -> 11-col schema (pipeline FIELDNAMES; Palomar + IU updated).
+2. **academic_year from page** when shown (items.year_from_page): CourseLeaf "2026-2027 Edition",
+   Clean Catalog home <title>, Maricopa catalog displayName, IU = AY of scraped terms. Fixes the
+   client complaint (e.g. CSU Bakersfield/NHTI were blank, now 2026-2027).
+3. **IU term coverage** = union all available AY terms (Summer 2026 + Fall 2026) — fixes the
+   manager's "less than live" catch (IU-Bloomington 5027 -> 5414 vs mgr 5422; the 395 were Summer-
+   only courses a single-term scrape missed).
+LIVE-COMPLETENESS QC METHOD (to catch the manager's issue): compare to the SOURCE's own total, not
+the prior count. Coursedog/Maricopa -> API listLength; Banner -> totalCount; CourseLeaf -> subjects
+on the live index; term-scoped -> union terms. For any flagged gap, deep-diff live-unique-codes vs
+ours to separate cross-list dedup from a real miss.
+REAL under-collections found & fixed (both matched prior counts, so only the live check caught them):
+- **Northern Iowa 1919 -> 2812 (+893)**: 40 subjects with 7-8 letter / two-word dept codes (THEATRE,
+  TEACHING, MUS HIST) were dropped by CODE_RE [A-Z]{2,6}.
+- **DePaul 8790 -> 9186 (+396)**: long codes + ampersand depts A&S, T&L.
+  Fix: CODE_RE -> `[A-Z][A-Z&]{0,8}(?:\s[A-Z][A-Z&]{0,8})?` (long/two-word/&/single-letter). Re-scraped
+  all 24 CourseLeaf; only UNI & DePaul changed (rest stable). Also Nicholls global dedup (1561->1527),
+  Stark/CourseLeaf no-number guard.
+3 external schools REBUILT as real spiders (were catalog_scrape_2627 CSVs): UConn-Stamford (CourseLeaf
+UG+grad 7445), SUNY Corning (Clean Catalog 590), SWAU (Clean Catalog UG+grad 760) — match external
+counts exactly + add academic_year/grad_type. Lord Fairfax + SW Michigan stay external (acalog anti-bot
+beats FlareSolverr, 202/0 courses), normalized to 11-col. Excluded: Trenholm 2988057, School of
+Architecture 2990789 (no data anywhere). bundle-9 = 77 schools / 238,659 rows.
+
 ## PDF scraping (probed all 34 in-scope PDFs 2026-06-21)
 Column-aware pdfplumber: detect the 2-column gutter via the word x-gap (NOT page midpoint, which
 splits codes like "HPE"+"458"); group words into visual lines; parse with a TIGHT regex (wordy

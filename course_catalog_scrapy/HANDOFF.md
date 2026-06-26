@@ -298,6 +298,28 @@ anti-bot, 202/0): Lord Fairfax 3106117, SW Michigan 3042629 — normalized to 11
 anywhere): H Councill Trenholm 2988057, The School of Architecture 2990789. Pushed as
 course_catalog_bundle-9.zip (code/ + csv/ 77 + html/ 74 backups + pdf/ 8).
 
+## TERM POLICY (manager Atasi, confirmed 2026-06-23) — applies to ALL term-scoped APIs
+IU iGPS (`sisjee`) and Banner SSB (`courseSearch`) are PER-TERM; a single-term scrape under-collects.
+RULE: scrape **ALL currently-available terms**, union by course code, and tag each by its **proper
+academic year** (Fall 2026 -> 2026-2027; Spring 2026 / Summer 2026 -> 2025-2026; Spring/Summer 2027
+-> 2026-2027 once posted). We are catching up on terms missed since the scraper last ran Oct 2025.
+Do NOT blanket-tag everything 2026-2027. (CONFIRM at implementation: rows are deduped per course; for
+a course spanning AYs, decide one row tagged latest-AY vs separate rows per AY.)
+
+### IU QA findings (manager's Drive folder, 7 campuses, 2026-06-23)
+Schema all clean (11-col, no credits, 0 blank/dup, multi-term). Completeness vs live iGPS union:
+6 regionals (South Bend 1645, Northwest 1275, Kokomo 1128, Southeast 1339, East 1025, Indianapolis
+3111) = union of all 3 available terms (Spring+Summer+Fall 2026) -> complete. Bloomington 5422 =
+Summer+Fall only (3-term union would be 7286). All tagged academic_year 2026-2027 (blanket).
+
+### OPEN ITEMS — apply the term policy (next session, after this was just confirmed)
+1. IU 7 campuses: re-tag Spring/Summer-2026 rows as AY 2025-2026; re-pull Bloomington Spring 2026.
+2. Our 77's Banner schools (UC-Riverside 2996093, Yeshiva 3067327, Kutztown 3083584): currently
+   Fall-2026 only (= 100% of Fall, but ~78/school more across other quarters). Make
+   `banner_ssb_spider` union all available terms + per-term AY; re-scrape; refresh the bundle.
+3. iu_igps_spider currently unions ("Summer 2026","Fall 2026","Spring 2027","Summer 2027") and tags
+   academic_year="2026-2027" for all — update to include Spring/Summer 2026 with AY 2025-2026 tagging.
+
 PDF REALITY (probed all 34 in-scope PDFs — see SCRAPE_NOTES): only 4 are cleanly scrapable
 (ENMU, La Sierra, Regent, Pacific Union — paren-credit descriptions). The other 30 are
 degree-plan / check-sheet / prereq formatted: credits extract as page-numbers/contact-hours,
@@ -479,3 +501,16 @@ QC EVERY school (both):
 ## 13. Related memory files
 `project-course-catalog-scrapy` (progress), `feedback-catalog-csv-conventions`
 (|-prefix / split / per-spider term rules).
+
+## 14. bundle-10 (2026-06-26): QA fixes for Catalog-Data-Verifier flags
+13 Akash-owned catalogs flagged by the verifier: 12 fixed, 1 false positive. Shared cleaning
+hardened — control-char strip + whitespace collapse in `clean_course_title`; `format_dept_code`
+strips stray chars (`*`) and uppercases dept/code; `CsvExportPipeline` drops blank-title /
+no-digit-code rows; CourseLeaf handles dual-listed `DEPT 4180/5180 Title` and drops one-char
+prereq-reference artifacts; Columbia drops residence-unit pseudo-courses and tags AY 2026-2027.
+Lord Fairfax (486) and SW Michigan (440) had 579/433 empty padding rows stripped. Plaza CR 104
+title corrected to "Stenotype IV". Highland's 59 "bad" dept codes are valid single letters
+(A=Art, M=Music) = false positive, no change. Lean bundle = 4 changed code files + csv/ (13) +
+FIXES.md. NOTE on QA method: count only real course headers (CourseLeaf `<h4 id>`/`detail-code`,
+not `/courses/CODE` hyperlinks) — raw links include prerequisite references (caused a false
+"26 missing" at Penn College; corrected to 1216=1216 complete).

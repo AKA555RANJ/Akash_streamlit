@@ -3,10 +3,14 @@ from urllib.parse import urlparse
 
 import scrapy
 
-from course_catalog_scrapy.items import CourseItem, year_from_url
+from course_catalog_scrapy.items import CourseItem, year_from_url, year_from_page
 
-CODE_RE = re.compile(r"^([A-Z]{2,6})[\s\-]*(\d{2,4}[A-Z0-9]*)")
+# dept code: 1+ uppercase tokens that may contain '&' (A&S, T&L) and may be
+# space-separated (MUS HIST), up to ~9 chars each, then the course number.
+CODE_RE = re.compile(
+    r"^([A-Z][A-Z&]{0,8}(?:\s[A-Z][A-Z&]{0,8})?)[\s\-]*(\d{2,4}[A-Z0-9]*)")
 XLIST_RE = re.compile(r"^/\s*[A-Z]{2,6}\s*\d[\w]*\.?\s*")
+DUAL_RE = re.compile(r"^/\s*\d{2,4}[A-Z]?\b\.?\s*")
 HOURS_NUM_RE = re.compile(r"(\d+(?:\.\d+)?)(?:\s*(?:to|through|-|–|—)\s*(\d+(?:\.\d+)?))?")
 CRED_RE = re.compile(
     r"(\d+(?:\.\d+)?)(?:\s*(?:to|through|-|–|—)\s*(\d+(?:\.\d+)?))?"
@@ -43,12 +47,21 @@ def parse_courseblock(b):
         title = re.sub(r"^[\s.:·–—-]+", "", _norm(" ".join(b.css("span.detail-title ::text").getall())))
         hours = _norm(" ".join(b.css('span[class*="detail-"][class*="hours"] ::text').getall()))
         dept, code = _code_dept(code_txt)
-        return dept, code, title, _hours(hours)
+        credits = _hours(hours)
+        if not credits:                              # credits as free text in courseblockextra
+            cm = CRED_RE.search(_norm(" ".join(b.css("div.courseblockextra ::text, p.courseblockextra ::text").getall())))
+            credits = _rng(cm) if cm else ""
+        return dept, code, title, credits
 
     cbc = _norm(" ".join(b.css("span.courseblockcode ::text").getall()))
     if cbc:
         title = re.sub(r"^[\s.:·–—-]+", "", _norm(" ".join(
             b.css("span.courseblock__title ::text").getall())))
+        if not title:                                # title sits in p.courseblocktitle after the code span
+            full = _norm(" ".join(b.css(
+                "p.courseblocktitle ::text, h3.courseblocktitle ::text").getall()))
+            mc = CODE_RE.match(full)
+            title = re.sub(r"^[\s.:·–—-]+", "", full[mc.end():]) if mc else full
         hours = _norm(" ".join(b.css(
             'span[class*="courseblock"][class*="hours"] ::text, '
             'span[class*="detail-"][class*="hours"] ::text').getall()))
@@ -63,7 +76,7 @@ def parse_courseblock(b):
         m = CODE_RE.match(ct)
         dept = m.group(1) if m else ""
         code = _norm(m.group(1) + " " + m.group(2)) if m else ct
-        title = re.sub(r"^[\s.:·–—-]+", "", _norm(ct[m.end():])).rstrip(" .") if m else ct
+        title = DUAL_RE.sub("", re.sub(r"^[\s.:·–—-]+", "", _norm(ct[m.end():]))).rstrip(" .") if m else ct
         return dept, code, title, _hours(ch)
 
     full = _norm("".join(b.css("p.courseblocktitle ::text, h3.courseblocktitle ::text").getall()))
@@ -72,6 +85,7 @@ def parse_courseblock(b):
         return "", "", "", ""
     dept, code = m.group(1), _norm(m.group(1) + " " + m.group(2))
     rest = XLIST_RE.sub("", full[m.end():].lstrip(" .:–—-·")).lstrip(" .:–—-·")
+    rest = DUAL_RE.sub("", rest).lstrip(" .:–—-·")
     if "|" in rest:                                  # pipe-delimited: TITLE | N hours
         segs = [s.strip() for s in rest.split("|") if s.strip()]
         title = segs[0] if segs else rest
@@ -105,7 +119,8 @@ class CourseLeafSpider(scrapy.Spider):
         if response.css("div.courseblock"):
             yield from self._emit(response, graduate_type)
             return
-        base = urlparse(index_url).path
+        idx = urlparse(index_url)
+        base = idx.path
         if not base.endswith("/"):
             base += "/"
         seen = set()
@@ -116,17 +131,20 @@ class CourseLeafSpider(scrapy.Spider):
                 rest = path[len(base):].strip("/")
                 if rest and "/" not in rest and "." not in rest and rest not in seen:
                     seen.add(rest)
-                    yield response.follow(h, callback=self._emit_cb,
+                    # follow subject pages on the index's own host (CourseLeaf
+                    # indexes sometimes link a subject to a sibling catalog host)
+                    yield response.follow(f"{idx.scheme}://{idx.netloc}{path}",
+                                          callback=self._emit_cb,
                                           cb_kwargs={"graduate_type": graduate_type})
 
     def _emit_cb(self, response, graduate_type):
         yield from self._emit(response, graduate_type)
 
     def _emit(self, response, graduate_type):
-        academic_year = year_from_url(response.url)
+        academic_year = year_from_page(response.text) or year_from_url(response.url)
         for b in response.css("div.courseblock"):
             dept, code, title, credits = parse_courseblock(b)
-            if not code or not title or code in self.seen:
+            if not code or len(title.strip()) < 2 or code in self.seen or not re.search(r"\d", code):
                 continue
             self.seen.add(code)
             yield CourseItem(
@@ -310,3 +328,82 @@ class StarkStateSpider(CourseLeafSpider):
     slug = "stark_state_college__3073939__cc"
     allowed_domains = ["catalog.starkstate.edu"]
     start_pages = [("https://catalog.starkstate.edu/course-descriptions/", "")]
+
+
+class MoorparkSpider(CourseLeafSpider):
+    name = "moorpark"
+    school_id = "2996015"
+    slug = "moorpark_college__2996015__cc"
+    allowed_domains = ["catalog.vcccd.edu"]
+    start_pages = [("https://catalog.vcccd.edu/moorpark/programs-courses/", "")]
+
+
+class UTEPSpider(CourseLeafSpider):
+    name = "utep"
+    school_id = "3094301"
+    slug = "the_university_of_texas_at_el_paso__3094301__cc"
+    allowed_domains = ["catalog.utep.edu"]
+    start_pages = [
+        ("https://catalog.utep.edu/undergrad/course-descriptions/", "Undergraduate"),
+        ("https://catalog.utep.edu/grad/course-descriptions/", "Graduate"),
+    ]
+
+
+class QuinnipiacSpider(CourseLeafSpider):
+    name = "quinnipiac"
+    school_id = "3009579"
+    slug = "quinnipiac_university__3009579__cc"
+    allowed_domains = ["catalog.qu.edu"]
+    start_pages = [
+        ("https://catalog.qu.edu/courses-undergraduate/", "Undergraduate"),
+        ("https://catalog.qu.edu/courses-graduate/", "Graduate"),
+    ]
+
+
+class UConnSpider(CourseLeafSpider):
+    name = "uconn"
+    school_id = "3009591"
+    slug = "university_of_connecticut-stamford__3009591__cc"
+    allowed_domains = ["catalog.uconn.edu"]
+    start_pages = [
+        ("https://catalog.uconn.edu/undergraduate/courses/", "Undergraduate"),
+        ("https://catalog.uconn.edu/graduate/courses/", "Graduate"),
+    ]
+
+
+class UtahTechSpider(CourseLeafSpider):
+    name = "utah_tech"
+    school_id = "3104284"
+    slug = "dixie_state_university__3104284__cc"
+    allowed_domains = ["catalog.utahtech.edu"]
+    start_pages = [("https://catalog.utahtech.edu/courses/", "")]
+
+
+class MiraCostaSpider(CourseLeafSpider):
+    name = "miracosta"
+    school_id = "2995709"
+    slug = "miracosta_college__2995709__cc"
+    allowed_domains = ["catalog.miracosta.edu"]
+    start_pages = [("https://catalog.miracosta.edu/disciplines/", "")]
+
+
+class UConnWaterburySpider(CourseLeafSpider):
+    name = "uconn_waterbury"
+    school_id = "3009589"
+    slug = "university_of_connecticut-waterbury_campus__3009589__cc"
+    allowed_domains = ["catalog.uconn.edu"]
+    start_pages = [
+        ("https://catalog.uconn.edu/undergraduate/courses/", "Undergraduate"),
+        ("https://catalog.uconn.edu/graduate/courses/", "Graduate"),
+    ]
+
+
+class LewisClarkSpider(CourseLeafSpider):
+    name = "lewis_clark"
+    school_id = "3080121"
+    slug = "lewis_&_clark_college__3080121__cc"
+    allowed_domains = ["docs.lclark.edu"]
+    start_pages = [
+        ("https://docs.lclark.edu/undergraduate/", "Undergraduate"),
+        ("https://docs.lclark.edu/graduate/", "Graduate"),
+    ]

@@ -303,6 +303,14 @@ counts exactly + add academic_year/grad_type. Lord Fairfax + SW Michigan stay ex
 beats FlareSolverr, 202/0 courses), normalized to 11-col. Excluded: Trenholm 2988057, School of
 Architecture 2990789 (no data anywhere). bundle-9 = 77 schools / 238,659 rows.
 
+## TERM POLICY (manager Atasi, 2026-06-23) + IU QA — see HANDOFF for full detail
+Term-scoped APIs (IU iGPS, Banner SSB): scrape ALL available terms, union by code, tag each by its
+proper AY (Fall2026=2026-2027; Spring/Summer2026=2025-2026). Catching up on terms missed since the
+Oct-2025 run. QA'd the manager's 7 IU campuses: schema clean; 6 regionals = full 3-term union
+(complete); Bloomington = Summer+Fall only. OPEN: re-tag Spring/Summer-2026 -> 2025-2026; re-pull
+Bloomington Spring 2026; make banner_ssb (UC-Riverside/Yeshiva/Kutztown) + iu_igps multi-term with
+per-term AY, then refresh the bundle.
+
 ## PDF scraping (probed all 34 in-scope PDFs 2026-06-21)
 Column-aware pdfplumber: detect the 2-column gutter via the word x-gap (NOT page midpoint, which
 splits codes like "HPE"+"458"); group words into visual lines; parse with a TIGHT regex (wordy
@@ -312,3 +320,26 @@ Pacific Union (344) — `pdf_catalog_spider.py`. NOT SCRAPABLE (30): degree-plan
 formatted (credits come out as page numbers/contact hours; codes scattered in requirement lists).
 Examples: SIU, El Paso, SOWELA, MS Delta, Northeast, Solano, Crowder, Jackson, Moody, Pima ×3,
 Fortis, Denver Nursing, Fox Valley, Ultimate Medical. Do not retry without per-PDF section logic.
+
+## bundle-18: missing-courses QA fixes, batch 2 of 2 (2026-07-17)
+Completes the 7-school "missing courses" QA batch (batch 1 = bundle-17: NNU 1546, NEO A&M 345).
+- Pacific Union 2995723: 344 -> 699. Local PDF (server 403s downloads). Per-line parse, two regexes
+  (compact program tables w/ credit boundary + description headers), plus wrapped-title join pass
+  (head line w/ no digits + Title-Case continuation ending in credit, looks ahead 2 lines to skip
+  column interleave) and a bare "GNRL 100 Campus Community." pass. Roman-numeral-glued credits
+  ("Accounting I3") now keep the numeral. `pdf_extractors/puc_pdf.py`.
+- Highland CC 3031374: 238 -> 592. Five formats: compact w/ credit, description, no-credit course
+  list ("HIS202 Introduction to Ancient History*"), work-experience "Title ^ (N)", bare trailing
+  credit; plus OSHA/EPA/KSPN cert-shorthand titles. Pages 30-37 hold a garbled transfer-articulation
+  matrix (4-digit university codes, "(3"/"Hours)" fragments, doubled words) — excluded by BADFRAG
+  guard. `pdf_extractors/highland_pdf.py`.
+- Palomar 2995726: 932 -> 1102. Descriptions parse kept as pass 1 (authoritative titles); new pass 2
+  reads program-requirement tables (bare units, titles wrap to next line — joined) which alone hold
+  170 real courses (DNCE/CFT/KINE/ACR...). Single-letter C-ID cross-reference codes ("C 1001") are
+  garbage — the 2-4 letter dept requirement excludes them. FIN 341 is NOT in the catalog (false QA
+  flag). `pdf_extractors/palomar_pdf.py` extended.
+- NEO A&M 3077922: 2 title fixes (PSYC 1113 cross-list bleed, ENGL 2653 truncation).
+Completeness QC: line-start code universe vs captured = 0 unresolved for all 4 PDF schools
+(remaining gaps classified as transfer-matrix/calendar noise). NNU re-verified live: 1546 = 1546
+badges across all 3 catalogs (11 code-normalization diffs only: "300#W", cross-listed "A/B" codes).
+Format QC all 5: schema/dept/code/dup/entities/dates all clean.

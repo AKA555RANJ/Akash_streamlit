@@ -70,11 +70,45 @@ class NHTISpider(CourseTeaserSpider):
 
 
 class NorthwestNazareneSpider(CourseTeaserSpider):
+    # NNU has 3 separate course-teaser catalogs: traditional, graduate/professional
+    # (gpscatalog), and ecampus (ecampuscatalog). Crawl all three, dedup by code.
     name = "northwest_nazarene"
     school_id = "3022108"
     slug = "northwest_nazarene_university__3022108__cc"
-    allowed_domains = ["catalog.nnu.edu"]
-    base = "https://catalog.nnu.edu"
+    allowed_domains = ["catalog.nnu.edu", "gpscatalog.nnu.edu", "ecampuscatalog.nnu.edu"]
+    nnu_bases = [("https://catalog.nnu.edu", ""),
+                 ("https://gpscatalog.nnu.edu", "Graduate"),
+                 ("https://ecampuscatalog.nnu.edu", "")]
+
+    def start_requests(self):
+        for base, gt in self.nnu_bases:
+            yield scrapy.Request(base + "/", callback=self._nnu_home,
+                                 cb_kwargs={"base": base, "gt": gt}, dont_filter=True)
+
+    def _nnu_home(self, response, base, gt):
+        ay = year_from_page(response.text)
+        yield scrapy.Request(base + "/classes?page=0", callback=self._nnu_parse,
+                             cb_kwargs={"page": 0, "base": base, "gt": gt, "ay": ay},
+                             dont_filter=True)
+
+    def _nnu_parse(self, response, page, base, gt, ay):
+        rows = response.css("div.views-row-wrapper, div.views-row")
+        new = 0
+        for row in rows:
+            code = _norm(" ".join(row.css("a.course-teaser-badge ::text").getall()))
+            title = _norm(" ".join(row.css("h2.course-teaser-title ::text").getall()))
+            m = CODE_RE.match(code)
+            if not m or not title or code in self.seen:
+                continue
+            self.seen.add(code)
+            new += 1
+            yield CourseItem(school_id=self.school_id, department_code=m.group(1),
+                             course_code=code, course_title=title, graduate_type=gt,
+                             term="", academic_year=ay, source_url=base + "/classes")
+        if rows and new and page < self.max_pages:
+            yield scrapy.Request(f"{base}/classes?page={page + 1}", callback=self._nnu_parse,
+                                 cb_kwargs={"page": page + 1, "base": base, "gt": gt, "ay": ay},
+                                 dont_filter=True)
 
 
 class FullSailSpider(CourseTeaserSpider):
@@ -218,3 +252,19 @@ class VillanovaSpider(CourseTeaserTableSpider):
     slug = "villanova_university__3083491__cc"
     allowed_domains = ["live-villanova-catalog.cleancatalog.io"]
     sources = [("https://live-villanova-catalog.cleancatalog.io", "/classes", "")]
+
+
+class LyonSpider(CourseTeaserSpider):
+    name = "lyon"
+    school_id = "2989255"
+    slug = "lyon_college__2989255__cc"
+    allowed_domains = ["catalog.lyon.edu"]
+    base = "https://catalog.lyon.edu"
+
+
+class GreatBaySpider(CourseTeaserSpider):
+    name = "great_bay"
+    school_id = "3059963"
+    slug = "great_bay_community_college__3059963__cc"
+    allowed_domains = ["catalog.greatbay.edu"]
+    base = "https://catalog.greatbay.edu"

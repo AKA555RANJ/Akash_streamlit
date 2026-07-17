@@ -343,3 +343,22 @@ Completeness QC: line-start code universe vs captured = 0 unresolved for all 4 P
 (remaining gaps classified as transfer-matrix/calendar noise). NNU re-verified live: 1546 = 1546
 badges across all 3 catalogs (11 code-normalization diffs only: "300#W", cross-listed "A/B" codes).
 Format QC all 5: schema/dept/code/dup/entities/dates all clean.
+
+## bundle-18 update: full completeness pass on all 7 QA-flagged schools (2026-07-17)
+Final counts: CRC 1411, FLC 985, Highland 592, NEO A&M 349, NNU 1546, PUC 775, Palomar 1102.
+- Los Rios (CRC 873->1411, FLC 525->985): `los_rios_spider.py` read only the requirement tables;
+  Work-Experience/Experimental courses (198/298/299/498/499) and hundreds more exist ONLY as
+  "<h3>CODE Title</h3>" description blocks on the same program pages — h3 pass added. ARC/SCC share
+  the spider and were re-crawled too (2549/1759, kept in data/, not in this bundle's scope).
+  Live completeness probes (all program pages re-fetched): CRC 0 missing, FLC 0 missing.
+- PUC 699->775: arranged courses ("CODE credit Arr") carry no inline title; pass 3 column-crops
+  pages (word-x-gap gutters) and takes the Title-Case streak of the next line, w/ 2-line join and
+  overrides for two uncroppable columns. Every dept's 495 = "Independent Study" (catalog p.23).
+- NEO A&M 345->349: comma-multi-code lines ("AG 1111, 1211, 2111, 2211 Rodeo Activities") expanded;
+  2 em-dash-truncated titles fixed (clean_course_title cuts at "—" ranges).
+- Highland: 17 list-bleed titles fixed (leading OR/AND from alternative lists, trailing cross-list
+  tokens); TITLE_OVERRIDES in highland_pdf.py for the 10 verified by eye.
+- clean_course_title over-strips titles matching "N Hour..." (OSHA courses) — fixed by hand in the
+  Los Rios CSVs; watch for it elsewhere.
+QC gates all green: 40/41 flagged codes present (Palomar FIN 341 does NOT exist in the 2026-27 PDF
+— false flag); completeness 0 unresolved vs source for all 7; format QC clean for all 7.

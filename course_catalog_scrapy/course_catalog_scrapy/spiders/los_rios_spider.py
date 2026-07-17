@@ -12,6 +12,7 @@ TITLE_UNITS_RE = re.compile(
 PROGRAM_HREF_RE = re.compile(
     r"/2026-2027-unofficial-catalog-preview/programs-of-study/list-of-programs/[^/]+$"
 )
+H3_COURSE_RE = re.compile(r"^([A-Z]{2,6})\s+(\d{2,4}[A-Z]?)\s+([A-Z].{2,90})$")
 
 class LosRiosSpider(scrapy.Spider):
 
@@ -57,6 +58,28 @@ class LosRiosSpider(scrapy.Spider):
                 course_code=code,
                 course_title=title,
                 credits=units,
+                graduate_type="Undergraduate",
+                term="",
+                academic_year=academic_year,
+                source_url=response.url,
+            )
+        # course-description blocks: "<h3>ACCT 499 Experimental Offering in
+        # Accounting</h3>". Work-experience / experimental courses (198/298/
+        # 299/498/499) appear ONLY here, never in the requirement tables.
+        for h3 in response.css("h3::text").getall():
+            m = H3_COURSE_RE.match(h3.strip())
+            if not m:
+                continue
+            code = f"{m.group(1)} {m.group(2)}"
+            if code in self.seen:
+                continue
+            self.seen.add(code)
+            yield CourseItem(
+                school_id=self.school_id,
+                department_code=m.group(1),
+                course_code=code,
+                course_title=m.group(3).strip(),
+                credits="",
                 graduate_type="Undergraduate",
                 term="",
                 academic_year=academic_year,

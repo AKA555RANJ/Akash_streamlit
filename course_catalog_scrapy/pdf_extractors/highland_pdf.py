@@ -50,15 +50,33 @@ XL = re.compile(r"\s+(?:AND|OR|and|or)\s+[A-Z]{2,5}\s?\d.*$")
 MARK = re.compile(r"\s*\(\s*\d[\d\s]*\)\s*(?:GE|SWT|GR)?\s*$"
                   r"|\s+with lab.*$|\s+\d+\s*$", re.I)
 BADFRAG = re.compile(r"\bHours\b|\(\s*[3-9]\b|([A-Z]{3,})\s+\1")
+# alternative-course lists produce "OR Science of Winemaking" style prefixes
+LEAD_CONJ = re.compile(r"^(?:OR|AND)\s+")
+# titles verified by eye against the PDF where list-format bleed (cross-list
+# tokens, "(does not count if ...)" notes) cannot be stripped generically
+TITLE_OVERRIDES = {
+    "HMS 112": "Home Visitor I",
+    "HMS 115": "Home Visitor II",
+    "LG 101": "Spanish I",
+    "M 146": "Musical Theatre History",
+    "TH 146": "Musical Theatre History",
+    "MAT 108": "Contemporary Math",
+    "PS 111": "College Chemistry I",
+    "PE 119": "Tennis",
+    "NET 196": "Certification Training Lab: NET+",
+    "BUS 203": "Macroeconomics",
+}
 
 
 def cl(t):
+    t = LEAD_CONJ.sub("", t)
     t = XL.sub("", t)
     t = MARK.sub("", t)
     t = re.sub(r"[\^*]+", "", t)
     m = CODEIN.search(t)
     if m and m.start() > 3:
         t = t[:m.start()]
+    t = re.sub(r"\s+(?:AND|OR)\s*$", "", t)
     return clean_course_title(t.strip(" +*,-^"))
 
 
@@ -88,7 +106,7 @@ def main():
         if BADFRAG.search(s):
             continue
         if (m := NOCRED.match(s)) and "(" not in s:
-            add(m.group(1), m.group(2), clean_course_title(m.group(3).strip(" *")))
+            add(m.group(1), m.group(2), cl(m.group(3)))
         if (m := WEXP.match(s)):
             add(m.group(1), m.group(2), cl(m.group(3)))
         if (m := TRAIL.match(s)):
@@ -97,6 +115,10 @@ def main():
             code = f"{m.group(1)} {m.group(2)}"
             if code not in seen:
                 seen[code] = m.group(3).strip()
+
+    for code, title in TITLE_OVERRIDES.items():
+        if code in seen:
+            seen[code] = title
 
     path = out_dir / f"{SLUG}.csv"
     with path.open("w", newline="", encoding="utf-8") as f:
